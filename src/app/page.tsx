@@ -8,7 +8,8 @@ import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
 import { CandlestickDisplay } from '@/components/geonera/candlestick-display';
-import type { PredictionLogItem, CurrencyPair, PipsTargetRange } from '@/types';
+import { LoginForm } from '@/components/geonera/login-form'; // Import LoginForm
+import type { PredictionLogItem, CurrencyPair, PipsTargetRange, User } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
@@ -20,6 +21,7 @@ const MAX_EXPIRATION_SECONDS = 30;
 const MAX_LOG_ITEMS = 50; // Max items in prediction log
 
 export default function GeoneraPage() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [predictionLogs, setPredictionLogs] = useState<PredictionLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentYear, setCurrentYear] = useState<string>('');
@@ -50,6 +52,18 @@ export default function GeoneraPage() {
 
   const { toast } = useToast();
 
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    toast({ title: `Welcome, ${user.username}!`, description: "You are now logged in." });
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setPredictionLogs([]); // Clear logs on logout
+    setSelectedPredictionLog(null);
+    toast({ title: "Logged Out", description: "You have been successfully logged out." });
+  };
+
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
     setSelectedCurrencyPairs(value);
   }, []);
@@ -63,6 +77,8 @@ export default function GeoneraPage() {
   }, []);
 
   useEffect(() => {
+    if (!currentUser) return; // Don't run predictions if not logged in
+
     let timeoutId: NodeJS.Timeout | undefined = undefined;
 
     const performPrediction = async () => {
@@ -185,10 +201,12 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [selectedCurrencyPairs, pipsTarget, toast, generateId, isLoading, predictionLogs.length, selectedPredictionLog]);
+  }, [currentUser, selectedCurrencyPairs, pipsTarget, toast, generateId, isLoading, predictionLogs.length, selectedPredictionLog]);
 
 
   useEffect(() => {
+    if (!currentUser) return; // Don't run expiration logic if not logged in
+
     const expirationIntervalId = setInterval(() => {
       const now = new Date(); 
       setPredictionLogs(prevLogs =>
@@ -207,40 +225,45 @@ export default function GeoneraPage() {
     }, 1000); 
 
     return () => clearInterval(expirationIntervalId);
-  }, [selectedPredictionLog?.id]); 
+  }, [currentUser, selectedPredictionLog?.id]); 
 
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <AppHeader />
-      <main className="flex-grow container mx-auto px-4 py-4">
-        <div className="max-w-7xl mx-auto space-y-4">
-          <PipsParameterForm
-            selectedCurrencyPairs={selectedCurrencyPairs}
-            pipsTarget={pipsTarget}
-            onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
-            onPipsChange={handlePipsChange}
-            isLoading={isLoading} 
-          />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-1">
-              <CandlestickDisplay selectedPrediction={selectedPredictionLog} />
-            </div>
-            <div className="md:col-span-2">
-              <PredictionsTable 
-                predictions={predictionLogs} 
-                onRowClick={handlePredictionSelect}
-                selectedPredictionId={selectedPredictionLog?.id}
-              />
-            </div>
-            <div className="md:col-span-1">
-              <PredictionDetailsPanel selectedPrediction={selectedPredictionLog} />
+      <AppHeader user={currentUser} onLogout={handleLogout} />
+      {currentUser ? (
+        <main className="flex-grow container mx-auto px-4 py-4">
+          <div className="max-w-7xl mx-auto space-y-4">
+            <PipsParameterForm
+              selectedCurrencyPairs={selectedCurrencyPairs}
+              pipsTarget={pipsTarget}
+              onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
+              onPipsChange={handlePipsChange}
+              isLoading={isLoading} 
+            />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-1">
+                <CandlestickDisplay selectedPrediction={selectedPredictionLog} />
+              </div>
+              <div className="md:col-span-2">
+                <PredictionsTable 
+                  predictions={predictionLogs} 
+                  onRowClick={handlePredictionSelect}
+                  selectedPredictionId={selectedPredictionLog?.id}
+                />
+              </div>
+              <div className="md:col-span-1">
+                <PredictionDetailsPanel selectedPrediction={selectedPredictionLog} />
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
+      ) : (
+        <LoginForm onLogin={handleLogin} />
+      )}
       <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
-        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every {PREDICTION_INTERVAL_MS / 1000} seconds if parameters are valid. Active predictions are removed after a variable duration (typically {MIN_EXPIRATION_SECONDS}-{MAX_EXPIRATION_SECONDS} seconds).
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice.
+        {currentUser && ` Predictions update automatically every ${PREDICTION_INTERVAL_MS / 1000} seconds if parameters are valid. Active predictions are removed after a variable duration (typically ${MIN_EXPIRATION_SECONDS}-${MAX_EXPIRATION_SECONDS} seconds).`}
       </footer>
     </div>
   );

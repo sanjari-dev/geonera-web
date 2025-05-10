@@ -46,4 +46,8 @@ export interface AnalyzePipsInfluenceInput {
   pipsTarget: PipsTargetRange;
 }
 
-```
+export interface User {
+  id: string;
+  username: string;
+  initials: string;
+}
