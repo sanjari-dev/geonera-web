@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <AppHeader user={null} onLogout={() => {}} /> {/* Simplified header for login page */}
+      <AppHeader user={null} onLogout={() => {}} />
       <main className="flex-grow container mx-auto px-4 py-4 flex items-center justify-center">
         <LoginForm onLogin={handleLoginSuccess} />
       </main>

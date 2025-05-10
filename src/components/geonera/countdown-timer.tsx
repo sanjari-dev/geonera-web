@@ -71,7 +71,7 @@ export function CountdownTimer({ expiresAt, onExpire, className, ...props }: Cou
     <span
       className={cn(
         isExpired ? "text-destructive/80" : "text-foreground",
-        "min-w-[80px] text-center", // Added min-width and text-center for better alignment
+        "min-w-[80px] text-center",
         className
       )}
       {...props}

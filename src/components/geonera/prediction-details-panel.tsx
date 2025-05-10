@@ -68,7 +68,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]"> {/* Increased height */}
+        <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]">
           <div className="p-4 space-y-3">
             {!selectedPrediction ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">

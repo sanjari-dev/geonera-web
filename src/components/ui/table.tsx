@@ -5,13 +5,13 @@ import { cn } from "@/lib/utils"
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => ( // Children will be part of `...props`
-  <div className="relative w-full overflow-auto">
+>(({ className, children, ...restProps }, ref) => (
+  <div className="relative overflow-auto inline-block align-top"> {/* Changed w-full to inline-block align-top */}
     <table
       ref={ref}
-      className={cn("caption-bottom text-sm", className)} // Removed w-full
-      {...props} // Spread all props, including children, onto the table element
-    />
+      className={cn("caption-bottom text-sm", className)} 
+      {...restProps}
+    >{children}</table>
   </div>
 ))
 Table.displayName = "Table"
@@ -73,7 +73,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-12 px-1 py-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 text-center whitespace-nowrap", // Adjusted padding and added text-center, whitespace-nowrap
+      "h-12 px-1 py-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 text-center whitespace-nowrap", 
       className
     )}
     {...props}
@@ -87,7 +87,7 @@ const TableCell = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <td
     ref={ref}
-    className={cn("p-1 align-middle [&:has([role=checkbox])]:pr-0 text-center whitespace-nowrap py-0.5", // Adjusted padding and added text-center, whitespace-nowrap
+    className={cn("p-1 align-middle [&:has([role=checkbox])]:pr-0 text-center whitespace-nowrap py-0.5", 
     className)}
     {...props}
   />

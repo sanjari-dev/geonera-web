@@ -380,12 +380,11 @@ export default function GeoneraPage() {
             onPipsChange={handlePipsChange}
             isLoading={isLoading}
           />
-          {/* Adjusted grid layout: Candlestick (flexible min 256px), Table (content width), Details (fixed ~320px) */}
           <div className="grid grid-cols-1 md:grid-cols-[minmax(theme(spacing.64),1fr)_auto_theme(spacing.80)] gap-4">
-            <div> {/* CandlestickDisplay column */}
+            <div>
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="max-w-max"> {/* PredictionsTable column - try to fit content width */}
+            <div className="max-w-max">
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -393,7 +392,7 @@ export default function GeoneraPage() {
                 maxLogs={MAX_PREDICTION_LOGS}
               />
             </div>
-            <div> {/* PredictionDetailsPanel column */}
+            <div>
               <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
           </div>

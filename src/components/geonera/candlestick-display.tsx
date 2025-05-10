@@ -86,7 +86,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
           {selectedPrediction ? `Visual for ${selectedPrediction.currencyPair}` : "Select a prediction."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-4 h-[calc(100%-theme(spacing.24))]"> {/* Adjust height based on header */}
+      <CardContent className="p-4 h-[calc(100%-theme(spacing.24))]">
         {!selectedPrediction || chartData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Info className="h-12 w-12 mb-3" />
@@ -97,7 +97,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
             <BarChart
               accessibilityLayer
               data={chartData}
-              margin={{ top: 20, right: 10, left: -15, bottom: 5 }} // Adjusted margins
+              margin={{ top: 20, right: 10, left: -15, bottom: 5 }}
             >
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
@@ -113,7 +113,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
                 tickMargin={8} 
                 domain={yDomain as [number, number]} 
                 tickFormatter={(value) => `$${value.toFixed(selectedPrediction?.currencyPair === "BTC/USD" ? 0 : 2)}`}
-                tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }} // Enhanced visibility
+                tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }}
               />
               <ChartTooltip
                 cursor={false}
