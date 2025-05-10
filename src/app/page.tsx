@@ -17,7 +17,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Loader2, Brain } from 'lucide-react';
 
 
-const PREDICTION_INTERVAL_MS = 60000; // 60 seconds
+const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 604800; // 7 days in seconds (7 * 24 * 60 * 60)
 const MAX_PREDICTION_LOGS = 100; // Maximum number of prediction logs to keep
