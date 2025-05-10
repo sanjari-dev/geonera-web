@@ -17,7 +17,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Loader2, Brain } from 'lucide-react';
 
 
-const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
+const PREDICTION_INTERVAL_MS = 10000; // 10 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 180;
 const MAX_LOG_ITEMS = 250; // Max items in prediction log
@@ -104,14 +104,10 @@ export default function GeoneraPage() {
   }, []);
 
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
-    // Ensure we are setting a shallow copy from the current logs, or the clicked log itself if it's from UI.
-    // If log is directly from predictionLogs state, spreading it is a good practice.
     const logFromState = predictionLogs.find(l => l.id === log.id);
     if (logFromState) {
       setSelectedPredictionLog({ ...logFromState });
     } else {
-      // If the log clicked isn't in the current full list (should not happen ideally),
-      // just use the passed log but spread it to be safe.
       setSelectedPredictionLog({ ...log });
     }
   }, [predictionLogs]);
@@ -135,15 +131,13 @@ export default function GeoneraPage() {
       const noCurrenciesSelected = currentSelectedPairs.length === 0;
 
       if (isPipsTargetInvalid || noCurrenciesSelected) {
-        const shouldShowPausedToast = predictionLogs.some(log => currentSelectedPairs.includes(log.currencyPair)) || (isPipsTargetInvalid && !noCurrenciesSelected) || (noCurrenciesSelected && !isPipsTargetInvalid && predictionLogs.length === 0);
-        
         if (currentSelectedPairs.length > 0 && isPipsTargetInvalid) {
              toast({
                 title: "Prediction Paused",
                 description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
                 variant: "default",
              });
-        } else if (noCurrenciesSelected && (predictionLogs.length > 0 || (isAuthCheckComplete && currentUser))) {
+        } else if (noCurrenciesSelected && (predictionLogs.some(log => log.status !== 'IDLE') || (isAuthCheckComplete && currentUser))) {
              toast({
                 title: "Prediction Paused",
                 description: "Please select at least one currency pair.",
@@ -197,7 +191,7 @@ export default function GeoneraPage() {
       let errorCount = 0;
       
       setPredictionLogs(produce(draft => {
-        const activePairsAfterAsync = latestSelectedCurrencyPairsRef.current; // Re-check active pairs
+        const activePairsAfterAsync = latestSelectedCurrencyPairsRef.current; 
 
         results.forEach(({ result, pendingLog }) => {
           const logIndex = draft.findIndex(log => log.id === pendingLog.id);
@@ -207,7 +201,6 @@ export default function GeoneraPage() {
 
           if (!activePairsAfterAsync.includes(pendingLog.currencyPair)) {
               draft.splice(logIndex, 1);
-              // No need to update selectedPredictionLog here, the sync effect will handle it
               return;
           }
 
@@ -219,10 +212,10 @@ export default function GeoneraPage() {
             logToUpdate.error = result.error;
           } else if (result.data) {
             successCount++;
-            const randomExpirationMs = (Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS) * 1000;
+            const randomExpirationSeconds = Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS;
+            const randomExpirationMs = randomExpirationSeconds * 1000;
             Object.assign(logToUpdate, { status: "SUCCESS", predictionOutcome: result.data, expiresAt: new Date(Date.now() + randomExpirationMs) });
           }
-          // selectedPredictionLog will be updated by the dedicated sync effect
         });
         if (draft.length > MAX_LOG_ITEMS) {
            draft.splice(MAX_LOG_ITEMS);
@@ -263,7 +256,7 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [currentUser, isAuthCheckComplete, toast, generateId, isLoading, predictionLogs.length]); // Removed pipsTarget, selectedCurrencyPairs to rely on refs
+  }, [currentUser, isAuthCheckComplete, toast, generateId, isLoading]); 
 
 
   // Prediction expiration and deselected pair cleanup useEffect
@@ -275,23 +268,25 @@ export default function GeoneraPage() {
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
 
       setPredictionLogs(produce(draft => {
-        let updated = false;
+        let didAnyExpireOrGetFilteredOut = false;
         for (let i = draft.length - 1; i >= 0; i--) {
           const log = draft[i];
+          let removeLog = false;
 
-          // Remove pending or successful logs if currency pair is deselected
           if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS")) {
-            draft.splice(i, 1);
-            updated = true;
-            continue;
+            removeLog = true;
           }
 
-          // Remove expired successful logs
           if (log.status === "SUCCESS" && log.expiresAt && now > new Date(log.expiresAt)) {
+            removeLog = true;
+          }
+          
+          if (removeLog) {
             draft.splice(i, 1);
-            updated = true;
+            didAnyExpireOrGetFilteredOut = true;
           }
         }
+        // No need to manage selectedPredictionLog directly here, the other effect handles it.
       }));
     }, 1000);
 
@@ -307,56 +302,57 @@ export default function GeoneraPage() {
       return;
     }
   
-    const currentSelectedPairs = selectedCurrencyPairs; // Use state directly for this effect
-    let newSelectedCandidate: PredictionLogItem | undefined = undefined;
+    const currentSelectedPairs = selectedCurrencyPairs;
+    let newSelectedCandidate: PredictionLogItem | null = null;
   
     if (selectedPredictionLog) {
-      // Check if the current selectedPredictionLog is still valid
       const logInCurrentList = predictionLogs.find(log => log.id === selectedPredictionLog.id);
       if (logInCurrentList && currentSelectedPairs.includes(logInCurrentList.currencyPair)) {
-        // If it exists and its currency pair is still selected, it's a candidate.
-        // We must use the object from the current predictionLogs to avoid stale proxies.
         newSelectedCandidate = logInCurrentList;
       }
     }
   
-    // If no valid current selection, or if the current selection might be stale (e.g. status update)
-    // try to find the "best" available log from the current list for selected pairs.
     if (!newSelectedCandidate && currentSelectedPairs.length > 0) {
-      newSelectedCandidate =
-        predictionLogs.find(log =>
-          currentSelectedPairs.includes(log.currencyPair) &&
-          log.status === "SUCCESS" &&
-          log.expiresAt && new Date(log.expiresAt) > new Date()
-        ) ||
-        predictionLogs.find(log =>
-          currentSelectedPairs.includes(log.currencyPair) &&
-          log.status === "PENDING"
-        ) ||
-        predictionLogs.find(log => // Fallback to any log for selected pairs
-            currentSelectedPairs.includes(log.currencyPair)
-        );
+      const activeSuccessLogs = predictionLogs.filter(log =>
+        currentSelectedPairs.includes(log.currencyPair) &&
+        log.status === "SUCCESS" &&
+        log.expiresAt && new Date(log.expiresAt) > new Date()
+      );
+      if (activeSuccessLogs.length > 0) {
+        newSelectedCandidate = activeSuccessLogs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+      } else {
+        const pendingLogs = predictionLogs.filter(log =>
+            currentSelectedPairs.includes(log.currencyPair) &&
+            log.status === "PENDING"
+          );
+        if (pendingLogs.length > 0) {
+          newSelectedCandidate = pendingLogs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+        } else {
+            const anyRelevantLog = predictionLogs.filter(log => currentSelectedPairs.includes(log.currencyPair));
+            if (anyRelevantLog.length > 0) {
+                 newSelectedCandidate = anyRelevantLog.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+            }
+        }
+      }
     }
   
-    // Update selectedPredictionLog state
-    // Create a new shallow copy ({ ... }) to ensure a fresh object reference for props
-    // and to break potential Immer proxy chains.
     if (newSelectedCandidate) {
-      // Only update if ID is different OR if it's the same ID but we want to ensure fresh object
-      if (selectedPredictionLog?.id !== newSelectedCandidate.id || selectedPredictionLog === null) {
+      if (selectedPredictionLog?.id !== newSelectedCandidate.id) {
         setSelectedPredictionLog({ ...newSelectedCandidate });
-      } else if (selectedPredictionLog?.id === newSelectedCandidate.id) {
-        // If IDs are the same, ensure the object instance is truly from the latest `predictionLogs`
-        // by re-setting it with a spread. This handles cases where the log item's content might have changed.
-        setSelectedPredictionLog({ ...newSelectedCandidate });
+      } else {
+        // If IDs are the same, compare content (e.g. status) to see if an update is needed
+        // This is a simplified check; more robust would be deep comparison or versioning
+        if (JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedCandidate)) {
+           setSelectedPredictionLog({ ...newSelectedCandidate });
+        }
       }
-    } else { // No valid candidate found
+    } else {
       if (selectedPredictionLog !== null) {
         setSelectedPredictionLog(null);
       }
     }
   
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedCurrencyPairs]); // selectedPredictionLog removed from deps
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedCurrencyPairs, selectedPredictionLog]);
   
 
 
@@ -385,11 +381,7 @@ export default function GeoneraPage() {
     ? predictionLogs.filter(log => selectedCurrencyPairs.includes(log.currencyPair))
     : [];
   
-  // Ensure selectedPredictionLog passed to children is a fresh copy if it exists
-  const currentSelectedLogForDisplay = selectedPredictionLog 
-    ? (predictionLogs.find(l => l.id === selectedPredictionLog.id) || null) 
-    : null;
-  const finalSelectedPredictionForChildren = currentSelectedLogForDisplay ? { ...currentSelectedLogForDisplay } : null;
+  const finalSelectedPredictionForChildren = selectedPredictionLog ? { ...selectedPredictionLog } : null;
 
 
   return (
@@ -428,4 +420,3 @@ export default function GeoneraPage() {
     </div>
   );
 }
-
