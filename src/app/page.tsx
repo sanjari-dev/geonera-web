@@ -28,7 +28,7 @@ export default function GeoneraPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentYear, setCurrentYear] = useState<string>('');
 
-  const [selectedCurrencyPairs, setSelectedCurrencyPairs] = useState<CurrencyPair[]>(["XAU/USD"]);
+  const [selectedCurrencyPairs, setSelectedCurrencyPairs] = useState<CurrencyPair[]>([]); // Initialize as empty
   const [pipsTarget, setPipsTarget] = useState<PipsTargetRange>({ min: 10, max: 20 });
   
   const [uuidAvailable, setUuidAvailable] = useState(false);
@@ -59,7 +59,7 @@ export default function GeoneraPage() {
       }
       setIsAuthCheckComplete(true);
     }
-  }, []); // Removed router from dependencies as it's not used for redirection here anymore
+  }, []); 
 
 
   const generateId = useCallback(() => {
@@ -115,7 +115,7 @@ export default function GeoneraPage() {
 
       if (isPipsTargetInvalid || noCurrenciesSelected) {
         const shouldShowPausedToast = predictionLogs.length > 0 || (isPipsTargetInvalid && !noCurrenciesSelected) || (noCurrenciesSelected && !isPipsTargetInvalid);
-        if (shouldShowPausedToast) {
+        if (shouldShowPausedToast || (noCurrenciesSelected && predictionLogs.length === 0) ) { // Also show if no currencies selected and no logs yet
              toast({
                 title: "Prediction Paused",
                 description: noCurrenciesSelected ? "Please select at least one currency pair." : "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
@@ -143,9 +143,11 @@ export default function GeoneraPage() {
 
       setPredictionLogs(prevLogs => [...newPendingLogs, ...prevLogs].slice(0, MAX_LOG_ITEMS));
       
-      if (!selectedPredictionLog && newPendingLogs.length > 0) {
+      // Select the first new pending log if no log is currently selected or if the selected one is for a different pair
+      if ((!selectedPredictionLog || !selectedCurrencyPairs.includes(selectedPredictionLog.currencyPair)) && newPendingLogs.length > 0) {
         setSelectedPredictionLog(newPendingLogs[0]);
       }
+
 
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
         const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsTarget);
@@ -185,7 +187,7 @@ export default function GeoneraPage() {
           );
           if (selectedPredictionLog?.id === pendingLog.id) {
               setSelectedPredictionLog(newSuccessfulLog);
-          } else if (!selectedPredictionLog && pendingLog.currencyPair === selectedCurrencyPairs[0]) { 
+          } else if ((!selectedPredictionLog || !selectedCurrencyPairs.includes(selectedPredictionLog.currencyPair)) && pendingLog.currencyPair === selectedCurrencyPairs[0]) { 
               setSelectedPredictionLog(newSuccessfulLog);
           }
         }
@@ -232,23 +234,54 @@ export default function GeoneraPage() {
 
     const expirationIntervalId = setInterval(() => {
       const now = new Date(); 
-      setPredictionLogs(prevLogs =>
-        prevLogs.filter(log => {
+      let didAnyExpire = false;
+      setPredictionLogs(prevLogs => {
+        const newLogs = prevLogs.filter(log => {
           if (log.status !== "SUCCESS" || !log.expiresAt) {
             return true; 
           }
           const isExpired = now > new Date(log.expiresAt);
-          if (isExpired && selectedPredictionLog?.id === log.id) {
-            const nextAvailableLog = prevLogs.find(p => p.id !== log.id && p.status === "SUCCESS" && p.expiresAt && new Date(p.expiresAt) > now);
-            setSelectedPredictionLog(nextAvailableLog || null);
+          if (isExpired) {
+            didAnyExpire = true;
+            if (selectedPredictionLog?.id === log.id) {
+              // If the selected log expired, try to select the next available log
+              // from the *original* prevLogs that is not this expired log and is not yet expired
+              const nextAvailableLog = prevLogs.find(p => 
+                p.id !== log.id && 
+                p.status === "SUCCESS" && 
+                p.expiresAt && 
+                new Date(p.expiresAt) > now &&
+                selectedCurrencyPairs.includes(p.currencyPair) // Ensure it's one of the currently selected pairs
+              );
+              setSelectedPredictionLog(nextAvailableLog || null);
+            }
           }
           return !isExpired; 
-        })
-      );
+        });
+        return newLogs;
+      });
+      
+       // If no prediction is selected AND some expired, try to select the first available for currently selected pairs
+      if (didAnyExpire && !selectedPredictionLog) {
+        setPredictionLogs(currentLogs => {
+           const firstAvailableForSelectedPairs = currentLogs.find(log => 
+             log.status === "SUCCESS" && 
+             log.expiresAt && 
+             new Date(log.expiresAt) > now &&
+             selectedCurrencyPairs.includes(log.currencyPair)
+           );
+           if (firstAvailableForSelectedPairs) {
+             setSelectedPredictionLog(firstAvailableForSelectedPairs);
+           }
+           return currentLogs;
+        });
+      }
+
+
     }, 1000); 
 
     return () => clearInterval(expirationIntervalId); 
-  }, [currentUser, selectedPredictionLog?.id]); 
+  }, [currentUser, selectedPredictionLog, selectedCurrencyPairs]); 
 
 
   if (!isAuthCheckComplete) {
