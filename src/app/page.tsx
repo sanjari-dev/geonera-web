@@ -4,6 +4,7 @@
 import type { ChangeEvent } from 'react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { produce } from 'immer';
 import { AppHeader } from '@/components/geonera/header';
 import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
@@ -18,8 +19,8 @@ import { Loader2, Brain } from 'lucide-react';
 
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
 const MIN_EXPIRATION_SECONDS = 10;
-const MAX_EXPIRATION_SECONDS = 30;
-const MAX_LOG_ITEMS = 50; // Max items in prediction log
+const MAX_EXPIRATION_SECONDS = 180;
+const MAX_LOG_ITEMS = 250; // Max items in prediction log
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -152,21 +153,25 @@ export default function GeoneraPage() {
         });
       });
 
-      setPredictionLogs(prevLogs => [...newPendingLogs, ...prevLogs].slice(0, MAX_LOG_ITEMS));
-
-      if ((!selectedPredictionLog || !currentSelectedPairs.includes(selectedPredictionLog.currencyPair)) && newPendingLogs.length > 0) {
-        const firstNewLogForAnySelectedPair = newPendingLogs.find(log => currentSelectedPairs.includes(log.currencyPair));
-        if (firstNewLogForAnySelectedPair) {
-            setSelectedPredictionLog(firstNewLogForAnySelectedPair);
-        } else if (newPendingLogs.length > 0) {
-            setSelectedPredictionLog(newPendingLogs[0]);
-        }
-      }
-
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
         const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsTarget);
         return { result, pendingLog };
       });
+
+      // Update state with pending logs using Immer
+      setPredictionLogs(produce(draft => {
+        newPendingLogs.forEach(log => {
+          draft.unshift(log);
+        });
+        if (draft.length > MAX_LOG_ITEMS) {
+          draft.splice(MAX_LOG_ITEMS);
+        }
+      }));
+
+      // Select the first new pending log if no relevant log is selected
+      if ((!selectedPredictionLog || !currentSelectedPairs.includes(selectedPredictionLog.currencyPair)) && newPendingLogs.length > 0) {
+         setSelectedPredictionLog(newPendingLogs[0]);
+      }
 
       const results = await Promise.all(predictionPromises);
 
@@ -174,55 +179,49 @@ export default function GeoneraPage() {
       let errorCount = 0;
       const trulySelectedPairsAfterAsync = latestSelectedCurrencyPairsRef.current; // Re-read ref before updating state
 
-      setPredictionLogs(prevLogs => {
-        let updatedLogs = [...prevLogs];
-
+      // Update state with results using Immer
+      setPredictionLogs(produce(draft => {
         results.forEach(({ result, pendingLog }) => {
-          if (!trulySelectedPairsAfterAsync.includes(pendingLog.currencyPair)) {
-            updatedLogs = updatedLogs.filter(log => log.id !== pendingLog.id);
-            if (selectedPredictionLog?.id === pendingLog.id) {
-                setSelectedPredictionLog(null);
-            }
-            return;
-          }
-
-          const logIndex = updatedLogs.findIndex(log => log.id === pendingLog.id);
+          const logIndex = draft.findIndex(log => log.id === pendingLog.id);
           if (logIndex === -1) {
             console.warn(`Pending log with id ${pendingLog.id} for ${pendingLog.currencyPair} not found for update.`);
             return;
           }
 
-          let logToUpdateOrBecomeSelected = updatedLogs[logIndex];
+          // If currency pair was deselected while prediction was in progress, remove the log
+          if (!trulySelectedPairsAfterAsync.includes(pendingLog.currencyPair)) {
+              draft.splice(logIndex, 1);
+              if (selectedPredictionLog?.id === pendingLog.id) {
+                  setSelectedPredictionLog(null);
+              }
+              return;
+          }
+
+          let logToUpdate = draft[logIndex];
 
           if (result.error) {
             errorCount++;
-            const erroredLog = { ...updatedLogs[logIndex], status: "ERROR" as PredictionStatus, error: result.error };
-            updatedLogs[logIndex] = erroredLog;
-            logToUpdateOrBecomeSelected = erroredLog;
+            logToUpdate.status = "ERROR";
+            logToUpdate.error = result.error;
           } else if (result.data) {
             successCount++;
             const randomExpirationMs = (Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS) * 1000;
-            const newSuccessfulLog: PredictionLogItem = {
-                ...pendingLog,
-                status: "SUCCESS",
-                predictionOutcome: result.data,
-                expiresAt: new Date(Date.now() + randomExpirationMs)
-            };
-            updatedLogs[logIndex] = newSuccessfulLog;
-            logToUpdateOrBecomeSelected = newSuccessfulLog;
+            Object.assign(logToUpdate, { status: "SUCCESS", predictionOutcome: result.data, expiresAt: new Date(Date.now() + randomExpirationMs) });
           }
 
           if (selectedPredictionLog?.id === pendingLog.id) {
-              setSelectedPredictionLog(logToUpdateOrBecomeSelected);
+              setSelectedPredictionLog(logToUpdate);
           } else if ((!selectedPredictionLog || !trulySelectedPairsAfterAsync.includes(selectedPredictionLog.currencyPair)) &&
                      trulySelectedPairsAfterAsync.includes(pendingLog.currencyPair)) {
               if (pendingLog.currencyPair === trulySelectedPairsAfterAsync[0] || trulySelectedPairsAfterAsync.length === 1) {
-                 setSelectedPredictionLog(logToUpdateOrBecomeSelected);
+                 setSelectedPredictionLog(logToUpdate);
               }
           }
         });
-        return updatedLogs.slice(0, MAX_LOG_ITEMS);
-      });
+        if (draft.length > MAX_LOG_ITEMS) {
+           draft.splice(MAX_LOG_ITEMS); // Ensure max items is maintained after updates
+        }
+      }));
 
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
         let toastTitle = "Predictions Updated";
@@ -270,30 +269,30 @@ export default function GeoneraPage() {
       let didAnyExpireOrGetFilteredOut = false;
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
 
-      setPredictionLogs(prevLogs => {
-        const newLogs = prevLogs.filter(log => {
+      setPredictionLogs(produce(draft => {
+        for (let i = draft.length - 1; i >= 0; i--) {
+          const log = draft[i];
+
+          // Remove pending logs if currency pair is deselected
           if (log.status === "PENDING" && !currentSelectedPairs.includes(log.currencyPair)) {
             didAnyExpireOrGetFilteredOut = true;
             if (selectedPredictionLog?.id === log.id) {
               setSelectedPredictionLog(null);
             }
-            return false;
+            draft.splice(i, 1);
+            continue;
           }
 
-          if (log.status !== "SUCCESS" || !log.expiresAt) {
-            return true;
-          }
-          const isExpired = now > new Date(log.expiresAt);
-          if (isExpired) {
+          // Remove expired successful logs
+          if (log.status === "SUCCESS" && log.expiresAt && now > new Date(log.expiresAt)) {
             didAnyExpireOrGetFilteredOut = true;
             if (selectedPredictionLog?.id === log.id) {
               setSelectedPredictionLog(null);
             }
+            draft.splice(i, 1);
           }
-          return !isExpired;
-        });
-        return newLogs.slice(0, MAX_LOG_ITEMS);
-      });
+        }
+      }));
 
       if (didAnyExpireOrGetFilteredOut && !selectedPredictionLog && currentSelectedPairs.length > 0) {
          setPredictionLogs(currentLogs => {
@@ -412,4 +411,3 @@ export default function GeoneraPage() {
     </div>
   );
 }
-
