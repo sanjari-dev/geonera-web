@@ -42,7 +42,7 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
       <div className="p-6 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center">
         <Info className="h-10 w-10 text-muted-foreground mb-3" />
         <p className="text-lg text-muted-foreground">No predictions generated yet.</p>
-        <p className="text-sm text-muted-foreground">Parameters are set? AI will predict pips movement soon.</p>
+        <p className="text-sm text-muted-foreground">Parameters are set? The system will predict pips movement soon.</p>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
     <Card className="shadow-xl overflow-hidden">
       <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
          <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
-         <CardDescription className="text-sm text-primary/80">Tracks AI predictions based on your parameters.</CardDescription>
+         <CardDescription className="text-sm text-primary/80">Tracks predictions based on your parameters.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[280px] md:h-[320px]"> {/* Adjusted height */}
@@ -83,7 +83,7 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
                     {log.status === "SUCCESS" && log.predictionOutcome?.outcome
                       ? log.predictionOutcome.outcome
                       : log.status === "PENDING"
-                      ? "Awaiting AI..."
+                      ? "Awaiting prediction..."
                       : "N/A"}
                   </TableCell>
                   <TableCell className="p-3 text-xs max-w-[150px] md:max-w-xs truncate hover:whitespace-normal hover:max-w-none hover:overflow-visible" title={log.status === "SUCCESS" ? log.predictionOutcome?.reasoning : log.error}>

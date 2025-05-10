@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/select";
 import { Coins, Bitcoin, Settings2 } from 'lucide-react';
 import type { CurrencyPair, CurrencyOption, PipsTarget } from '@/types';
-// Removed useToast as it's not used here anymore
 
 interface PipsParameterFormProps {
   currencyPair: CurrencyPair;
@@ -94,9 +93,8 @@ export function PipsParameterForm({
       </div>
 
        <p className="text-sm text-center text-muted-foreground pt-2">
-        AI predictions will be generated automatically every minute based on the parameters above.
+        Predictions will be generated automatically every minute based on the parameters above.
       </p>
     </div>
   );
 }
-

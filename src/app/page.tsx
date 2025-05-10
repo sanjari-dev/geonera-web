@@ -26,9 +26,6 @@ export default function GeoneraPage() {
   
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
-    // Check if uuid is available client-side to avoid hydration issues if it's used during SSR
-    // For this specific use case (generating IDs on client actions), direct import is fine.
-    // However, if uuidv4 were used in initial render logic, this useEffect approach would be better.
     if (typeof window !== 'undefined') {
         setUuidAvailable(true);
     }
@@ -39,12 +36,9 @@ export default function GeoneraPage() {
       try {
         return uuidv4();
       } catch (e) {
-         // Fallback if uuidv4 fails for some reason, though unlikely
          return Date.now().toString() + Math.random().toString(36).substring(2,7);
       }
     }
-    // Fallback if uuid library is not yet confirmed available (e.g. during initial hydration phase if not careful)
-    // or if there was an issue importing it (though PipsParameterForm already uses it directly).
     return Date.now().toString() + Math.random().toString(36).substring(2,7);
   }, [uuidAvailable]);
 
@@ -68,10 +62,7 @@ export default function GeoneraPage() {
       }
 
       if (pipsTarget <= 0 || !selectedCurrency) {
-        // Do not toast if initially parameters are not set, let the UI guide the user.
-        // Only toast if user interaction led to invalid state or if it was previously valid.
-        // For simplicity here, we keep the toast but it could be refined.
-        if (predictionLogs.length > 0 || pipsTarget <= 0 && selectedCurrency) { // Example: toast if form was touched/used
+        if (predictionLogs.length > 0 || pipsTarget <= 0 && selectedCurrency) { 
              toast({
                 title: "Prediction Paused",
                 description: "Ensure currency and pips target (>0) are set.",
@@ -115,7 +106,7 @@ export default function GeoneraPage() {
         );
         toast({
           title: "Prediction Updated",
-          description: `AI analysis for ${selectedCurrency} with ${pipsTarget} pips target completed.`,
+          description: `Prediction analysis for ${selectedCurrency} with ${pipsTarget} pips target completed.`,
         });
       }
       setIsLoading(false);
@@ -144,7 +135,7 @@ export default function GeoneraPage() {
         </div>
       </main>
       <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
-        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. AI predictions are for informational purposes only and not financial advice. Predictions update automatically every minute if parameters are valid.
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every minute if parameters are valid.
       </footer>
     </div>
   );
