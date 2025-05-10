@@ -2,7 +2,7 @@
 "use client";
 
 import type { ChangeEvent } from 'react';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppHeader } from '@/components/geonera/header';
 import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
@@ -36,6 +36,13 @@ export default function GeoneraPage() {
   
   const router = useRouter();
   const { toast } = useToast();
+
+  // Ref to store the latest selectedCurrencyPairs for use in closures
+  const latestSelectedCurrencyPairsRef = useRef(selectedCurrencyPairs);
+  useEffect(() => {
+    latestSelectedCurrencyPairsRef.current = selectedCurrencyPairs;
+  }, [selectedCurrencyPairs]);
+
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
@@ -91,12 +98,10 @@ export default function GeoneraPage() {
   }, []);
 
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
-    if (selectedCurrencyPairs.length === 0 || selectedCurrencyPairs.includes(log.currencyPair)) {
-      setSelectedPredictionLog(log);
-    } else {
-      setSelectedPredictionLog(log); 
-    }
-  }, [selectedCurrencyPairs]);
+    // This logic ensures that a clicked log from the table (which is already filtered) can be selected.
+    // The table only shows logs for currently selected pairs or all if no pairs are selected (though this case is handled by logsForTable being empty).
+    setSelectedPredictionLog(log);
+  }, []);
 
   // Prediction generation useEffect
   useEffect(() => {
@@ -111,11 +116,12 @@ export default function GeoneraPage() {
         return;
       }
 
+      const currentSelectedPairs = latestSelectedCurrencyPairsRef.current; // Use the latest value
       const isPipsTargetInvalid = pipsTarget.min <= 0 || pipsTarget.max <= 0 || pipsTarget.min > pipsTarget.max;
-      const noCurrenciesSelected = selectedCurrencyPairs.length === 0;
+      const noCurrenciesSelected = currentSelectedPairs.length === 0;
 
       if (isPipsTargetInvalid || noCurrenciesSelected) {
-        const shouldShowPausedToast = predictionLogs.some(log => selectedCurrencyPairs.includes(log.currencyPair)) || (isPipsTargetInvalid && !noCurrenciesSelected) || (noCurrenciesSelected && !isPipsTargetInvalid && predictionLogs.length === 0);
+        const shouldShowPausedToast = predictionLogs.some(log => currentSelectedPairs.includes(log.currencyPair)) || (isPipsTargetInvalid && !noCurrenciesSelected) || (noCurrenciesSelected && !isPipsTargetInvalid && predictionLogs.length === 0);
         if (shouldShowPausedToast) {
              toast({
                 title: "Prediction Paused",
@@ -131,7 +137,7 @@ export default function GeoneraPage() {
       setIsLoading(true);
       
       const newPendingLogs: PredictionLogItem[] = [];
-      selectedCurrencyPairs.forEach(currencyPair => {
+      currentSelectedPairs.forEach(currencyPair => {
         const newLogId = generateId(); 
         newPendingLogs.push({
           id: newLogId,
@@ -144,8 +150,8 @@ export default function GeoneraPage() {
 
       setPredictionLogs(prevLogs => [...newPendingLogs, ...prevLogs].slice(0, MAX_LOG_ITEMS));
       
-      if ((!selectedPredictionLog || !selectedCurrencyPairs.includes(selectedPredictionLog.currencyPair)) && newPendingLogs.length > 0) {
-        const firstNewLogForAnySelectedPair = newPendingLogs.find(log => selectedCurrencyPairs.includes(log.currencyPair));
+      if ((!selectedPredictionLog || !currentSelectedPairs.includes(selectedPredictionLog.currencyPair)) && newPendingLogs.length > 0) {
+        const firstNewLogForAnySelectedPair = newPendingLogs.find(log => currentSelectedPairs.includes(log.currencyPair));
         if (firstNewLogForAnySelectedPair) {
             setSelectedPredictionLog(firstNewLogForAnySelectedPair);
         } else if (newPendingLogs.length > 0) { 
@@ -165,14 +171,24 @@ export default function GeoneraPage() {
       
       setPredictionLogs(prevLogs => {
         let updatedLogs = [...prevLogs]; 
+        const trulySelectedPairs = latestSelectedCurrencyPairsRef.current; // Get latest selection again for processing results
 
         results.forEach(({ result, pendingLog }) => {
-          if (!selectedCurrencyPairs.includes(pendingLog.currencyPair)) {
-              return; 
+          // If the pair for this log is NO LONGER in the *globally current* selection, remove it.
+          if (!trulySelectedPairs.includes(pendingLog.currencyPair)) {
+            updatedLogs = updatedLogs.filter(log => log.id !== pendingLog.id);
+            // If this was the selectedPredictionLog, it needs to be cleared.
+            // This will be handled by the dedicated useEffect for selectedPredictionLog.
+            if (selectedPredictionLog?.id === pendingLog.id) {
+                setSelectedPredictionLog(null); // Proactively clear if it's removed
+            }
+            return; 
           }
 
           const logIndex = updatedLogs.findIndex(log => log.id === pendingLog.id);
           if (logIndex === -1) {
+            // This can happen if the log was already removed (e.g., by another concurrent update or expiration)
+            // or if it was filtered out due to pair deselection just before this update.
             console.warn(`Pending log with id ${pendingLog.id} for ${pendingLog.currencyPair} not found for update.`);
             return; 
           }
@@ -197,12 +213,17 @@ export default function GeoneraPage() {
             logToUpdateOrBecomeSelected = newSuccessfulLog;
           }
           
+          // Update selectedPredictionLog using the latest set of selected pairs (`trulySelectedPairs`)
           if (selectedPredictionLog?.id === pendingLog.id) {
               setSelectedPredictionLog(logToUpdateOrBecomeSelected);
-          } else if ((!selectedPredictionLog || !selectedCurrencyPairs.includes(selectedPredictionLog.currencyPair)) && 
-                     selectedCurrencyPairs.includes(pendingLog.currencyPair) && 
-                     pendingLog.currencyPair === selectedCurrencyPairs[0]) { 
-              setSelectedPredictionLog(logToUpdateOrBecomeSelected);
+          } else if ((!selectedPredictionLog || !trulySelectedPairs.includes(selectedPredictionLog.currencyPair)) && 
+                     trulySelectedPairs.includes(pendingLog.currencyPair)) {
+              // If no log is selected OR current selected log's pair is deselected,
+              // AND this log's pair IS selected, consider making it the selected log.
+              // Prioritize the first of the truly selected pairs if multiple are updated.
+              if (pendingLog.currencyPair === trulySelectedPairs[0] || trulySelectedPairs.length === 1) {
+                 setSelectedPredictionLog(logToUpdateOrBecomeSelected);
+              }
           }
         });
         return updatedLogs; 
@@ -211,7 +232,7 @@ export default function GeoneraPage() {
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
         let toastTitle = "Predictions Updated";
         let toastDescription = "";
-        const relevantPairs = selectedCurrencyPairs.join(', ');
+        const relevantPairs = trulySelectedPairs.join(', '); // Use trulySelectedPairs for toast
 
         if (successCount > 0 && errorCount === 0) {
           toastDescription = `${successCount} prediction(s) completed for ${relevantPairs}.`;
@@ -242,7 +263,7 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [currentUser, selectedCurrencyPairs, pipsTarget, toast, generateId, isLoading]);
+  }, [currentUser, pipsTarget, toast, generateId, isLoading, predictionLogs, selectedPredictionLog]); // Added predictionLogs and selectedPredictionLog because they are read in performPrediction for selection logic
 
 
   // Prediction expiration useEffect
@@ -252,9 +273,19 @@ export default function GeoneraPage() {
     const expirationIntervalId = setInterval(() => {
       const now = new Date(); 
       let didAnyExpireOrGetFilteredOut = false;
+      const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
 
       setPredictionLogs(prevLogs => {
         const newLogs = prevLogs.filter(log => {
+          // Also remove PENDING logs for pairs that are no longer selected
+          if (log.status === "PENDING" && !currentSelectedPairs.includes(log.currencyPair)) {
+            didAnyExpireOrGetFilteredOut = true;
+            if (selectedPredictionLog?.id === log.id) {
+              setSelectedPredictionLog(null);
+            }
+            return false; // Remove this log
+          }
+
           if (log.status !== "SUCCESS" || !log.expiresAt) {
             return true; 
           }
@@ -270,10 +301,10 @@ export default function GeoneraPage() {
         return newLogs;
       });
       
-      if (didAnyExpireOrGetFilteredOut && !selectedPredictionLog && selectedCurrencyPairs.length > 0) {
-         setPredictionLogs(currentLogs => {
+      if (didAnyExpireOrGetFilteredOut && !selectedPredictionLog && currentSelectedPairs.length > 0) {
+         setPredictionLogs(currentLogs => { // Reading currentLogs here
            const firstAvailableForSelectedPairs = currentLogs.find(log => 
-             selectedCurrencyPairs.includes(log.currencyPair) && 
+             currentSelectedPairs.includes(log.currencyPair) && 
              log.status === "SUCCESS" && 
              log.expiresAt && 
              new Date(log.expiresAt) > now
@@ -287,36 +318,37 @@ export default function GeoneraPage() {
     }, 1000); 
 
     return () => clearInterval(expirationIntervalId); 
-  }, [currentUser, selectedPredictionLog, selectedCurrencyPairs, predictionLogs]); // predictionLogs dependency is okay here as it reads it.
+  }, [currentUser, selectedPredictionLog]); // Removed predictionLogs and selectedCurrencyPairs from deps to avoid frequent reruns of this interval setup. Ref access is fine.
 
   // Effect to reset selectedPredictionLog if its currency pair is deselected or if no log is selected
   useEffect(() => {
     if (!currentUser) return;
+    const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
 
-    if (selectedPredictionLog && !selectedCurrencyPairs.includes(selectedPredictionLog.currencyPair)) {
+    if (selectedPredictionLog && !currentSelectedPairs.includes(selectedPredictionLog.currencyPair)) {
       const nextValidLog = predictionLogs.find(log =>
-        selectedCurrencyPairs.includes(log.currencyPair) &&
+        currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "SUCCESS" &&
         log.expiresAt && new Date(log.expiresAt) > new Date()
       ) || predictionLogs.find(log => 
-        selectedCurrencyPairs.includes(log.currencyPair) &&
+        currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "PENDING"
       );
       setSelectedPredictionLog(nextValidLog || null);
-    } else if (!selectedPredictionLog && selectedCurrencyPairs.length > 0) {
+    } else if (!selectedPredictionLog && currentSelectedPairs.length > 0) {
       const firstLogForSelectedPairs = predictionLogs.find(log =>
-        selectedCurrencyPairs.includes(log.currencyPair) &&
+        currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "SUCCESS" &&
         log.expiresAt && new Date(log.expiresAt) > new Date()
       ) || predictionLogs.find(log =>
-        selectedCurrencyPairs.includes(log.currencyPair) &&
+        currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "PENDING"
       );
       if (firstLogForSelectedPairs) {
         setSelectedPredictionLog(firstLogForSelectedPairs);
       }
     }
-  }, [currentUser, selectedCurrencyPairs, selectedPredictionLog, predictionLogs]); // Removed setSelectedPredictionLog, kept others
+  }, [currentUser, selectedCurrencyPairs, selectedPredictionLog, predictionLogs]); 
 
 
   if (!isAuthCheckComplete) {
@@ -346,8 +378,8 @@ export default function GeoneraPage() {
     );
   }
 
-  const logsForTable = selectedCurrencyPairs.length > 0 
-    ? predictionLogs.filter(log => selectedCurrencyPairs.includes(log.currencyPair))
+  const logsForTable = latestSelectedCurrencyPairsRef.current.length > 0 
+    ? predictionLogs.filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
     : []; 
 
   return (
@@ -356,7 +388,7 @@ export default function GeoneraPage() {
       <main className="flex-grow container mx-auto px-4 py-4">
         <div className="max-w-7xl mx-auto space-y-4">
           <PipsParameterForm
-            selectedCurrencyPairs={selectedCurrencyPairs}
+            selectedCurrencyPairs={selectedCurrencyPairs} // Pass state for controlled component
             pipsTarget={pipsTarget}
             onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
             onPipsChange={handlePipsChange}
@@ -386,3 +418,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
