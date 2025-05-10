@@ -501,10 +501,8 @@ export default function GeoneraPage() {
         </div>
       </main>
       <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
-        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice.
-        {` Predictions update automatically every ${PREDICTION_INTERVAL_MS / 1000} seconds if parameters are valid. Active predictions are removed after a variable duration (typically ${MIN_EXPIRATION_SECONDS}s - ${MAX_EXPIRATION_SECONDS / (60*60*24)} days).`}
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved.
       </footer>
     </div>
   );
 }
-
