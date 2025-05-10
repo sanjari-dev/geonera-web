@@ -9,7 +9,7 @@ import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
 import { CandlestickDisplay } from '@/components/geonera/candlestick-display';
-import type { PredictionLogItem, CurrencyPair, PipsTargetRange, User } from '@/types';
+import type { PredictionLogItem, CurrencyPair, PipsTargetRange, User, PredictionStatus } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
@@ -91,16 +91,9 @@ export default function GeoneraPage() {
   }, []);
 
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
-    // Only select if the log's currency pair is currently in the selected list,
-    // or if no pairs are selected (in which case any log is fine if it's somehow present)
-    // This check might be redundant if logsForTable is already filtered, but good for safety.
     if (selectedCurrencyPairs.length === 0 || selectedCurrencyPairs.includes(log.currencyPair)) {
       setSelectedPredictionLog(log);
     } else {
-      // If the clicked log is for a pair not currently selected,
-      // ideally, this scenario shouldn't happen if the table is correctly filtered.
-      // But if it does, we could choose to not select it, or clear selection.
-      // For now, assume table filtering prevents this.
       setSelectedPredictionLog(log); 
     }
   }, [selectedCurrencyPairs]);
@@ -152,9 +145,13 @@ export default function GeoneraPage() {
       setPredictionLogs(prevLogs => [...newPendingLogs, ...prevLogs].slice(0, MAX_LOG_ITEMS));
       
       if ((!selectedPredictionLog || !selectedCurrencyPairs.includes(selectedPredictionLog.currencyPair)) && newPendingLogs.length > 0) {
-        setSelectedPredictionLog(newPendingLogs[0]);
+        const firstNewLogForAnySelectedPair = newPendingLogs.find(log => selectedCurrencyPairs.includes(log.currencyPair));
+        if (firstNewLogForAnySelectedPair) {
+            setSelectedPredictionLog(firstNewLogForAnySelectedPair);
+        } else if (newPendingLogs.length > 0) { 
+            setSelectedPredictionLog(newPendingLogs[0]);
+        }
       }
-
 
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
         const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsTarget);
@@ -166,46 +163,52 @@ export default function GeoneraPage() {
       let successCount = 0;
       let errorCount = 0;
       
-      results.forEach(({ result, pendingLog }) => {
-        // Ensure we only process results for currently selected currency pairs
-        if (!selectedCurrencyPairs.includes(pendingLog.currencyPair)) {
-            return; 
-        }
+      setPredictionLogs(prevLogs => {
+        let updatedLogs = [...prevLogs]; 
 
-        if (result.error) {
-          errorCount++;
-          setPredictionLogs(prevLogs => 
-            prevLogs.map(log => 
-              log.id === pendingLog.id ? { ...log, status: "ERROR", error: result.error } : log
-            )
-          );
-          if (selectedPredictionLog?.id === pendingLog.id) {
-              setSelectedPredictionLog(prev => prev ? { ...prev, status: "ERROR", error: result.error } : null);
+        results.forEach(({ result, pendingLog }) => {
+          if (!selectedCurrencyPairs.includes(pendingLog.currencyPair)) {
+              return; 
           }
-        } else if (result.data) {
-          successCount++;
-          const randomExpirationMs = (Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS) * 1000;
-          const newSuccessfulLog: PredictionLogItem = { 
-              ...pendingLog, 
-              status: "SUCCESS", 
-              predictionOutcome: result.data,
-              expiresAt: new Date(Date.now() + randomExpirationMs) 
-          };
+
+          const logIndex = updatedLogs.findIndex(log => log.id === pendingLog.id);
+          if (logIndex === -1) {
+            console.warn(`Pending log with id ${pendingLog.id} for ${pendingLog.currencyPair} not found for update.`);
+            return; 
+          }
+
+          let logToUpdateOrBecomeSelected = updatedLogs[logIndex];
+
+          if (result.error) {
+            errorCount++;
+            const erroredLog = { ...updatedLogs[logIndex], status: "ERROR" as PredictionStatus, error: result.error };
+            updatedLogs[logIndex] = erroredLog;
+            logToUpdateOrBecomeSelected = erroredLog;
+          } else if (result.data) {
+            successCount++;
+            const randomExpirationMs = (Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS) * 1000;
+            const newSuccessfulLog: PredictionLogItem = { 
+                ...pendingLog, 
+                status: "SUCCESS", 
+                predictionOutcome: result.data,
+                expiresAt: new Date(Date.now() + randomExpirationMs) 
+            };
+            updatedLogs[logIndex] = newSuccessfulLog;
+            logToUpdateOrBecomeSelected = newSuccessfulLog;
+          }
           
-          setPredictionLogs(prevLogs => 
-            prevLogs.map(log => 
-              log.id === pendingLog.id ? newSuccessfulLog : log
-            )
-          );
           if (selectedPredictionLog?.id === pendingLog.id) {
-              setSelectedPredictionLog(newSuccessfulLog);
-          } else if ((!selectedPredictionLog || !selectedCurrencyPairs.includes(selectedPredictionLog.currencyPair)) && selectedCurrencyPairs.includes(pendingLog.currencyPair) && pendingLog.currencyPair === selectedCurrencyPairs[0]) { 
-              setSelectedPredictionLog(newSuccessfulLog);
+              setSelectedPredictionLog(logToUpdateOrBecomeSelected);
+          } else if ((!selectedPredictionLog || !selectedCurrencyPairs.includes(selectedPredictionLog.currencyPair)) && 
+                     selectedCurrencyPairs.includes(pendingLog.currencyPair) && 
+                     pendingLog.currencyPair === selectedCurrencyPairs[0]) { 
+              setSelectedPredictionLog(logToUpdateOrBecomeSelected);
           }
-        }
+        });
+        return updatedLogs; 
       });
 
-      if (results.length > 0 && (successCount > 0 || errorCount > 0)) { // Only toast if there were relevant results
+      if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
         let toastTitle = "Predictions Updated";
         let toastDescription = "";
         const relevantPairs = selectedCurrencyPairs.join(', ');
@@ -239,7 +242,7 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [currentUser, selectedCurrencyPairs, pipsTarget, toast, generateId, isLoading, predictionLogs.length, selectedPredictionLog]);
+  }, [currentUser, selectedCurrencyPairs, pipsTarget, toast, generateId, isLoading]);
 
 
   // Prediction expiration useEffect
@@ -252,7 +255,6 @@ export default function GeoneraPage() {
 
       setPredictionLogs(prevLogs => {
         const newLogs = prevLogs.filter(log => {
-          // Keep if not SUCCESS or no expiresAt
           if (log.status !== "SUCCESS" || !log.expiresAt) {
             return true; 
           }
@@ -260,7 +262,7 @@ export default function GeoneraPage() {
           if (isExpired) {
             didAnyExpireOrGetFilteredOut = true;
             if (selectedPredictionLog?.id === log.id) {
-              setSelectedPredictionLog(null); // Clear selection if expired
+              setSelectedPredictionLog(null); 
             }
           }
           return !isExpired; 
@@ -271,7 +273,7 @@ export default function GeoneraPage() {
       if (didAnyExpireOrGetFilteredOut && !selectedPredictionLog && selectedCurrencyPairs.length > 0) {
          setPredictionLogs(currentLogs => {
            const firstAvailableForSelectedPairs = currentLogs.find(log => 
-             selectedCurrencyPairs.includes(log.currencyPair) && // Must be for a currently selected pair
+             selectedCurrencyPairs.includes(log.currencyPair) && 
              log.status === "SUCCESS" && 
              log.expiresAt && 
              new Date(log.expiresAt) > now
@@ -285,25 +287,23 @@ export default function GeoneraPage() {
     }, 1000); 
 
     return () => clearInterval(expirationIntervalId); 
-  }, [currentUser, selectedPredictionLog, selectedCurrencyPairs, predictionLogs]); 
+  }, [currentUser, selectedPredictionLog, selectedCurrencyPairs, predictionLogs]); // predictionLogs dependency is okay here as it reads it.
 
   // Effect to reset selectedPredictionLog if its currency pair is deselected or if no log is selected
   useEffect(() => {
     if (!currentUser) return;
 
     if (selectedPredictionLog && !selectedCurrencyPairs.includes(selectedPredictionLog.currencyPair)) {
-      // The selected log's currency pair is no longer active.
       const nextValidLog = predictionLogs.find(log =>
         selectedCurrencyPairs.includes(log.currencyPair) &&
         log.status === "SUCCESS" &&
         log.expiresAt && new Date(log.expiresAt) > new Date()
-      ) || predictionLogs.find(log => // Fallback to a pending log for selected pairs
+      ) || predictionLogs.find(log => 
         selectedCurrencyPairs.includes(log.currencyPair) &&
         log.status === "PENDING"
       );
       setSelectedPredictionLog(nextValidLog || null);
     } else if (!selectedPredictionLog && selectedCurrencyPairs.length > 0) {
-      // If no log is selected, but there are selected pairs, try to select the first available log.
       const firstLogForSelectedPairs = predictionLogs.find(log =>
         selectedCurrencyPairs.includes(log.currencyPair) &&
         log.status === "SUCCESS" &&
@@ -316,7 +316,7 @@ export default function GeoneraPage() {
         setSelectedPredictionLog(firstLogForSelectedPairs);
       }
     }
-  }, [currentUser, selectedCurrencyPairs, selectedPredictionLog, predictionLogs, setSelectedPredictionLog]);
+  }, [currentUser, selectedCurrencyPairs, selectedPredictionLog, predictionLogs]); // Removed setSelectedPredictionLog, kept others
 
 
   if (!isAuthCheckComplete) {
@@ -346,10 +346,9 @@ export default function GeoneraPage() {
     );
   }
 
-  // Filter logs for display in the table based on selectedCurrencyPairs
   const logsForTable = selectedCurrencyPairs.length > 0 
     ? predictionLogs.filter(log => selectedCurrencyPairs.includes(log.currencyPair))
-    : []; // If no currency pairs are selected, table should be empty or show a message via PredictionsTable component.
+    : []; 
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
