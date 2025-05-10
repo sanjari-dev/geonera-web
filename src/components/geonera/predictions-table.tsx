@@ -73,17 +73,17 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
   return (
     <TooltipProvider>
-      <Card className="shadow-xl overflow-hidden h-full">
+      <Card className="shadow-xl overflow-hidden h-full"> {/* Removed w-fit, width determined by parent grid column */}
         <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
            <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
            <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]"> {/* Adjusted height */}
-            <Table>
+          <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]">
+            <Table> {/* The inner table will now size to content due to ui/table.tsx change */}
               <TableHeader className="sticky top-0 bg-card z-10 border-b border-border">
                 <TableRow>
-                  <TableHead className="w-[40px] px-1 py-0.5 text-center whitespace-nowrap">
+                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Status</TooltipTrigger>
                       <TooltipContent>
@@ -91,7 +91,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[130px] px-1 py-0.5 text-center whitespace-nowrap">
+                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Timestamp</TooltipTrigger>
                       <TooltipContent>
@@ -99,7 +99,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[80px] px-1 py-0.5 text-center whitespace-nowrap">
+                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Pair</TooltipTrigger>
                       <TooltipContent>
@@ -107,7 +107,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[80px] px-1 py-0.5 text-center whitespace-nowrap"> {/* Adjusted min-width */}
+                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">PIPS Target</TooltipTrigger>
                       <TooltipContent>
@@ -115,7 +115,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[80px] px-1 py-0.5 text-center whitespace-nowrap"> {/* Adjusted min-width */}
+                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
                      <Tooltip>
                       <TooltipTrigger className="cursor-default">Signal (MT5)</TooltipTrigger>
                       <TooltipContent>
@@ -123,7 +123,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[110px] px-1 py-0.5 text-center whitespace-nowrap"> 
+                  <TableHead className="px-1 py-2 text-center whitespace-nowrap"> 
                     <Tooltip>
                       <TooltipTrigger className="cursor-default flex items-center justify-center">
                         <Timer className="h-4 w-4 mr-1"/> Expires In
@@ -136,7 +136,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {predictions.map((log) => ( // Display logs oldest first
+                {predictions.map((log) => ( 
                   <TableRow 
                     key={log.id} 
                     onClick={() => onRowClick(log)}

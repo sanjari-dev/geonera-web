@@ -108,9 +108,9 @@ export default function GeoneraPage() {
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
     const logFromState = predictionLogs.find(l => l.id === log.id);
      if (logFromState) {
-      setSelectedPredictionLog(produce(logFromState, draft => { return draft; })); 
+      setSelectedPredictionLog(produce(logFromState, draft => draft)); 
     } else {
-      setSelectedPredictionLog(produce(log, draft => { return draft; })); 
+      setSelectedPredictionLog(produce(log, draft => draft)); 
     }
   }, [predictionLogs]);
 
@@ -183,7 +183,6 @@ export default function GeoneraPage() {
         if (draft.length > MAX_PREDICTION_LOGS) {
           draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
-        // No need to return draft explicitly, Immer handles it if draft is modified
       }));
       
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
@@ -227,7 +226,6 @@ export default function GeoneraPage() {
         if (draft.length > MAX_PREDICTION_LOGS) {
           draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
-       // No need to return draft explicitly
       }));
 
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
@@ -281,32 +279,25 @@ export default function GeoneraPage() {
           const log = draft[i];
           let removeLog = false;
 
-          // Remove if currency pair is no longer selected (applies to PENDING or SUCCESS)
-          if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS")) {
+          if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS" || log.status === "ERROR")) {
             removeLog = true;
           }
 
-          // Remove if SUCCESS log is expired
           if (log.status === "SUCCESS" && log.expiresAt && now > new Date(log.expiresAt)) {
             removeLog = true;
           }
           
           if (removeLog) {
-            const removedLogId = draft[i].id;
             draft.splice(i, 1);
             didChange = true;
-            if (selectedPredictionLog && selectedPredictionLog.id === removedLogId) {
-              // Postpone clearing selection to the dedicated effect for selection management
-            }
           }
         }
-        if (!didChange) return undefined; // No changes, return undefined for Immer to optimize
-        // No need to return draft explicitly if modified
+        if (!didChange) return undefined; 
       }));
     }, 1000);
 
     return () => clearInterval(expirationIntervalId);
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); // Removed predictionLogs from dep array to avoid self-triggering loops with produce
+  }, [currentUser, isAuthCheckComplete]); 
 
 
   // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
@@ -315,43 +306,34 @@ export default function GeoneraPage() {
       if (selectedPredictionLog !== null) setSelectedPredictionLog(null);
       return;
     }
-
+  
     const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
     let newSelectedLogCandidate: PredictionLogItem | null = null;
-
+  
     if (currentSelectedPairs.length > 0 && predictionLogs.length > 0) {
-      // Filter logs for selected pairs that are not expired (if SUCCESS) or are PENDING/ERROR
       const eligibleLogs = predictionLogs
         .filter(log =>
           currentSelectedPairs.includes(log.currencyPair) &&
           !(log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) < new Date())
         )
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); // Sort OLDEST first
-
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); 
+  
       if (eligibleLogs.length > 0) {
-        // If there's an existing selection, try to maintain it if it's still in eligibleLogs
         const currentSelectionStillEligible = selectedPredictionLog && eligibleLogs.find(log => log.id === selectedPredictionLog.id);
-
+  
         if (currentSelectionStillEligible) {
-          newSelectedLogCandidate = currentSelectionStillEligible; // Use the (potentially updated) object from eligibleLogs
+          newSelectedLogCandidate = produce(currentSelectionStillEligible, draft => draft);
         } else {
-          // Otherwise, pick the first (oldest) eligible log
-          newSelectedLogCandidate = eligibleLogs[0];
+          newSelectedLogCandidate = produce(eligibleLogs[0], draft => draft);
         }
       }
     }
-    // If no currentSelectedPairs, or no predictionLogs, or no eligibleLogs, newSelectedLogCandidate remains null.
-
-    const finalNewSelectedLog = newSelectedLogCandidate ? produce(newSelectedLogCandidate, draft => draft) : null;
-
-    // Update state only if there's a change in selection ID or if the selected object's content changed
-    // or if one is null and the other is not.
-    if (selectedPredictionLog?.id !== finalNewSelectedLog?.id ||
-        (finalNewSelectedLog && selectedPredictionLog && JSON.stringify(selectedPredictionLog) !== JSON.stringify(finalNewSelectedLog)) ||
-        (selectedPredictionLog === null && finalNewSelectedLog !== null) ||
-        (selectedPredictionLog !== null && finalNewSelectedLog === null)
-    ) {
-      setSelectedPredictionLog(finalNewSelectedLog);
+    
+    if (selectedPredictionLog?.id !== newSelectedLogCandidate?.id || 
+        (selectedPredictionLog && newSelectedLogCandidate && JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedLogCandidate)) ||
+        (!selectedPredictionLog && newSelectedLogCandidate) || (selectedPredictionLog && !newSelectedLogCandidate)
+       ) {
+      setSelectedPredictionLog(newSelectedLogCandidate);
     }
   }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]);
 
@@ -378,10 +360,12 @@ export default function GeoneraPage() {
   }
 
   const logsForTable = currentUser && latestSelectedCurrencyPairsRef.current.length > 0
-    ? predictionLogs.filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
+    ? predictionLogs
+        .filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
+        .sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Sort oldest first for display
     : [];
   
-  const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => { return draft; }) : null;
+  const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
 
 
   return (
@@ -396,11 +380,12 @@ export default function GeoneraPage() {
             onPipsChange={handlePipsChange}
             isLoading={isLoading}
           />
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-4"> {/* Adjusted from md:col-span-3 */}
+          {/* Adjusted grid layout: Candlestick (flexible min 256px), Table (content width), Details (fixed ~320px) */}
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(theme(spacing.64),1fr)_auto_theme(spacing.80)] gap-4">
+            <div> {/* CandlestickDisplay column */}
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="md:col-span-5"> {/* Adjusted from md:col-span-6 */}
+            <div className="max-w-max"> {/* PredictionsTable column - try to fit content width */}
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -408,7 +393,7 @@ export default function GeoneraPage() {
                 maxLogs={MAX_PREDICTION_LOGS}
               />
             </div>
-            <div className="md:col-span-3"> {/* Remains md:col-span-3 */}
+            <div> {/* PredictionDetailsPanel column */}
               <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
           </div>
