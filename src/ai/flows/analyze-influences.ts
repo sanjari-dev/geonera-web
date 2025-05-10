@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -24,15 +25,18 @@ const AnalyzePipsInfluenceInputSchema = z.object({
 });
 
 const PipsPredictionOutcomeSchema = z.object({
-  outcome: z
+  tradingSignal: z
+    .enum(["BUY", "SELL", "HOLD", "WAIT", "N/A"])
+    .describe('The trading signal (e.g., BUY, SELL, HOLD, WAIT, N/A).'),
+  signalDetails: z
     .string()
     .describe(
-      'The predicted outcome regarding the pips target (e.g., "Price expected to increase by at least X pips.", "Unlikely to reach X pips target.", "Price may consolidate, not hitting the target.").'
+      'Detailed information about the signal, e.g., "Price expected to increase by at least X pips.", "Unlikely to reach X pips target."'
     ),
   reasoning: z
     .string()
     .describe(
-      'The AI’s reasoning behind the prediction, including influential factors and analysis towards the pips target.'
+      'The AI’s reasoning behind the prediction, including influential factors and analysis.'
     ),
 });
 
@@ -51,8 +55,9 @@ Currency Pair: {{{currencyPair}}}
 Target Pips: {{{pipsTarget}}}
 
 Analyze current market sentiment and typical behavior for this pair and provide:
-1.  'outcome': A clear statement on whether the {{{pipsTarget}}} pips movement is likely (e.g., "Likely to increase by at least {{{pipsTarget}}} pips", "Unlikely to reach {{{pipsTarget}}} pips, may decrease", "Neutral, price consolidation expected below {{{pipsTarget}}} pips movement").
-2.  'reasoning': A detailed explanation for your prediction, highlighting key factors and typical price patterns that support your conclusion regarding the pips target.
+1.  'tradingSignal': A trading signal (BUY, SELL, HOLD, WAIT, N/A) based on whether the {{{pipsTarget}}} pips movement is likely.
+2.  'signalDetails': A clear statement describing the expected price movement in relation to the {{{pipsTarget}}} pips (e.g., "Likely to increase by at least {{{pipsTarget}}} pips", "Unlikely to reach {{{pipsTarget}}} pips, may decrease", "Neutral, price consolidation expected below {{{pipsTarget}}} pips movement").
+3.  'reasoning': A detailed explanation for your prediction, highlighting key factors and typical price patterns that support your conclusion regarding the pips target and the trading signal.
 `,
 });
 

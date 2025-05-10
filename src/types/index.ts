@@ -5,17 +5,18 @@ export type CurrencyPair = "XAU/USD" | "BTC/USD"; // Add more as needed
 export interface CurrencyOption {
   value: CurrencyPair;
   label: string;
-  icon?: LucideIcon; // Corrected: LucideIcon is a type for the component itself
+  icon?: LucideIcon;
 }
 
 export type PipsTarget = number;
 
-export type PredictionStatus = "IDLE" | "PENDING" | "SUCCESS" | "ERROR"; // Removed "EXPIRED"
+export type PredictionStatus = "IDLE" | "PENDING" | "SUCCESS" | "ERROR";
 
-// This will be the output structure from the modified AI flow
+// This will be the output structure from the AI flow or mock generator
 export interface PipsPredictionOutcome {
-  outcome: string; // e.g., "Price expected to increase by ~15 pips.", "Likely to decrease, missing target.", "Neutral, no significant move towards target."
-  reasoning: string;
+  tradingSignal: "BUY" | "SELL" | "HOLD" | "WAIT" | "N/A"; // For "Buy/Sell/etc (MT5)" column
+  signalDetails: string; // Descriptive outcome, e.g., "Price expected to increase by ~15 pips."
+  reasoning: string; // AI's reasoning or mock data reasoning
 }
 
 // This will represent an item in our prediction log table
@@ -30,9 +31,8 @@ export interface PredictionLogItem {
   expiresAt?: Date;
 }
 
-// This will be the input for the modified AI flow
+// This will be the input for the AI flow
 export interface AnalyzePipsInfluenceInput {
   currencyPair: CurrencyPair;
   pipsTarget: PipsTarget;
 }
-

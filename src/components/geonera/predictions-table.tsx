@@ -4,7 +4,6 @@
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -12,8 +11,8 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react"; // Removed TimerOff
-import type { PredictionLogItem, PredictionStatus } from '@/types';
+import { AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react";
+import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome } from '@/types';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -30,15 +29,24 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
       return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     case "ERROR":
       return <AlertCircle className="h-4 w-4 text-red-500" />;
-    case "IDLE": // IDLE might still be relevant if predictions can be paused/stopped
+    case "IDLE":
        return <Info className="h-4 w-4 text-gray-400" />;
-    // EXPIRED case is removed as items will be filtered out
-    // case "EXPIRED":
-    //   return <TimerOff className="h-4 w-4 text-orange-500" />;
     default:
       return null;
   }
 };
+
+const getSignalBadgeVariant = (signal: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
+  switch (signal) {
+    case "BUY": return "default"; // Primary color (e.g., blue/greenish if theme supports)
+    case "SELL": return "destructive"; // Red
+    case "HOLD": return "secondary"; // Gray
+    case "WAIT": return "outline"; // Neutral outline
+    case "N/A": return "secondary";
+    default: return "secondary";
+  }
+};
+
 
 export function PredictionsTable({ predictions }: PredictionsTableProps) {
   if (predictions.length === 0) {
@@ -55,29 +63,26 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
     <Card className="shadow-xl overflow-hidden">
       <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
          <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
-         <CardDescription className="text-sm text-primary/80">Tracks active predictions based on your parameters. Predictions are automatically removed when they expire.</CardDescription>
+         <CardDescription className="text-sm text-primary/80">Tracks active predictions. Expired predictions are automatically removed.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[280px] md:h-[320px]"> {/* Adjusted height */}
+        <ScrollArea className="h-[280px] md:h-[320px]">
           <Table>
             <TableHeader className="sticky top-0 bg-card z-10">
               <TableRow>
                 <TableHead className="w-[50px] p-3">Status</TableHead>
                 <TableHead className="w-[150px] p-3">Timestamp</TableHead>
                 <TableHead className="p-3">Pair</TableHead>
-                <TableHead className="text-right p-3">Pips Target</TableHead>
-                <TableHead className="p-3">Outcome</TableHead>
-                <TableHead className="p-3">Reasoning / Error</TableHead>
+                <TableHead className="text-right p-3">PIPS Target</TableHead>
+                <TableHead className="p-3">Signal (MT5)</TableHead>
+                <TableHead className="p-3">Details / Reasoning</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {predictions.map((log) => (
                 <TableRow 
                   key={log.id} 
-                  className={cn(
-                    "hover:bg-muted/50 transition-colors"
-                    // Removed EXPIRED styling as items are removed
-                  )}
+                  className={cn("hover:bg-muted/50 transition-colors")}
                 >
                   <TableCell className="p-3">
                     <StatusIndicator status={log.status} />
@@ -90,17 +95,30 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
                     <Badge variant={"secondary"}>{log.pipsTarget}</Badge>
                   </TableCell>
                   <TableCell className="p-3 text-sm">
-                    {log.status === "SUCCESS" && log.predictionOutcome?.outcome
-                      ? log.predictionOutcome.outcome
-                      : log.status === "PENDING"
-                      ? "Awaiting prediction..."
-                      : "N/A"}
+                    {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
+                      <Badge variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}>
+                        {log.predictionOutcome.tradingSignal}
+                      </Badge>
+                    ) : log.status === "PENDING" ? (
+                      "..."
+                    ) : (
+                      "N/A"
+                    )}
                   </TableCell>
-                  <TableCell className="p-3 text-xs max-w-[150px] md:max-w-xs truncate hover:whitespace-normal hover:max-w-none hover:overflow-visible" title={log.status === "SUCCESS" ? log.predictionOutcome?.reasoning : log.error}>
-                    {log.status === "SUCCESS" && log.predictionOutcome?.reasoning
-                      ? log.predictionOutcome.reasoning
+                  <TableCell 
+                    className="p-3 text-xs max-w-[150px] md:max-w-xs truncate hover:whitespace-normal hover:max-w-none hover:overflow-visible" 
+                    title={
+                      log.status === "SUCCESS" && log.predictionOutcome 
+                        ? `${log.predictionOutcome.signalDetails} - ${log.predictionOutcome.reasoning}` 
+                        : log.error
+                    }
+                  >
+                    {log.status === "SUCCESS" && log.predictionOutcome?.signalDetails
+                      ? log.predictionOutcome.signalDetails
                       : log.status === "ERROR"
                       ? log.error
+                      : log.status === "PENDING"
+                      ? "Awaiting analysis..."
                       : "-"}
                   </TableCell>
                 </TableRow>
@@ -111,10 +129,12 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
       </CardContent>
        {predictions.length > 0 && (
         <CardFooter className="p-3 text-xs text-muted-foreground border-t">
-          Displaying {predictions.length} active prediction log(s). Hover over reasoning for full text. Expired predictions are removed.
+          Displaying {predictions.length} active prediction log(s). Hover over Details / Reasoning for full text.
         </CardFooter>
       )}
     </Card>
   );
 }
 
+// Define VariantProps type locally if not globally available or for clarity
+type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
