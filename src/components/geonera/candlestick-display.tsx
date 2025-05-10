@@ -4,7 +4,7 @@
 import type { PredictionLogItem } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info, TrendingUp } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 interface CandlestickDisplayProps {
@@ -64,8 +64,8 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
   const chartData = ohlcData && ohlcData.openPrice !== undefined && ohlcData.highPrice !== undefined && ohlcData.lowPrice !== undefined && ohlcData.closePrice !== undefined
     ? [{
         name: selectedPrediction.currencyPair,
+        currencyPair: selectedPrediction.currencyPair, // Pass for potential direct labeling in shape
         ohlc: [ohlcData.lowPrice, ohlcData.openPrice, ohlcData.closePrice, ohlcData.highPrice],
-        // Pass domain for y-axis scaling to the custom shape if needed, or calculate it here
         // This 'value' dataKey is just to make the Bar component render. The shape does the real work.
         value: ohlcData.highPrice, 
         domainY: [ohlcData.lowPrice * 0.995, ohlcData.highPrice * 1.005] // slightly padded domain
@@ -97,7 +97,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
             <BarChart
               accessibilityLayer
               data={chartData}
-              margin={{ top: 20, right: 0, left: -25, bottom: 5 }} // Adjusted left margin for YAxis labels
+              margin={{ top: 20, right: 10, left: -15, bottom: 5 }} // Adjusted margins
             >
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
@@ -113,6 +113,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
                 tickMargin={8} 
                 domain={yDomain as [number, number]} 
                 tickFormatter={(value) => `$${value.toFixed(selectedPrediction?.currencyPair === "BTC/USD" ? 0 : 2)}`}
+                tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }} // Enhanced visibility
               />
               <ChartTooltip
                 cursor={false}
