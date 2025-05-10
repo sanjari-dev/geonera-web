@@ -107,10 +107,10 @@ export default function GeoneraPage() {
 
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
     const logFromState = predictionLogs.find(l => l.id === log.id);
-    if (logFromState) {
-      setSelectedPredictionLog(produce(logFromState, draft => draft)); 
+     if (logFromState) {
+      setSelectedPredictionLog(produce(logFromState, draft => { return draft; })); // Return the draft
     } else {
-      setSelectedPredictionLog(produce(log, draft => draft)); 
+      setSelectedPredictionLog(produce(log, draft => { return draft; })); // Return the draft
     }
   }, [predictionLogs]);
 
@@ -183,6 +183,7 @@ export default function GeoneraPage() {
         if (draft.length > MAX_PREDICTION_LOGS) {
           draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
+        return draft; // Ensure Immer returns the modified draft
       }));
       
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
@@ -226,6 +227,7 @@ export default function GeoneraPage() {
         if (draft.length > MAX_PREDICTION_LOGS) {
           draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
+        return draft; // Ensure Immer returns the modified draft
       }));
 
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
@@ -290,14 +292,19 @@ export default function GeoneraPage() {
           if (removeLog) {
             draft.splice(i, 1);
             didChange = true;
+             // If the removed log was the selected one, clear selection
+            if (selectedPredictionLog && selectedPredictionLog.id === log.id) {
+              setSelectedPredictionLog(null); 
+            }
           }
         }
-        return didChange ? draft : undefined; 
+        if (didChange) return draft;
+        return undefined; // No changes, return undefined for Immer
       }));
     }, 1000);
 
     return () => clearInterval(expirationIntervalId);
-  }, [currentUser, isAuthCheckComplete]);
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]);
 
 
   // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
@@ -313,47 +320,48 @@ export default function GeoneraPage() {
     let newSelectedCandidate: PredictionLogItem | null = null;
   
     if (selectedPredictionLog) {
+      // Check if the currently selected log is still valid (exists, matches selected pairs, not expired)
       const logInCurrentList = predictionLogs.find(log => log.id === selectedPredictionLog.id);
-      if (logInCurrentList && currentSelectedPairs.includes(logInCurrentList.currencyPair)) {
-        if (!(logInCurrentList.status === "SUCCESS" && logInCurrentList.expiresAt && new Date() > new Date(logInCurrentList.expiresAt))) {
-          newSelectedCandidate = logInCurrentList;
-        }
+      if (logInCurrentList && 
+          currentSelectedPairs.includes(logInCurrentList.currencyPair) &&
+          !(logInCurrentList.status === "SUCCESS" && logInCurrentList.expiresAt && new Date() > new Date(logInCurrentList.expiresAt))) {
+        newSelectedCandidate = logInCurrentList;
       }
     }
   
-    if (!newSelectedCandidate && currentSelectedPairs.length > 0) {
-      const activeSuccessLogs = predictionLogs.filter(log =>
-        currentSelectedPairs.includes(log.currencyPair) &&
-        log.status === "SUCCESS" &&
-        log.expiresAt && new Date(log.expiresAt) > new Date()
-      ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // If no valid candidate yet, try to find a default one from the current list and pairs
+    if (!newSelectedCandidate && currentSelectedPairs.length > 0 && predictionLogs.length > 0) {
+      const activeSuccessLogs = predictionLogs
+        .filter(log =>
+          currentSelectedPairs.includes(log.currencyPair) &&
+          log.status === "SUCCESS" &&
+          log.expiresAt && new Date(log.expiresAt) > new Date()
+        )
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Latest first
 
       if (activeSuccessLogs.length > 0) {
         newSelectedCandidate = activeSuccessLogs[0];
       } else {
-        const pendingLogs = predictionLogs.filter(log =>
-            currentSelectedPairs.includes(log.currencyPair) &&
-            log.status === "PENDING"
-          ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        if (pendingLogs.length > 0) {
-          newSelectedCandidate = pendingLogs[0];
-        } else {
-            const anyRelevantLog = predictionLogs.filter(log => currentSelectedPairs.includes(log.currencyPair))
-                                  .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-            if (anyRelevantLog.length > 0) {
-                 newSelectedCandidate = anyRelevantLog[0];
-            }
+        // Fallback to latest pending or any relevant log if no active success logs
+        const anyRelevantLog = predictionLogs
+          .filter(log => currentSelectedPairs.includes(log.currencyPair))
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        if (anyRelevantLog.length > 0) {
+          newSelectedCandidate = anyRelevantLog[0];
         }
       }
     }
     
-    const finalNewSelectedCandidate = newSelectedCandidate ? produce(newSelectedCandidate, draft => draft) : null;
+    // Create a new object for state update to ensure re-render if candidate changed
+    const finalNewSelectedCandidate = newSelectedCandidate ? produce(newSelectedCandidate, draft => { return draft; }) : null;
 
-    if (JSON.stringify(selectedPredictionLog) !== JSON.stringify(finalNewSelectedCandidate) ) {
-      setSelectedPredictionLog(finalNewSelectedCandidate);
+    if ( (selectedPredictionLog === null && finalNewSelectedCandidate !== null) ||
+         (selectedPredictionLog !== null && finalNewSelectedCandidate === null) ||
+         (selectedPredictionLog !== null && finalNewSelectedCandidate !== null && selectedPredictionLog.id !== finalNewSelectedCandidate.id) ) {
+       setSelectedPredictionLog(finalNewSelectedCandidate);
     }
   
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]);
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]); // selectedPredictionLog added to dependencies
 
 
   if (!isAuthCheckComplete) {
@@ -381,7 +389,7 @@ export default function GeoneraPage() {
     ? predictionLogs.filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
     : [];
   
-  const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
+  const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => { return draft; }) : null;
 
 
   return (
@@ -397,10 +405,10 @@ export default function GeoneraPage() {
             isLoading={isLoading}
           />
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-2">
+            <div className="md:col-span-3">
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="md:col-span-7"> 
+            <div className="md:col-span-6"> 
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -421,3 +429,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+

@@ -83,7 +83,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10 border-b border-border">
                 <TableRow>
-                  <TableHead className="w-[50px] p-2 text-center whitespace-nowrap">
+                  <TableHead className="w-[40px] p-1 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Status</TooltipTrigger>
                       <TooltipContent>
@@ -91,7 +91,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[150px] p-2 text-center whitespace-nowrap">
+                  <TableHead className="min-w-[130px] p-1 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Timestamp</TooltipTrigger>
                       <TooltipContent>
@@ -99,7 +99,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[100px] p-2 text-center whitespace-nowrap">
+                  <TableHead className="min-w-[80px] p-1 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Pair</TooltipTrigger>
                       <TooltipContent>
@@ -107,7 +107,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[120px] p-2 text-center whitespace-nowrap">
+                  <TableHead className="min-w-[100px] p-1 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">PIPS Target</TooltipTrigger>
                       <TooltipContent>
@@ -115,7 +115,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[120px] p-2 text-center whitespace-nowrap">
+                  <TableHead className="min-w-[100px] p-1 text-center whitespace-nowrap">
                      <Tooltip>
                       <TooltipTrigger className="cursor-default">Signal (MT5)</TooltipTrigger>
                       <TooltipContent>
@@ -123,7 +123,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="min-w-[130px] p-2 text-center whitespace-nowrap"> {/* Adjusted width for DD HH:MM:SS + icon */}
+                  <TableHead className="min-w-[110px] p-1 text-center whitespace-nowrap"> {/* Adjusted width for DD HH:MM:SS + icon */}
                     <Tooltip>
                       <TooltipTrigger className="cursor-default flex items-center justify-center">
                         <Timer className="h-4 w-4 mr-1"/> Expires In
@@ -136,7 +136,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {predictions.map((log) => (
+                {predictions.slice().reverse().map((log) => ( // Display latest logs at the top by reversing a copy
                   <TableRow 
                     key={log.id} 
                     onClick={() => onRowClick(log)}
@@ -145,25 +145,25 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       selectedPredictionId === log.id && "bg-secondary text-secondary-foreground hover:bg-muted"
                     )}
                   >
-                    <TableCell className="p-2 text-center whitespace-nowrap">
+                    <TableCell className="p-1 text-center whitespace-nowrap">
                       <div className="flex justify-center">
                         <StatusIndicator status={log.status} />
                       </div>
                     </TableCell>
-                    <TableCell className="p-2 text-xs text-center whitespace-nowrap">
+                    <TableCell className="p-1 text-xs text-center whitespace-nowrap">
                       {format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss")}
                     </TableCell>
-                    <TableCell className="p-2 font-medium text-center whitespace-nowrap">{log.currencyPair}</TableCell>
-                    <TableCell className="p-2 text-center whitespace-nowrap">
-                      <Badge variant={selectedPredictionId === log.id ? "default" : "secondary"}>
+                    <TableCell className="p-1 font-medium text-center whitespace-nowrap text-xs">{log.currencyPair}</TableCell>
+                    <TableCell className="p-1 text-center whitespace-nowrap text-xs">
+                      <Badge variant={selectedPredictionId === log.id ? "default" : "secondary"} className="px-1.5 py-0.5 text-[10px]">
                         {log.pipsTarget.min} - {log.pipsTarget.max}
                       </Badge>
                     </TableCell>
-                    <TableCell className="p-2 text-sm text-center whitespace-nowrap">
+                    <TableCell className="p-1 text-xs text-center whitespace-nowrap">
                       {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
                         <Badge 
                           variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
-                          className={cn("whitespace-nowrap", selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : "")}
+                          className={cn("whitespace-nowrap px-1.5 py-0.5 text-[10px]", selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : "")}
                         >
                           {log.predictionOutcome.tradingSignal}
                         </Badge>
@@ -173,9 +173,9 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                         "N/A"
                       )}
                     </TableCell>
-                    <TableCell className="p-2 text-xs text-center whitespace-nowrap">
+                    <TableCell className="p-1 text-xs text-center whitespace-nowrap">
                       {log.expiresAt && log.status === "SUCCESS" ? (
-                        <CountdownTimer expiresAt={log.expiresAt} />
+                        <CountdownTimer expiresAt={log.expiresAt} className="text-[11px]" />
                       ) : (
                         "-- --:--:--"
                       )}
@@ -198,3 +198,4 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
