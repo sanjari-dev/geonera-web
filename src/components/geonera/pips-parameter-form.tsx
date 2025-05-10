@@ -157,10 +157,6 @@ export function PipsParameterForm({
           />
         </div>
       </div>
-
-       <p className="text-sm text-center text-muted-foreground pt-2">
-        Predictions will be generated automatically based on the parameters above. Ensure Min PIPS is less than or equal to Max PIPS.
-      </p>
     </div>
   );
 }
