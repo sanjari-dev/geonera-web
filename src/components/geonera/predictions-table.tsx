@@ -29,6 +29,7 @@ interface PredictionsTableProps {
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
+  maxLogs: number; // Add maxLogs prop
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -59,7 +60,7 @@ const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]):
 };
 
 
-export function PredictionsTable({ predictions, onRowClick, selectedPredictionId }: PredictionsTableProps) {
+export function PredictionsTable({ predictions, onRowClick, selectedPredictionId, maxLogs }: PredictionsTableProps) {
   if (predictions.length === 0) {
     return (
       <div className="p-6 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center h-full">
@@ -185,7 +186,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
         </CardContent>
          {predictions.length > 0 && (
           <CardFooter className="p-3 text-xs text-muted-foreground border-t">
-            Displaying {predictions.length} active prediction log(s). Max {MAX_PREDICTION_LOGS} logs.
+            Displaying {predictions.length} active prediction log(s). Max {maxLogs} logs.
           </CardFooter>
         )}
       </Card>
@@ -195,9 +196,3 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
-// MAX_PREDICTION_LOGS needs to be defined or imported if it's used in CardFooter.
-// For now, assuming it might be available from context or props in a real scenario, or it's a placeholder.
-// If it's meant to be a constant used here, it should be defined within this file or imported.
-// For this example, I'll add a placeholder definition.
-const MAX_PREDICTION_LOGS = 100;

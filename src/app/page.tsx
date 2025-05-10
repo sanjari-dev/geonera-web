@@ -20,7 +20,7 @@ import { Loader2, Brain } from 'lucide-react';
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 604800; // 7 days in seconds (7 * 24 * 60 * 60)
-const MAX_PREDICTION_LOGS = 100; // Maximum number of prediction logs to keep
+const MAX_PREDICTION_LOGS = 1500; // Maximum number of prediction logs to keep
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -106,9 +106,9 @@ export default function GeoneraPage() {
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
     const logFromState = predictionLogs.find(l => l.id === log.id);
     if (logFromState) {
-      setSelectedPredictionLog(produce(logFromState, draft => draft)); 
+      setSelectedPredictionLog(produce(logFromState, draft => draft));
     } else {
-      setSelectedPredictionLog(produce(log, draft => draft)); 
+      setSelectedPredictionLog(produce(log, draft => draft));
     }
   }, [predictionLogs]);
 
@@ -133,11 +133,11 @@ export default function GeoneraPage() {
       if (noCurrenciesSelected) {
          if (predictionLogs.some(log => log.status !== 'IDLE') || (isAuthCheckComplete && currentUser)) {
             // Only toast if there were active predictions or user is logged in and expects something
-             toast({
-                title: "Prediction Paused",
-                description: "Please select at least one currency pair to generate predictions.",
-                variant: "default",
-             });
+            //  toast({
+            //     title: "Prediction Paused",
+            //     description: "Please select at least one currency pair to generate predictions.",
+            //     variant: "default",
+            //  });
         }
         if (timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
@@ -204,7 +204,7 @@ export default function GeoneraPage() {
       let errorCount = 0;
       
       setPredictionLogs(produce(draft => {
-        const activePairsAfterAsync = latestSelectedCurrencyPairsRef.current; 
+        const activePairsAfterAsync = latestSelectedCurrencyPairsRef.current;
 
         results.forEach(({ result, pendingLog }) => {
           const logIndex = draft.findIndex(log => log.id === pendingLog.id);
@@ -270,7 +270,7 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [currentUser, isAuthCheckComplete, toast, generateId, isLoading]); 
+  }, [currentUser, isAuthCheckComplete, toast, generateId, isLoading]);
 
 
   // Prediction expiration and deselected pair cleanup useEffect
@@ -282,7 +282,7 @@ export default function GeoneraPage() {
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
 
       setPredictionLogs(produce(draft => {
-        // let didAnyExpireOrGetFilteredOut = false; 
+        // let didAnyExpireOrGetFilteredOut = false;
         for (let i = draft.length - 1; i >= 0; i--) {
           const log = draft[i];
           let removeLog = false;
@@ -298,7 +298,7 @@ export default function GeoneraPage() {
           if (removeLog) {
             const removedLogId = log.id;
             draft.splice(i, 1);
-            // didAnyExpireOrGetFilteredOut = true; 
+            // didAnyExpireOrGetFilteredOut = true;
              // If the removed log was the selected one, clear selection
             if (selectedPredictionLog && selectedPredictionLog.id === removedLogId) {
               setSelectedPredictionLog(null);
@@ -309,7 +309,7 @@ export default function GeoneraPage() {
     }, 1000);
 
     return () => clearInterval(expirationIntervalId);
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); 
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]);
 
   // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
   useEffect(() => {
@@ -358,15 +358,15 @@ export default function GeoneraPage() {
       }
     }
   
-    // Only update selectedPredictionLog if it's actually different to avoid infinite loops or unnecessary re-renders
-    if (selectedPredictionLog?.id !== newSelectedCandidate?.id) {
-      // If newSelectedCandidate is an Immer proxy, we might need to ensure it's a plain object before setting
-      // However, standard practice is to set the state with the object from the array which should be fine.
-      // Forcing a new object for safety:
-      setSelectedPredictionLog(newSelectedCandidate ? produce(newSelectedCandidate, draft => draft) : null);
-    } else if (selectedPredictionLog && newSelectedCandidate && JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedCandidate) ) {
-       // If IDs are same but content differs (e.g. status update), update
-       setSelectedPredictionLog(produce(newSelectedCandidate, draft => draft));
+
+    // Ensure selectedPredictionLog is a plain object, not a proxy, before comparison and setting.
+    const plainSelectedPredictionLog = selectedPredictionLog ? JSON.parse(JSON.stringify(selectedPredictionLog)) : null;
+    const plainNewSelectedCandidate = newSelectedCandidate ? JSON.parse(JSON.stringify(newSelectedCandidate)) : null;
+
+    if (plainSelectedPredictionLog?.id !== plainNewSelectedCandidate?.id) {
+      setSelectedPredictionLog(plainNewSelectedCandidate);
+    } else if (plainSelectedPredictionLog && plainNewSelectedCandidate && JSON.stringify(plainSelectedPredictionLog) !== JSON.stringify(plainNewSelectedCandidate) ) {
+       setSelectedPredictionLog(plainNewSelectedCandidate);
     }
   
   }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]); // selectedCurrencyPairs removed, using ref now
@@ -383,12 +383,10 @@ export default function GeoneraPage() {
   }
 
   if (!currentUser) {
-    // User not logged in, redirect to login page
-    // No specific action for page.tsx, login page handles this
      if (typeof window !== 'undefined') {
         router.replace('/login');
     }
-    return ( // Fallback content while redirecting
+    return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
             <p className="text-lg text-muted-foreground">Redirecting to login...</p>
@@ -400,7 +398,8 @@ export default function GeoneraPage() {
     ? predictionLogs.filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
     : [];
   
-  const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
+  // Ensure selectedPredictionLog passed to children is a plain object
+  const finalSelectedPredictionForChildren = selectedPredictionLog ? JSON.parse(JSON.stringify(selectedPredictionLog)) : null;
 
 
   return (
@@ -424,6 +423,7 @@ export default function GeoneraPage() {
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
                 selectedPredictionId={finalSelectedPredictionForChildren?.id}
+                maxLogs={MAX_PREDICTION_LOGS}
               />
             </div>
             <div className="md:col-span-1">
