@@ -108,9 +108,9 @@ export default function GeoneraPage() {
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
     const logFromState = predictionLogs.find(l => l.id === log.id);
     if (logFromState) {
-      setSelectedPredictionLog(produce(logFromState, draft => draft)); // Create a plain copy
+      setSelectedPredictionLog(produce(logFromState, draft => draft)); 
     } else {
-      setSelectedPredictionLog(produce(log, draft => draft)); // Create a plain copy
+      setSelectedPredictionLog(produce(log, draft => draft)); 
     }
   }, [predictionLogs]);
 
@@ -178,10 +178,9 @@ export default function GeoneraPage() {
 
       setPredictionLogs(produce(draft => {
         newPendingLogs.forEach(log => {
-          draft.push(log); // Add new logs to the end (bottom)
+          draft.push(log); 
         });
         if (draft.length > MAX_PREDICTION_LOGS) {
-          // Remove oldest logs from the beginning (top)
           draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
       }));
@@ -225,7 +224,6 @@ export default function GeoneraPage() {
           }
         });
         if (draft.length > MAX_PREDICTION_LOGS) {
-           // Remove oldest logs from the beginning (top)
           draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
       }));
@@ -294,8 +292,6 @@ export default function GeoneraPage() {
             didChange = true;
           }
         }
-        // No need to return draft if undefined; immer handles it.
-        // Return the draft if changes were made, or let immer know no changes if !didChange
         return didChange ? draft : undefined; 
       }));
     }, 1000);
@@ -319,16 +315,13 @@ export default function GeoneraPage() {
     if (selectedPredictionLog) {
       const logInCurrentList = predictionLogs.find(log => log.id === selectedPredictionLog.id);
       if (logInCurrentList && currentSelectedPairs.includes(logInCurrentList.currencyPair)) {
-        // Check if the log is not expired
         if (!(logInCurrentList.status === "SUCCESS" && logInCurrentList.expiresAt && new Date() > new Date(logInCurrentList.expiresAt))) {
           newSelectedCandidate = logInCurrentList;
         }
       }
     }
   
-    // If no valid selected log (or it expired/got filtered), try to find a new one
     if (!newSelectedCandidate && currentSelectedPairs.length > 0) {
-      // Prioritize newest, active, successful predictions for the selected pairs
       const activeSuccessLogs = predictionLogs.filter(log =>
         currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "SUCCESS" &&
@@ -338,7 +331,6 @@ export default function GeoneraPage() {
       if (activeSuccessLogs.length > 0) {
         newSelectedCandidate = activeSuccessLogs[0];
       } else {
-        // Fallback to newest pending logs if no active success logs
         const pendingLogs = predictionLogs.filter(log =>
             currentSelectedPairs.includes(log.currencyPair) &&
             log.status === "PENDING"
@@ -346,7 +338,6 @@ export default function GeoneraPage() {
         if (pendingLogs.length > 0) {
           newSelectedCandidate = pendingLogs[0];
         } else {
-            // Fallback to any most recent log for the selected pairs if no success or pending
             const anyRelevantLog = predictionLogs.filter(log => currentSelectedPairs.includes(log.currencyPair))
                                   .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             if (anyRelevantLog.length > 0) {
@@ -356,7 +347,6 @@ export default function GeoneraPage() {
       }
     }
     
-    // Ensure we are setting a plain object, not a proxy, to avoid issues with child components
     const finalNewSelectedCandidate = newSelectedCandidate ? produce(newSelectedCandidate, draft => draft) : null;
 
     if (JSON.stringify(selectedPredictionLog) !== JSON.stringify(finalNewSelectedCandidate) ) {
@@ -398,7 +388,7 @@ export default function GeoneraPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <AppHeader user={currentUser} onLogout={handleLogout} />
       <main className="flex-grow container mx-auto py-4">
-        <div className="max-w-7xl mx-auto space-y-4">
+        <div className="max-w-screen-2xl mx-auto space-y-4">
           <PipsParameterForm
             selectedCurrencyPairs={selectedCurrencyPairs}
             pipsTarget={pipsTarget}
@@ -431,4 +421,3 @@ export default function GeoneraPage() {
     </div>
   );
 }
-
