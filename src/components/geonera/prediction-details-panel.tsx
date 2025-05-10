@@ -4,7 +4,7 @@
 import type { PredictionLogItem, PipsPredictionOutcome } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Tag, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Tag, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Landmark } from "lucide-react";
 import { format } from 'date-fns';
 import { ScrollArea } from '../ui/scroll-area';
 
@@ -45,6 +45,16 @@ const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status 
   }
 };
 
+const formatPrice = (price?: number) => {
+    if (price === undefined || price === null) return "N/A";
+    return price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const formatVolume = (volume?: number) => {
+    if (volume === undefined || volume === null) return "N/A";
+    return volume.toLocaleString();
+}
+
 
 export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetailsPanelProps) {
   return (
@@ -66,7 +76,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
             ) : (
               <>
                 <div className="flex items-center space-x-2">
-                  <Tag className="h-5 w-5 text-primary" />
+                  <Landmark className="h-5 w-5 text-primary" />
                   <span className="font-medium">Currency Pair:</span>
                   <span>{selectedPrediction.currencyPair}</span>
                 </div>
@@ -78,7 +88,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                 <div className="flex items-center space-x-2">
                   <Clock className="h-5 w-5 text-primary" />
                   <span className="font-medium">Timestamp:</span>
-                  <span className="text-sm">{format(selectedPrediction.timestamp, "yyyy-MM-dd HH:mm:ss")}</span>
+                  <span className="text-sm">{format(new Date(selectedPrediction.timestamp), "yyyy-MM-dd HH:mm:ss")}</span>
                 </div>
                  <div className="flex items-center space-x-2">
                   <div className="flex items-center justify-center h-5 w-5">
@@ -113,6 +123,37 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                       <span className="font-medium text-primary block">Reasoning:</span>
                       <p className="text-sm bg-muted/50 p-2 rounded">{selectedPrediction.predictionOutcome.reasoning}</p>
                     </div>
+                    
+                    {/* New Price and Volume Details */}
+                    <div className="pt-2 border-t mt-3 space-y-2">
+                        <h4 className="text-md font-semibold text-primary mb-1">Market Data</h4>
+                        <div className="flex items-center space-x-2">
+                            <LogIn className="h-5 w-5 text-primary opacity-80" />
+                            <span className="font-medium">Open Price:</span>
+                            <span>{formatPrice(selectedPrediction.predictionOutcome.openPrice)}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <LogOut className="h-5 w-5 text-primary opacity-80" />
+                            <span className="font-medium">Close Price:</span>
+                            <span>{formatPrice(selectedPrediction.predictionOutcome.closePrice)}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <ArrowUpCircle className="h-5 w-5 text-green-600" />
+                            <span className="font-medium">High Price:</span>
+                            <span>{formatPrice(selectedPrediction.predictionOutcome.highPrice)}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <ArrowDownCircle className="h-5 w-5 text-red-600" />
+                            <span className="font-medium">Low Price:</span>
+                            <span>{formatPrice(selectedPrediction.predictionOutcome.lowPrice)}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <BarChart3 className="h-5 w-5 text-primary opacity-80" />
+                            <span className="font-medium">Volume:</span>
+                            <span>{formatVolume(selectedPrediction.predictionOutcome.volume)}</span>
+                        </div>
+                    </div>
+
                   </>
                 )}
 
@@ -134,7 +175,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                   <div className="flex items-center space-x-2 pt-2 border-t mt-2">
                     <Clock className="h-5 w-5 text-orange-500" />
                     <span className="font-medium">Expires At:</span>
-                    <span className="text-sm">{format(selectedPrediction.expiresAt, "yyyy-MM-dd HH:mm:ss")}</span>
+                    <span className="text-sm">{format(new Date(selectedPrediction.expiresAt), "yyyy-MM-dd HH:mm:ss")}</span>
                   </div>
                 )}
               </>
@@ -148,3 +189,4 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+

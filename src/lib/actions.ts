@@ -18,6 +18,25 @@ function generateMockPrediction(currencyPair: CurrencyPair, pipsTarget: PipsTarg
 
   const targetRangeString = `${pipsTarget.min}-${pipsTarget.max} PIPS`;
 
+  // Mock Price Data Generation
+  let openPrice, closePrice, highPrice, lowPrice;
+  const volume = Math.floor(Math.random() * 100000) + 5000; // Volume between 5,000 and 105,000
+
+  if (currencyPair === "XAU/USD") {
+    const base = 2300 + (Math.random() - 0.5) * 100; // Base price for XAU/USD
+    openPrice = parseFloat((base + (Math.random() - 0.5) * 20).toFixed(2));
+    closePrice = parseFloat((openPrice + (Math.random() - 0.5) * 15).toFixed(2));
+    highPrice = parseFloat((Math.max(openPrice, closePrice) + Math.random() * 10).toFixed(2));
+    lowPrice = parseFloat((Math.min(openPrice, closePrice) - Math.random() * 10).toFixed(2));
+  } else { // BTC/USD
+    const base = 60000 + (Math.random() - 0.5) * 5000; // Base price for BTC/USD
+    openPrice = parseFloat((base + (Math.random() - 0.5) * 1000).toFixed(2));
+    closePrice = parseFloat((openPrice + (Math.random() - 0.5) * 800).toFixed(2));
+    highPrice = parseFloat((Math.max(openPrice, closePrice) + Math.random() * 500).toFixed(2));
+    lowPrice = parseFloat((Math.min(openPrice, closePrice) - Math.random() * 500).toFixed(2));
+  }
+
+
   if (randomFactor < 0.4) { // Price increase scenario
     tradingSignal = "BUY";
     if (potentialPipsMove >= pipsTarget.min) { // Check against min of the range
@@ -39,7 +58,16 @@ function generateMockPrediction(currencyPair: CurrencyPair, pipsTarget: PipsTarg
   
   reasoning = `${reasoning} Target Range: ${targetRangeString} for ${currencyPair}. Not financial advice.`;
 
-  return { tradingSignal, signalDetails, reasoning };
+  return { 
+    tradingSignal, 
+    signalDetails, 
+    reasoning,
+    openPrice,
+    closePrice,
+    highPrice,
+    lowPrice,
+    volume
+  };
 }
 
 export async function getPipsPredictionAction(
@@ -67,3 +95,4 @@ export async function getPipsPredictionAction(
     return { error: `Failed to get mock prediction: ${errorMessage}` };
   }
 }
+
