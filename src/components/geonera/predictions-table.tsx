@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, Timer } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome } from '@/types';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CountdownTimer } from "./countdown-timer";
+
 
 interface PredictionsTableProps {
   predictions: PredictionLogItem[];
@@ -44,7 +46,8 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
   }
 };
 
-const getSignalBadgeVariant = (signal: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
+const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
+  if (!signal) return "secondary";
   switch (signal) {
     case "BUY": return "default"; 
     case "SELL": return "destructive"; 
@@ -119,6 +122,16 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
+                  <TableHead className="w-[100px] p-3 text-center">
+                    <Tooltip>
+                      <TooltipTrigger className="cursor-default flex items-center justify-center">
+                        <Timer className="h-4 w-4 mr-1"/> Expires In
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Time remaining until this prediction expires and is removed.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -155,6 +168,13 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                         "..."
                       ) : (
                         "N/A"
+                      )}
+                    </TableCell>
+                    <TableCell className="p-3 text-xs text-center">
+                      {log.expiresAt && log.status === "SUCCESS" ? (
+                        <CountdownTimer expiresAt={log.expiresAt} />
+                      ) : (
+                        "--:--"
                       )}
                     </TableCell>
                   </TableRow>

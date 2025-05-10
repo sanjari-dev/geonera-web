@@ -20,7 +20,6 @@ import { Loader2, Brain } from 'lucide-react';
 const PREDICTION_INTERVAL_MS = 10000; // 10 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 180;
-const MAX_LOG_ITEMS = 250; // Max items in prediction log
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -174,9 +173,6 @@ export default function GeoneraPage() {
         newPendingLogs.forEach(log => {
           draft.unshift(log);
         });
-        if (draft.length > MAX_LOG_ITEMS) {
-          draft.splice(MAX_LOG_ITEMS);
-        }
       }));
       
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
@@ -217,9 +213,6 @@ export default function GeoneraPage() {
             Object.assign(logToUpdate, { status: "SUCCESS", predictionOutcome: result.data, expiresAt: new Date(Date.now() + randomExpirationMs) });
           }
         });
-        if (draft.length > MAX_LOG_ITEMS) {
-           draft.splice(MAX_LOG_ITEMS);
-        }
       }));
 
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
