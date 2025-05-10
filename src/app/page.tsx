@@ -1,7 +1,7 @@
 // src/app/page.tsx
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { AppHeader } from '@/components/geonera/header';
 import { PredictionForm } from '@/components/geonera/prediction-form';
 import { PredictionDisplay } from '@/components/geonera/prediction-display';
@@ -21,6 +21,11 @@ export default function GeoneraPage() {
     prediction: null,
     error: null,
   });
+  const [currentYear, setCurrentYear] = useState<string>('');
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear().toString());
+  }, []);
 
   const handleStateChange = useCallback((newState: Partial<FormState>) => {
     // When loading starts, clear previous prediction and error
@@ -50,7 +55,7 @@ export default function GeoneraPage() {
         </div>
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border">
-        © {new Date().getFullYear()} Geonera. All rights reserved. AI predictions are for informational purposes only.
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. AI predictions are for informational purposes only.
       </footer>
     </div>
   );
