@@ -13,7 +13,7 @@ import type { PredictionLogItem, CurrencyPair, PipsTargetRange, User } from '@/t
 import { getPipsPredictionAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Brain } from 'lucide-react';
 
 
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
@@ -52,14 +52,14 @@ export default function GeoneraPage() {
         } catch (e) {
           console.error("Failed to parse user from localStorage", e);
           localStorage.removeItem('geoneraUser');
-          router.replace('/login');
+          // No redirect, currentUser remains null
         }
       } else {
-        router.replace('/login');
+        // No redirect, currentUser remains null
       }
       setIsAuthCheckComplete(true);
     }
-  }, [router]);
+  }, []); // Removed router from dependencies as it's not used for redirection here anymore
 
 
   const generateId = useCallback(() => {
@@ -82,7 +82,7 @@ export default function GeoneraPage() {
     setPredictionLogs([]); 
     setSelectedPredictionLog(null);
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
-    router.push('/login');
+    // No router.push('/login'), stay on '/'
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -251,11 +251,30 @@ export default function GeoneraPage() {
   }, [currentUser, selectedPredictionLog?.id]); 
 
 
-  if (!isAuthCheckComplete || !currentUser) {
+  if (!isAuthCheckComplete) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
         <p className="text-lg text-muted-foreground">Loading Geonera...</p>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <AppHeader user={null} onLogout={handleLogout} />
+        <main className="flex-grow container mx-auto px-4 py-4 flex items-center justify-center">
+          <div className="text-center">
+            <Brain className="h-16 w-16 text-primary mx-auto mb-4" />
+            <h2 className="text-2xl font-semibold text-foreground mb-2">Welcome to Geonera</h2>
+            <p className="text-muted-foreground mb-6">Please log in to access AI-powered Forex predictions and analysis tools.</p>
+            {/* Login button is now in AppHeader */}
+          </div>
+        </main>
+        <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
+          {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved.
+        </footer>
       </div>
     );
   }

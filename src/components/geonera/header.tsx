@@ -1,4 +1,4 @@
-import { Brain, LogOut } from 'lucide-react';
+import { Brain, LogOut, LogIn as LogInIcon } from 'lucide-react';
 import type { User } from '@/types';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useRouter } from 'next/navigation';
 
 interface AppHeaderProps {
   user: User | null;
@@ -17,6 +18,12 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ user, onLogout }: AppHeaderProps) {
+  const router = useRouter();
+
+  const handleLoginRedirect = () => {
+    router.push('/login');
+  };
+
   return (
     <header className="py-4 mb-3 border-b border-border">
       <div className="container mx-auto flex items-center justify-between">
@@ -27,7 +34,7 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
           </h1>
         </div>
 
-        {user && (
+        {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
@@ -52,6 +59,11 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        ) : (
+          <Button onClick={handleLoginRedirect} variant="outline">
+            <LogInIcon className="mr-2 h-4 w-4" />
+            Login
+          </Button>
         )}
       </div>
     </header>
