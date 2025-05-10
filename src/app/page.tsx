@@ -130,17 +130,25 @@ export default function GeoneraPage() {
       const isPipsTargetInvalid = currentPipsTarget.min <= 0 || currentPipsTarget.max <= 0 || currentPipsTarget.min > currentPipsTarget.max;
       const noCurrenciesSelected = currentSelectedPairs.length === 0;
 
-      if (isPipsTargetInvalid || noCurrenciesSelected) {
-        if (currentSelectedPairs.length > 0 && isPipsTargetInvalid) {
+      if (noCurrenciesSelected) {
+         if (predictionLogs.some(log => log.status !== 'IDLE') || (isAuthCheckComplete && currentUser)) {
+            // Only toast if there were active predictions or user is logged in and expects something
+             toast({
+                title: "Prediction Paused",
+                description: "Please select at least one currency pair to generate predictions.",
+                variant: "default",
+             });
+        }
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
+        return;
+      }
+      
+      if (isPipsTargetInvalid) {
+        if (currentSelectedPairs.length > 0) { // Only toast if pairs are selected but pips are invalid
              toast({
                 title: "Prediction Paused",
                 description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
-                variant: "default",
-             });
-        } else if (noCurrenciesSelected && (predictionLogs.some(log => log.status !== 'IDLE') || (isAuthCheckComplete && currentUser))) {
-             toast({
-                title: "Prediction Paused",
-                description: "Please select at least one currency pair.",
                 variant: "default",
              });
         }
@@ -149,18 +157,22 @@ export default function GeoneraPage() {
         return;
       }
 
+
       setIsLoading(true);
 
       const newPendingLogs: PredictionLogItem[] = [];
       currentSelectedPairs.forEach(currencyPair => {
-        const newLogId = generateId();
-        newPendingLogs.push({
-          id: newLogId,
-          timestamp: new Date(),
-          currencyPair: currencyPair,
-          pipsTarget: currentPipsTarget,
-          status: "PENDING",
-        });
+        const numPredictionsForPair = Math.floor(Math.random() * 10) + 1; // Random number between 1 and 10
+        for (let i = 0; i < numPredictionsForPair; i++) {
+          const newLogId = generateId();
+          newPendingLogs.push({
+            id: newLogId,
+            timestamp: new Date(),
+            currencyPair: currencyPair,
+            pipsTarget: currentPipsTarget,
+            status: "PENDING",
+          });
+        }
       });
       
       if (newPendingLogs.length === 0) {
@@ -308,7 +320,7 @@ export default function GeoneraPage() {
       return;
     }
   
-    const currentSelectedPairs = selectedCurrencyPairs;
+    const currentSelectedPairs = latestSelectedCurrencyPairsRef.current; // Use ref here
     let newSelectedCandidate: PredictionLogItem | null = null;
   
     if (selectedPredictionLog) {
@@ -346,23 +358,18 @@ export default function GeoneraPage() {
       }
     }
   
-    if (newSelectedCandidate) {
-      const currentSelectedIsPlainObject = selectedPredictionLog && Object.getPrototypeOf(selectedPredictionLog) === Object.prototype;
-      const newCandidateIsPlainObject = newSelectedCandidate && Object.getPrototypeOf(newSelectedCandidate) === Object.prototype;
-
-      if (selectedPredictionLog?.id !== newSelectedCandidate.id || 
-          (currentSelectedIsPlainObject && newCandidateIsPlainObject && JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedCandidate))) {
-        setSelectedPredictionLog(produce(newSelectedCandidate, draft => draft)); 
-      } else if (selectedPredictionLog?.id !== newSelectedCandidate.id) {
-        setSelectedPredictionLog(produce(newSelectedCandidate, draft => draft));
-      }
-    } else {
-      if (selectedPredictionLog !== null) {
-        setSelectedPredictionLog(null);
-      }
+    // Only update selectedPredictionLog if it's actually different to avoid infinite loops or unnecessary re-renders
+    if (selectedPredictionLog?.id !== newSelectedCandidate?.id) {
+      // If newSelectedCandidate is an Immer proxy, we might need to ensure it's a plain object before setting
+      // However, standard practice is to set the state with the object from the array which should be fine.
+      // Forcing a new object for safety:
+      setSelectedPredictionLog(newSelectedCandidate ? produce(newSelectedCandidate, draft => draft) : null);
+    } else if (selectedPredictionLog && newSelectedCandidate && JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedCandidate) ) {
+       // If IDs are same but content differs (e.g. status update), update
+       setSelectedPredictionLog(produce(newSelectedCandidate, draft => draft));
     }
   
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedCurrencyPairs, selectedPredictionLog]);
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]); // selectedCurrencyPairs removed, using ref now
   
 
 
@@ -389,8 +396,8 @@ export default function GeoneraPage() {
     );
   }
 
-  const logsForTable = currentUser && selectedCurrencyPairs.length > 0
-    ? predictionLogs.filter(log => selectedCurrencyPairs.includes(log.currencyPair))
+  const logsForTable = currentUser && latestSelectedCurrencyPairsRef.current.length > 0
+    ? predictionLogs.filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
     : [];
   
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
