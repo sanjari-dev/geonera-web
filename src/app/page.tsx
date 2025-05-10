@@ -50,7 +50,7 @@ export default function GeoneraPage() {
   // Filtering and Sorting State
   const [filterStatus, setFilterStatus] = useState<StatusFilterType>("ALL");
   const [filterSignal, setFilterSignal] = useState<SignalFilterType>("ALL");
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'asc' });
 
   const router = useRouter();
   const { toast } = useToast();
@@ -465,19 +465,21 @@ export default function GeoneraPage() {
       <AppHeader user={currentUser} onLogout={handleLogout} />
       <main className="flex-grow container mx-auto py-4">
         <div className="max-w-screen-2xl mx-auto space-y-4">
-          <PipsParameterForm
-            selectedCurrencyPairs={selectedCurrencyPairs}
-            pipsTarget={pipsTarget}
-            onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
-            onPipsChange={handlePipsChange}
-            isLoading={isLoading}
-          />
-          <PredictionFilterControls
-            filterStatus={filterStatus}
-            onFilterStatusChange={setFilterStatus}
-            filterSignal={filterSignal}
-            onFilterSignalChange={setFilterSignal}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <PipsParameterForm
+              selectedCurrencyPairs={selectedCurrencyPairs}
+              pipsTarget={pipsTarget}
+              onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
+              onPipsChange={handlePipsChange}
+              isLoading={isLoading}
+            />
+            <PredictionFilterControls
+              filterStatus={filterStatus}
+              onFilterStatusChange={setFilterStatus}
+              filterSignal={filterSignal}
+              onFilterSignalChange={setFilterSignal}
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-[minmax(theme(spacing.64),1fr)_auto_theme(spacing.80)] gap-4">
             <div>
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
@@ -505,3 +507,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
