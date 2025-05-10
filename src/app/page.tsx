@@ -480,11 +480,11 @@ export default function GeoneraPage() {
               onFilterSignalChange={setFilterSignal}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(theme(spacing.64),1fr)_auto_theme(spacing.80)] gap-4 flex-grow min-h-0">
-            <div className="flex flex-col min-h-0">
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(theme(spacing.64),1fr)_auto_theme(spacing.80)] gap-4 flex-grow min-h-0"> {/* Added min-h-0 */}
+            <div className="flex flex-col min-h-0"> {/* Added min-h-0 */}
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="max-w-max flex flex-col min-h-0">
+            <div className="max-w-max flex flex-col min-h-0"> {/* Added min-h-0 */}
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -494,7 +494,7 @@ export default function GeoneraPage() {
                 onSort={handleSort}
               />
             </div>
-            <div className="flex flex-col min-h-0">
+            <div className="flex flex-col min-h-0"> {/* Added min-h-0 */}
               <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
           </div>

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, Timer, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +42,7 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
       return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     case "ERROR":
       return <AlertCircle className="h-4 w-4 text-red-500" />;
-    case "IDLE":
+    case "IDLE": // Should ideally not happen in active log
        return <Info className="h-4 w-4 text-gray-400" />;
     default:
       return null;
@@ -82,7 +82,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
   const renderSortableHeader = (label: string, columnKey: SortableColumnKey, tooltipContent: string) => (
     <TableHead
-      className="px-1 py-2 text-center whitespace-nowrap cursor-pointer hover:bg-accent/50 transition-colors"
+      className="px-1 py-2 text-center whitespace-nowrap cursor-pointer hover:bg-accent/50 transition-colors sticky top-0 bg-card z-10"
       onClick={() => onSort(columnKey)}
     >
       <Tooltip>
@@ -103,10 +103,10 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
            <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
            <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
         </CardHeader>
-        <CardContent className="p-0 flex-grow">
-          <ScrollArea className="h-full">
+        <CardContent className="p-0 flex-grow overflow-hidden"> {/* Added overflow-hidden */}
+          <ScrollArea className="h-full"> {/* ScrollArea now wraps the Table */}
             <Table>
-              <TableHeader className="sticky top-0 bg-card z-10 border-b border-border">
+              <TableHeader>
                 <TableRow>
                   {renderSortableHeader("Status", "status", "Indicates the current state of the prediction (Pending, Success, Error). Click to sort.")}
                   {renderSortableHeader("Timestamp", "timestamp", "The date and time when the prediction was generated. Click to sort.")}
