@@ -10,11 +10,23 @@ import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
 import { CandlestickDisplay } from '@/components/geonera/candlestick-display';
-import type { PredictionLogItem, CurrencyPair, PipsTargetRange, User, PredictionStatus } from '@/types';
+import { PredictionFilterControls } from '@/components/geonera/prediction-filter-controls';
+import type {
+  PredictionLogItem,
+  CurrencyPair,
+  PipsTargetRange,
+  User,
+  PredictionStatus,
+  PipsPredictionOutcome,
+  StatusFilterType,
+  SignalFilterType,
+  SortConfig,
+  SortableColumnKey
+} from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, Brain } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
@@ -34,6 +46,11 @@ export default function GeoneraPage() {
 
   const [uuidAvailable, setUuidAvailable] = useState(false);
   const [selectedPredictionLog, setSelectedPredictionLog] = useState<PredictionLogItem | null>(null);
+
+  // Filtering and Sorting State
+  const [filterStatus, setFilterStatus] = useState<StatusFilterType>("ALL");
+  const [filterSignal, setFilterSignal] = useState<SignalFilterType>("ALL");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'desc' });
 
   const router = useRouter();
   const { toast } = useToast();
@@ -314,9 +331,31 @@ export default function GeoneraPage() {
       const eligibleLogs = predictionLogs
         .filter(log =>
           currentSelectedPairs.includes(log.currencyPair) &&
-          !(log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) < new Date())
+          !(log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) < new Date()) &&
+          (filterStatus === "ALL" || log.status === filterStatus) &&
+          (filterSignal === "ALL" || (log.predictionOutcome && log.predictionOutcome.tradingSignal === filterSignal))
         )
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); 
+        .sort((a, b) => { // Use current sortConfig
+           if (!sortConfig) return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(); // Default sort if none
+            const valA = getSortableValue(a, sortConfig.key);
+            const valB = getSortableValue(b, sortConfig.key);
+
+            if (valA === undefined && valB === undefined) return 0;
+            if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
+            if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
+            
+            let comparison = 0;
+            if (typeof valA === 'number' && typeof valB === 'number') {
+              comparison = valA - valB;
+            } else if (valA instanceof Date && valB instanceof Date) {
+              comparison = valA.getTime() - valB.getTime();
+            } else if (typeof valA === 'string' && typeof valB === 'string') {
+              comparison = valA.localeCompare(valB);
+            } else {
+              comparison = String(valA).localeCompare(String(valB));
+            }
+            return sortConfig.direction === 'asc' ? comparison : -comparison;
+        });
   
       if (eligibleLogs.length > 0) {
         const currentSelectionStillEligible = selectedPredictionLog && eligibleLogs.find(log => log.id === selectedPredictionLog.id);
@@ -324,6 +363,7 @@ export default function GeoneraPage() {
         if (currentSelectionStillEligible) {
           newSelectedLogCandidate = produce(currentSelectionStillEligible, draft => draft);
         } else {
+          // Select the first item from the *sorted and filtered* list
           newSelectedLogCandidate = produce(eligibleLogs[0], draft => draft);
         }
       }
@@ -335,7 +375,37 @@ export default function GeoneraPage() {
        ) {
       setSelectedPredictionLog(newSelectedLogCandidate);
     }
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]);
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog, filterStatus, filterSignal, sortConfig]);
+
+
+  const handleSort = (key: SortableColumnKey) => {
+    setSortConfig(prevConfig => {
+      if (prevConfig && prevConfig.key === key) {
+        return { key, direction: prevConfig.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      const defaultDirection = (key === 'timestamp' || key === 'expiresAt') ? 'desc' : 'asc';
+      return { key, direction: defaultDirection };
+    });
+  };
+
+  const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
+    switch (key) {
+      case 'status':
+        return log.status;
+      case 'timestamp':
+        return log.timestamp;
+      case 'currencyPair':
+        return log.currencyPair;
+      case 'pipsTargetMin':
+        return log.pipsTarget.min;
+      case 'tradingSignal':
+        return log.predictionOutcome?.tradingSignal;
+      case 'expiresAt':
+        return log.expiresAt;
+      default:
+        return undefined;
+    }
+  };
 
 
   if (!isAuthCheckComplete) {
@@ -362,7 +432,29 @@ export default function GeoneraPage() {
   const logsForTable = currentUser && latestSelectedCurrencyPairsRef.current.length > 0
     ? predictionLogs
         .filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
-        .sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Sort oldest first for display
+        .filter(log => filterStatus === "ALL" || log.status === filterStatus)
+        .filter(log => filterSignal === "ALL" || (log.predictionOutcome && log.predictionOutcome.tradingSignal === filterSignal))
+        .sort((a, b) => {
+            if (!sortConfig) return 0;
+            const valA = getSortableValue(a, sortConfig.key);
+            const valB = getSortableValue(b, sortConfig.key);
+
+            if (valA === undefined && valB === undefined) return 0;
+            if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
+            if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
+            
+            let comparison = 0;
+            if (typeof valA === 'number' && typeof valB === 'number') {
+              comparison = valA - valB;
+            } else if (valA instanceof Date && valB instanceof Date) {
+              comparison = valA.getTime() - valB.getTime();
+            } else if (typeof valA === 'string' && typeof valB === 'string') {
+              comparison = valA.localeCompare(valB);
+            } else {
+              comparison = String(valA).localeCompare(String(valB));
+            }
+            return sortConfig.direction === 'asc' ? comparison : -comparison;
+        })
     : [];
   
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
@@ -380,6 +472,12 @@ export default function GeoneraPage() {
             onPipsChange={handlePipsChange}
             isLoading={isLoading}
           />
+          <PredictionFilterControls
+            filterStatus={filterStatus}
+            onFilterStatusChange={setFilterStatus}
+            filterSignal={filterSignal}
+            onFilterSignalChange={setFilterSignal}
+          />
           <div className="grid grid-cols-1 md:grid-cols-[minmax(theme(spacing.64),1fr)_auto_theme(spacing.80)] gap-4">
             <div>
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
@@ -390,6 +488,8 @@ export default function GeoneraPage() {
                 onRowClick={handlePredictionSelect}
                 selectedPredictionId={finalSelectedPredictionForChildren?.id}
                 maxLogs={MAX_PREDICTION_LOGS}
+                sortConfig={sortConfig}
+                onSort={handleSort}
               />
             </div>
             <div>

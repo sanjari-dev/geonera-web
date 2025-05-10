@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, Timer } from "lucide-react";
-import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome } from '@/types';
+import { AlertCircle, CheckCircle2, Loader2, Info, Timer, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,8 @@ interface PredictionsTableProps {
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
   maxLogs: number; 
+  sortConfig: SortConfig | null;
+  onSort: (key: SortableColumnKey) => void;
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -59,21 +61,44 @@ const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]):
   }
 };
 
+const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: SortableColumnKey }> = ({ sortConfig, columnKey }) => {
+  if (!sortConfig || sortConfig.key !== columnKey) {
+    return <ChevronsUpDown className="ml-1 h-3 w-3 opacity-50" />;
+  }
+  return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+};
 
-export function PredictionsTable({ predictions, onRowClick, selectedPredictionId, maxLogs }: PredictionsTableProps) {
+
+export function PredictionsTable({ predictions, onRowClick, selectedPredictionId, maxLogs, sortConfig, onSort }: PredictionsTableProps) {
   if (predictions.length === 0) {
     return (
       <div className="p-2 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center h-full">
         <Info className="h-10 w-10 text-muted-foreground mb-3" />
         <p className="text-lg text-muted-foreground">No active predictions.</p>
-        <p className="text-sm text-muted-foreground">Set parameters to start generating predictions. They will appear here and be removed upon expiration.</p>
+        <p className="text-sm text-muted-foreground">Set parameters or adjust filters to see predictions. They will appear here and be removed upon expiration.</p>
       </div>
     );
   }
 
+  const renderSortableHeader = (label: string, columnKey: SortableColumnKey, tooltipContent: string) => (
+    <TableHead
+      className="px-1 py-2 text-center whitespace-nowrap cursor-pointer hover:bg-accent/50 transition-colors"
+      onClick={() => onSort(columnKey)}
+    >
+      <Tooltip>
+        <TooltipTrigger className="cursor-pointer flex items-center justify-center w-full">
+          {label} <SortIndicator sortConfig={sortConfig} columnKey={columnKey} />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{tooltipContent}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TableHead>
+  );
+
   return (
     <TooltipProvider>
-      <Card className="shadow-xl overflow-hidden h-full w-fit"> {/* Added w-fit */}
+      <Card className="shadow-xl overflow-hidden h-full w-fit">
         <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
            <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
            <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
@@ -83,56 +108,12 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10 border-b border-border">
                 <TableRow>
-                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
-                    <Tooltip>
-                      <TooltipTrigger className="cursor-default">Status</TooltipTrigger>
-                      <TooltipContent>
-                        <p>Indicates the current state of the prediction (Pending, Success, Error).</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
-                    <Tooltip>
-                      <TooltipTrigger className="cursor-default">Timestamp</TooltipTrigger>
-                      <TooltipContent>
-                        <p>The date and time when the prediction was generated.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
-                    <Tooltip>
-                      <TooltipTrigger className="cursor-default">Pair</TooltipTrigger>
-                      <TooltipContent>
-                        <p>The currency pair for which the prediction is made (e.g., XAU/USD).</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
-                    <Tooltip>
-                      <TooltipTrigger className="cursor-default">PIPS Target</TooltipTrigger>
-                      <TooltipContent>
-                        <p>The desired PIPS movement range (Min - Max) for the prediction.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="px-1 py-2 text-center whitespace-nowrap">
-                     <Tooltip>
-                      <TooltipTrigger className="cursor-default">Signal (MT5)</TooltipTrigger>
-                      <TooltipContent>
-                        <p>The recommended trading action based on the prediction (e.g., BUY, SELL, HOLD).</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="px-1 py-2 text-center whitespace-nowrap"> 
-                    <Tooltip>
-                      <TooltipTrigger className="cursor-default flex items-center justify-center">
-                        <Timer className="h-4 w-4 mr-1"/> Expires In
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Time remaining until this prediction expires (DD HH:mm:ss).</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableHead>
+                  {renderSortableHeader("Status", "status", "Indicates the current state of the prediction (Pending, Success, Error). Click to sort.")}
+                  {renderSortableHeader("Timestamp", "timestamp", "The date and time when the prediction was generated. Click to sort.")}
+                  {renderSortableHeader("Pair", "currencyPair", "The currency pair for which the prediction is made (e.g., XAU/USD). Click to sort.")}
+                  {renderSortableHeader("PIPS Target", "pipsTargetMin", "The desired PIPS movement range (Min - Max) for the prediction. Sorted by Min PIPS. Click to sort.")}
+                  {renderSortableHeader("Signal (MT5)", "tradingSignal", "The recommended trading action based on the prediction (e.g., BUY, SELL, HOLD). Click to sort.")}
+                  {renderSortableHeader("Expires In", "expiresAt", "Time remaining until this prediction expires (DD HH:mm:ss). Click to sort.")}
                 </TableRow>
               </TableHeader>
               <TableBody>

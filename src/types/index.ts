@@ -51,3 +51,15 @@ export interface User {
   username: string;
   initials: string;
 }
+
+// Types for filtering and sorting
+export type AllFilterType = "ALL";
+export type StatusFilterType = PredictionStatus | AllFilterType;
+export type SignalFilterType = PipsPredictionOutcome["tradingSignal"] | AllFilterType;
+
+export type SortableColumnKey = 'status' | 'timestamp' | 'currencyPair' | 'pipsTargetMin' | 'tradingSignal' | 'expiresAt';
+
+export interface SortConfig {
+  key: SortableColumnKey;
+  direction: 'asc' | 'desc';
+}
