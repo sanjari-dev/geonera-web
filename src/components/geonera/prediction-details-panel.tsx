@@ -62,9 +62,9 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
   return (
     <Card className="shadow-xl h-full">
       <CardHeader className="bg-secondary/30 p-4 rounded-t-lg">
-        <CardTitle className="text-xl font-semibold text-primary">Prediction Details</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground whitespace-nowrap">
-          {selectedPrediction ? `Details for ${selectedPrediction.currencyPair}` : "Select a prediction from the log to view its details."}
+        <CardTitle className="text-xl font-semibold text-primary whitespace-nowrap">Prediction Details</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
+          {selectedPrediction ? <span className="whitespace-nowrap">{`Details for ${selectedPrediction.currencyPair}`}</span> : "Select a prediction from the log to view its details."}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
@@ -73,7 +73,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
             {!selectedPrediction ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
                 <Info className="h-12 w-12 mb-3" />
-                <p className="whitespace-nowrap">No prediction selected.</p>
+                <p>No prediction selected.</p>
               </div>
             ) : (
               <>
@@ -119,11 +119,11 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                     </div>
                     <div className="space-y-1">
                       <span className="font-medium text-primary block whitespace-nowrap">Signal Details:</span>
-                      <p className="text-sm bg-muted/50 p-2 rounded whitespace-nowrap">{selectedPrediction.predictionOutcome.signalDetails}</p>
+                      <p className="text-sm bg-muted/50 p-2 rounded">{selectedPrediction.predictionOutcome.signalDetails}</p>
                     </div>
                     <div className="space-y-1">
                       <span className="font-medium text-primary block whitespace-nowrap">Reasoning:</span>
-                      <p className="text-sm bg-muted/50 p-2 rounded whitespace-nowrap">{selectedPrediction.predictionOutcome.reasoning}</p>
+                      <p className="text-sm bg-muted/50 p-2 rounded">{selectedPrediction.predictionOutcome.reasoning}</p>
                     </div>
                     
                     { (selectedPrediction.predictionOutcome.openPrice !== undefined ||
@@ -176,7 +176,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                 {selectedPrediction.status === "ERROR" && selectedPrediction.error && (
                   <div className="space-y-1">
                     <span className="font-medium text-destructive block whitespace-nowrap">Error:</span>
-                    <p className="text-sm bg-destructive/10 text-destructive p-2 rounded whitespace-nowrap">{selectedPrediction.error}</p>
+                    <p className="text-sm bg-destructive/10 text-destructive p-2 rounded">{selectedPrediction.error}</p>
                   </div>
                 )}
                 
@@ -205,3 +205,4 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
