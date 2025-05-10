@@ -405,10 +405,10 @@ export default function GeoneraPage() {
             isLoading={isLoading}
           />
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-3">
+            <div className="md:col-span-4"> {/* Adjusted from md:col-span-3 */}
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="md:col-span-6"> 
+            <div className="md:col-span-5"> {/* Adjusted from md:col-span-6 */}
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -416,7 +416,7 @@ export default function GeoneraPage() {
                 maxLogs={MAX_PREDICTION_LOGS}
               />
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-3"> {/* Remains md:col-span-3 */}
               <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
           </div>
@@ -429,4 +429,5 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
 
