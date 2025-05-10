@@ -90,12 +90,12 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                 <div className="flex items-center space-x-2">
                   <Landmark className="h-5 w-5 text-primary" />
                   <span className="font-medium whitespace-nowrap">Currency Pair:</span>
-                  <span className="whitespace-nowrap">{selectedPrediction.currencyPair}</span>
+                  <span className="text-sm whitespace-nowrap">{selectedPrediction.currencyPair}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Target className="h-5 w-5 text-primary" />
                   <span className="font-medium whitespace-nowrap">PIPS Target:</span>
-                  <span className="whitespace-nowrap">{selectedPrediction.pipsTarget.min} - {selectedPrediction.pipsTarget.max}</span>
+                  <span className="text-sm whitespace-nowrap">{selectedPrediction.pipsTarget.min} - {selectedPrediction.pipsTarget.max}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Clock className="h-5 w-5 text-primary" />
@@ -103,7 +103,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                   <span className="text-sm whitespace-nowrap">{format(new Date(selectedPrediction.timestamp), "yyyy-MM-dd HH:mm:ss")}</span>
                 </div>
                  <div className="flex items-center space-x-2">
-                  <div className="flex items-center justify-center h-5 w-5">
+                  <div className="flex items-center justify-center h-5 w-5"> {/* Ensure icon wrapper size consistency */}
                     <StatusIcon status={selectedPrediction.status} />
                   </div>
                   <span className="font-medium whitespace-nowrap">Status:</span>
@@ -119,7 +119,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                 {selectedPrediction.status === "SUCCESS" && selectedPrediction.predictionOutcome && (
                   <>
                     <div className="flex items-center space-x-2">
-                       <div className="flex items-center justify-center h-5 w-5">
+                       <div className="flex items-center justify-center h-5 w-5"> {/* Ensure icon wrapper size consistency */}
                         <SignalIcon signal={selectedPrediction.predictionOutcome.tradingSignal} />
                        </div>
                       <span className="font-medium whitespace-nowrap">Trading Signal:</span>
@@ -147,69 +147,76 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                 
                 {selectedPrediction.status === "PENDING" && (
                    <div className="flex items-center space-x-2 text-muted-foreground">
-                     <Loader2 className="h-4 w-4 animate-spin" />
+                     <Loader2 className="h-4 w-4 animate-spin" /> {/* Icon size here is smaller, might be intentional for pending */}
                      <span className="whitespace-nowrap">Awaiting analysis...</span>
                    </div>
                 )}
 
-                {/* Market Data Section - Changed to vertical layout */}
+                {/* Market Data Section - Styled like Expires At items */}
                 {marketDataAvailable && ohlcData && (
-                  <div className="pt-3 mt-3 border-t border-border space-y-1.5">
-                    <h4 className="text-sm font-medium text-primary mb-1.5 whitespace-nowrap">Market Data</h4>
-                    <div className="flex flex-col space-y-1 text-xs w-full">
-                      {ohlcData.openPrice !== undefined && (
-                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
-                                <LogIn className="h-4 w-4 text-primary" />
-                            </div>
-                            <span className="font-medium">Open:</span>
-                            <span>{formatPrice(ohlcData.openPrice, selectedPrediction.currencyPair)}</span>
+                  <div className="pt-3 mt-3 border-t border-border space-y-2">
+                    {ohlcData.openPrice !== undefined && (
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                          <LogIn className="h-5 w-5 text-primary" />
                         </div>
-                      )}
-                      {ohlcData.highPrice !== undefined && (
-                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
-                                <ArrowUpCircle className="h-4 w-4 text-green-500" />
-                            </div>
-                            <span className="font-medium">High:</span>
-                            <span>{formatPrice(ohlcData.highPrice, selectedPrediction.currencyPair)}</span>
+                        <span className="font-medium whitespace-nowrap">Open:</span>
+                        <span className="text-sm whitespace-nowrap">
+                          {formatPrice(ohlcData.openPrice, selectedPrediction.currencyPair)}
+                        </span>
+                      </div>
+                    )}
+                    {ohlcData.highPrice !== undefined && (
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                          <ArrowUpCircle className="h-5 w-5 text-green-500" />
                         </div>
-                      )}
-                      {ohlcData.lowPrice !== undefined && (
-                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
-                                <ArrowDownCircle className="h-4 w-4 text-red-500" />
-                            </div>
-                            <span className="font-medium">Low:</span>
-                            <span>{formatPrice(ohlcData.lowPrice, selectedPrediction.currencyPair)}</span>
+                        <span className="font-medium whitespace-nowrap">High:</span>
+                        <span className="text-sm whitespace-nowrap">
+                          {formatPrice(ohlcData.highPrice, selectedPrediction.currencyPair)}
+                        </span>
+                      </div>
+                    )}
+                    {ohlcData.lowPrice !== undefined && (
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                          <ArrowDownCircle className="h-5 w-5 text-red-500" />
                         </div>
-                      )}
-                      {ohlcData.closePrice !== undefined && (
-                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
-                                <LogOut className="h-4 w-4 text-primary" />
-                            </div>
-                            <span className="font-medium">Close:</span>
-                            <span>{formatPrice(ohlcData.closePrice, selectedPrediction.currencyPair)}</span>
+                        <span className="font-medium whitespace-nowrap">Low:</span>
+                        <span className="text-sm whitespace-nowrap">
+                          {formatPrice(ohlcData.lowPrice, selectedPrediction.currencyPair)}
+                        </span>
+                      </div>
+                    )}
+                    {ohlcData.closePrice !== undefined && (
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                          <LogOut className="h-5 w-5 text-primary" />
                         </div>
-                      )}
-                      {ohlcData.volume !== undefined && (
-                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                             <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
-                                <BarChart3 className="h-4 w-4 text-primary" />
-                            </div>
-                            <span className="font-medium">Volume:</span>
-                            <span>{formatVolume(ohlcData.volume)}</span>
+                        <span className="font-medium whitespace-nowrap">Close:</span>
+                        <span className="text-sm whitespace-nowrap">
+                          {formatPrice(ohlcData.closePrice, selectedPrediction.currencyPair)}
+                        </span>
+                      </div>
+                    )}
+                    {ohlcData.volume !== undefined && (
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                          <BarChart3 className="h-5 w-5 text-primary" />
                         </div>
-                      )}
-                    </div>
+                        <span className="font-medium whitespace-nowrap">Volume:</span>
+                        <span className="text-sm whitespace-nowrap">
+                          {formatVolume(ohlcData.volume)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {selectedPrediction.expiresAt && (
                   <div className={cn(
                       "flex items-center space-x-2 pt-2 mt-2",
-                      !marketDataAvailable && "border-t border-border" 
+                      !marketDataAvailable && "border-t border-border" // Add border if market data wasn't there
                     )}
                   >
                     <Clock className="h-5 w-5 text-orange-500" />
@@ -222,12 +229,9 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
           </div>
         </ScrollArea>
       </CardContent>
-      {/* CardFooter is removed as its content (Market Data) is moved into CardContent */}
     </Card>
   );
 }
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
-
