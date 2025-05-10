@@ -101,7 +101,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
           {selectedPrediction ? `Visual for ${selectedPrediction.currencyPair}` : "Select a prediction."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-4 flex-grow h-[calc(100%-theme(spacing.24)-theme(spacing.32))]"> {/* Adjusted height */}
+      <CardContent className="p-4 flex-grow"> {/* Removed explicit height calculation, rely on flex-grow */}
         {!selectedPrediction || chartData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Info className="h-12 w-12 mb-3" />
@@ -204,3 +204,4 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
     </Card>
   );
 }
+
