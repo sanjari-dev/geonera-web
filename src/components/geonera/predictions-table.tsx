@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus } from '@/types';
 import { format } from 'date-fns';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface PredictionsTableProps {
   predictions: PredictionLogItem[];
@@ -41,7 +42,7 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
       <div className="p-6 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center">
         <Info className="h-10 w-10 text-muted-foreground mb-3" />
         <p className="text-lg text-muted-foreground">No predictions generated yet.</p>
-        <p className="text-sm text-muted-foreground">Use the form above to generate your first AI-powered pips prediction.</p>
+        <p className="text-sm text-muted-foreground">Parameters are set? AI will predict pips movement soon.</p>
       </div>
     );
   }
@@ -53,16 +54,16 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
          <CardDescription className="text-sm text-primary/80">Tracks AI predictions based on your parameters.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[400px] md:h-[500px]"> {/* Adjust height as needed */}
+        <ScrollArea className="h-[280px] md:h-[320px]"> {/* Adjusted height */}
           <Table>
             <TableHeader className="sticky top-0 bg-card z-10">
               <TableRow>
-                <TableHead className="w-[50px]">Status</TableHead>
-                <TableHead className="w-[150px]">Timestamp</TableHead>
-                <TableHead>Pair</TableHead>
-                <TableHead className="text-right">Pips Target</TableHead>
-                <TableHead>Outcome</TableHead>
-                <TableHead>Reasoning / Error</TableHead>
+                <TableHead className="w-[50px] p-3">Status</TableHead>
+                <TableHead className="w-[150px] p-3">Timestamp</TableHead>
+                <TableHead className="p-3">Pair</TableHead>
+                <TableHead className="text-right p-3">Pips Target</TableHead>
+                <TableHead className="p-3">Outcome</TableHead>
+                <TableHead className="p-3">Reasoning / Error</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -85,7 +86,7 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
                       ? "Awaiting AI..."
                       : "N/A"}
                   </TableCell>
-                  <TableCell className="p-3 text-xs max-w-xs truncate hover:whitespace-normal hover:max-w-none hover:overflow-visible" title={log.status === "SUCCESS" ? log.predictionOutcome?.reasoning : log.error}>
+                  <TableCell className="p-3 text-xs max-w-[150px] md:max-w-xs truncate hover:whitespace-normal hover:max-w-none hover:overflow-visible" title={log.status === "SUCCESS" ? log.predictionOutcome?.reasoning : log.error}>
                     {log.status === "SUCCESS" && log.predictionOutcome?.reasoning
                       ? log.predictionOutcome.reasoning
                       : log.status === "ERROR"
@@ -106,12 +107,3 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
     </Card>
   );
 }
-
-// Need to import Card components if not already globally available
-// For now, assuming they are or will be added.
-// If not, let's define basic stubs or use divs.
-// Using divs for now as Card was not explicitly requested for this component,
-// but it's good practice for consistency with ShadCN.
-// UPDATE: Added Card imports and structure for better styling.
-
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";

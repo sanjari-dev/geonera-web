@@ -68,11 +68,16 @@ export default function GeoneraPage() {
       }
 
       if (pipsTarget <= 0 || !selectedCurrency) {
-        toast({
-          title: "Prediction Paused",
-          description: "Please ensure currency pair and a valid pips target (greater than 0) are set to start automatic predictions.",
-          variant: "default",
-        });
+        // Do not toast if initially parameters are not set, let the UI guide the user.
+        // Only toast if user interaction led to invalid state or if it was previously valid.
+        // For simplicity here, we keep the toast but it could be refined.
+        if (predictionLogs.length > 0 || pipsTarget <= 0 && selectedCurrency) { // Example: toast if form was touched/used
+             toast({
+                title: "Prediction Paused",
+                description: "Ensure currency and pips target (>0) are set.",
+                variant: "default",
+             });
+        }
         timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
         return;
       }
@@ -120,14 +125,14 @@ export default function GeoneraPage() {
     performPrediction();
 
     return () => clearTimeout(timeoutId);
-  }, [selectedCurrency, pipsTarget, isLoading, toast, generateId]);
+  }, [selectedCurrency, pipsTarget, isLoading, toast, generateId, predictionLogs.length]);
 
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <AppHeader />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-10">
+      <main className="flex-grow container mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto space-y-4">
           <PipsParameterForm
             currencyPair={selectedCurrency}
             pipsTarget={pipsTarget}
@@ -138,7 +143,7 @@ export default function GeoneraPage() {
           <PredictionsTable predictions={predictionLogs} />
         </div>
       </main>
-      <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border">
+      <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
         {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. AI predictions are for informational purposes only and not financial advice. Predictions update automatically every minute if parameters are valid.
       </footer>
     </div>
