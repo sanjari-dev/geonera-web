@@ -97,7 +97,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
             <BarChart
               accessibilityLayer
               data={chartData}
-              margin={{ top: 20, right: 10, left: -15, bottom: 5 }}
+              margin={{ top: 20, right: 10, left: -25, bottom: 5 }} // Adjusted left margin
             >
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
@@ -110,10 +110,8 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
               <YAxis 
                 tickLine={false} 
                 axisLine={false} 
-                tickMargin={8} 
+                tick={false} // Hide Y-axis ticks (numbers)
                 domain={yDomain as [number, number]} 
-                tickFormatter={(value) => `$${value.toFixed(selectedPrediction?.currencyPair === "BTC/USD" ? 0 : 2)}`}
-                tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }}
               />
               <ChartTooltip
                 cursor={false}
@@ -150,3 +148,4 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
     </Card>
   );
 }
+
