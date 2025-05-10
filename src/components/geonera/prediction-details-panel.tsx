@@ -152,11 +152,11 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                    </div>
                 )}
 
-                {/* Market Data Section */}
+                {/* Market Data Section - Changed to vertical layout */}
                 {marketDataAvailable && ohlcData && (
                   <div className="pt-3 mt-3 border-t border-border space-y-1.5">
                     <h4 className="text-sm font-medium text-primary mb-1.5 whitespace-nowrap">Market Data</h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-xs w-full">
+                    <div className="flex flex-col space-y-1 text-xs w-full">
                       {ohlcData.openPrice !== undefined && (
                         <div className="flex items-center space-x-1.5 whitespace-nowrap">
                             <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
@@ -229,4 +229,5 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
 
