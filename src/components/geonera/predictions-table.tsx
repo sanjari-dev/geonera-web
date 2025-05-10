@@ -59,7 +59,7 @@ const getSignalBadgeVariant = (signal: PipsPredictionOutcome["tradingSignal"]): 
 export function PredictionsTable({ predictions, onRowClick, selectedPredictionId }: PredictionsTableProps) {
   if (predictions.length === 0) {
     return (
-      <div className="p-6 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center">
+      <div className="p-6 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center h-full">
         <Info className="h-10 w-10 text-muted-foreground mb-3" />
         <p className="text-lg text-muted-foreground">No active predictions.</p>
         <p className="text-sm text-muted-foreground">Set parameters to start generating predictions. They will appear here and be removed upon expiration.</p>
@@ -69,13 +69,13 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
   return (
     <TooltipProvider>
-      <Card className="shadow-xl overflow-hidden">
+      <Card className="shadow-xl overflow-hidden h-full">
         <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
            <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
            <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[280px] md:h-[320px]"> {/* Consistent height with details panel */}
+          <ScrollArea className="h-[360px]"> {/* Adjusted height */}
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
@@ -174,4 +174,3 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-

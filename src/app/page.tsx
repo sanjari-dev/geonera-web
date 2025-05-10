@@ -7,6 +7,7 @@ import { AppHeader } from '@/components/geonera/header';
 import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
+import { CandlestickDisplay } from '@/components/geonera/candlestick-display'; // New component
 import type { PredictionLogItem, CurrencyPair, PipsTargetRange } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
@@ -30,7 +31,8 @@ export default function GeoneraPage() {
   
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
-    if (typeof window !== 'undefined') {
+    // Check if uuid is available (client-side)
+    if (typeof window !== 'undefined' && typeof uuidv4 === 'function') {
         setUuidAvailable(true);
     }
   }, []);
@@ -40,7 +42,7 @@ export default function GeoneraPage() {
       try {
         return uuidv4();
       } catch (e) {
-         // Fallback for environments where uuidv4 might fail or during SSR if not guarded properly.
+         // Fallback for environments where uuidv4 might fail
          return Date.now().toString() + Math.random().toString(36).substring(2,7);
       }
     }
@@ -131,7 +133,7 @@ export default function GeoneraPage() {
             log.id === newLogId ? newSuccessfulLog : log
           )
         );
-        if (selectedPredictionLog?.id === newLogId) {
+        if (selectedPredictionLog?.id === newLogId || !selectedPredictionLog) { // Also select if no prediction is currently selected
             setSelectedPredictionLog(newSuccessfulLog);
         }
         toast({
@@ -150,7 +152,7 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [selectedCurrency, pipsTarget, toast, generateId, isLoading, predictionLogs.length, selectedPredictionLog?.id]); 
+  }, [selectedCurrency, pipsTarget, toast, generateId, isLoading, predictionLogs.length, selectedPredictionLog]); 
 
 
   useEffect(() => {
@@ -178,7 +180,7 @@ export default function GeoneraPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <AppHeader />
       <main className="flex-grow container mx-auto px-4 py-4">
-        <div className="max-w-6xl mx-auto space-y-4">
+        <div className="max-w-7xl mx-auto space-y-4"> {/* Increased max-width for 3 columns */}
           <PipsParameterForm
             currencyPair={selectedCurrency}
             pipsTarget={pipsTarget}
@@ -186,7 +188,10 @@ export default function GeoneraPage() {
             onPipsChange={handlePipsChange}
             isLoading={isLoading} 
           />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-1">
+              <CandlestickDisplay selectedPrediction={selectedPredictionLog} />
+            </div>
             <div className="md:col-span-2">
               <PredictionsTable 
                 predictions={predictionLogs} 
