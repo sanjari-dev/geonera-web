@@ -29,7 +29,7 @@ interface PredictionsTableProps {
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
-  maxLogs: number; // Add maxLogs prop
+  maxLogs: number; 
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -81,7 +81,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
         <CardContent className="p-0">
           <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]"> {/* Adjusted height */}
             <Table>
-              <TableHeader className="sticky top-0 bg-card z-10">
+              <TableHeader className="sticky top-0 bg-card z-10 border-b border-border">
                 <TableRow>
                   <TableHead className="w-[50px] p-2 text-center whitespace-nowrap">
                     <Tooltip>
@@ -91,7 +91,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="w-[150px] p-2 text-center whitespace-nowrap">
+                  <TableHead className="min-w-[150px] p-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Timestamp</TooltipTrigger>
                       <TooltipContent>
@@ -99,7 +99,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="p-2 text-center whitespace-nowrap">
+                  <TableHead className="min-w-[100px] p-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Pair</TooltipTrigger>
                       <TooltipContent>
@@ -107,7 +107,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="p-2 text-center whitespace-nowrap">
+                  <TableHead className="min-w-[120px] p-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">PIPS Target</TooltipTrigger>
                       <TooltipContent>
@@ -115,7 +115,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="p-2 text-center whitespace-nowrap">
+                  <TableHead className="min-w-[120px] p-2 text-center whitespace-nowrap">
                      <Tooltip>
                       <TooltipTrigger className="cursor-default">Signal (MT5)</TooltipTrigger>
                       <TooltipContent>
@@ -123,7 +123,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="w-[130px] p-2 text-center whitespace-nowrap"> {/* Adjusted width for DD HH:MM:SS + icon */}
+                  <TableHead className="min-w-[130px] p-2 text-center whitespace-nowrap"> {/* Adjusted width for DD HH:MM:SS + icon */}
                     <Tooltip>
                       <TooltipTrigger className="cursor-default flex items-center justify-center">
                         <Timer className="h-4 w-4 mr-1"/> Expires In
