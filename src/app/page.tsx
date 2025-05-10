@@ -88,6 +88,7 @@ export default function GeoneraPage() {
     setSelectedPredictionLog(null);
     setSelectedCurrencyPairs([]); // Also reset selected pairs on logout
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
+    router.push('/login'); // Redirect to login page on logout
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -121,13 +122,13 @@ export default function GeoneraPage() {
 
       if (isPipsTargetInvalid || noCurrenciesSelected) {
         const shouldShowPausedToast = predictionLogs.some(log => currentSelectedPairs.includes(log.currencyPair)) || (isPipsTargetInvalid && !noCurrenciesSelected) || (noCurrenciesSelected && !isPipsTargetInvalid && predictionLogs.length === 0);
-        if (shouldShowPausedToast && currentSelectedPairs.length > 0) { // Only show toast if pairs are selected but pips are invalid
+        if (shouldShowPausedToast && currentSelectedPairs.length > 0) { 
              toast({
                 title: "Prediction Paused",
                 description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
                 variant: "default",
              });
-        } else if (noCurrenciesSelected && (predictionLogs.length > 0 || isPipsTargetInvalid)) { // Or if no pairs selected but there were logs or invalid pips
+        } else if (noCurrenciesSelected && (predictionLogs.length > 0 || isPipsTargetInvalid)) { 
              toast({
                 title: "Prediction Paused",
                 description: "Please select at least one currency pair.",
@@ -170,7 +171,7 @@ export default function GeoneraPage() {
 
       // Select the first new pending log if no relevant log is selected
       if ((!selectedPredictionLog || !currentSelectedPairs.includes(selectedPredictionLog.currencyPair)) && newPendingLogs.length > 0) {
-         setSelectedPredictionLog(newPendingLogs[0]);
+         setSelectedPredictionLog({...newPendingLogs[0]});
       }
 
       const results = await Promise.all(predictionPromises);
@@ -210,11 +211,11 @@ export default function GeoneraPage() {
           }
 
           if (selectedPredictionLog?.id === pendingLog.id) {
-              setSelectedPredictionLog(logToUpdate);
+              setSelectedPredictionLog(logToUpdate ? {...logToUpdate} : null);
           } else if ((!selectedPredictionLog || !trulySelectedPairsAfterAsync.includes(selectedPredictionLog.currencyPair)) &&
                      trulySelectedPairsAfterAsync.includes(pendingLog.currencyPair)) {
               if (pendingLog.currencyPair === trulySelectedPairsAfterAsync[0] || trulySelectedPairsAfterAsync.length === 1) {
-                 setSelectedPredictionLog(logToUpdate);
+                 setSelectedPredictionLog(logToUpdate ? {...logToUpdate} : null);
               }
           }
         });
@@ -257,7 +258,7 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [currentUser, pipsTarget, selectedCurrencyPairs, toast, generateId, isLoading, predictionLogs, selectedPredictionLog]);
+  }, [currentUser, pipsTarget, toast, generateId, isLoading]);
 
 
   // Prediction expiration useEffect
@@ -303,7 +304,7 @@ export default function GeoneraPage() {
              new Date(log.expiresAt) > now
            );
            if (firstAvailableForSelectedPairs) {
-             setSelectedPredictionLog(firstAvailableForSelectedPairs);
+             setSelectedPredictionLog({...firstAvailableForSelectedPairs});
            }
            return currentLogs;
         });
@@ -327,7 +328,7 @@ export default function GeoneraPage() {
         currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "PENDING"
       );
-      setSelectedPredictionLog(nextValidLog || null);
+      setSelectedPredictionLog(nextValidLog ? {...nextValidLog} : null);
     } else if (!selectedPredictionLog && currentSelectedPairs.length > 0) {
       const firstLogForSelectedPairs = predictionLogs.find(log =>
         currentSelectedPairs.includes(log.currencyPair) &&
@@ -338,7 +339,7 @@ export default function GeoneraPage() {
         log.status === "PENDING"
       );
       if (firstLogForSelectedPairs) {
-        setSelectedPredictionLog(firstLogForSelectedPairs);
+        setSelectedPredictionLog({...firstLogForSelectedPairs});
       }
     }
   }, [currentUser, selectedCurrencyPairs, selectedPredictionLog, predictionLogs]);
@@ -354,20 +355,15 @@ export default function GeoneraPage() {
   }
 
   if (!currentUser) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <AppHeader user={null} onLogout={handleLogout} />
-        <main className="flex-grow container mx-auto px-4 py-4 flex items-center justify-center">
-          <div className="text-center">
-            <Brain className="h-16 w-16 text-primary mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold text-foreground mb-2">Welcome to Geonera</h2>
-            <p className="text-muted-foreground mb-6">Please log in to access AI-powered Forex predictions and analysis tools.</p>
-          </div>
-        </main>
-        <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
-          {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved.
-        </footer>
-      </div>
+     // Redirect to login if not authenticated and check is complete
+    if (typeof window !== 'undefined') { // Ensure this runs only on client
+        router.replace('/login');
+    }
+    return ( // Render minimal loading/redirecting UI
+        <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-lg text-muted-foreground">Redirecting to login...</p>
+        </div>
     );
   }
 
