@@ -79,7 +79,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
            <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[360px]"> {/* Adjusted height */}
+          <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]"> {/* Adjusted height */}
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>

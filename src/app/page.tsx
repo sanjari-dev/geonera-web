@@ -108,9 +108,9 @@ export default function GeoneraPage() {
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
     const logFromState = predictionLogs.find(l => l.id === log.id);
     if (logFromState) {
-      setSelectedPredictionLog(JSON.parse(JSON.stringify(logFromState)));
+      setSelectedPredictionLog(produce(logFromState, draft => draft)); // Create a plain copy
     } else {
-      setSelectedPredictionLog(JSON.parse(JSON.stringify(log)));
+      setSelectedPredictionLog(produce(log, draft => draft)); // Create a plain copy
     }
   }, [predictionLogs]);
 
@@ -292,9 +292,10 @@ export default function GeoneraPage() {
           if (removeLog) {
             draft.splice(i, 1);
             didChange = true;
-            // selectedPredictionLog update is handled by the sync effect below
           }
         }
+        // No need to return draft if undefined; immer handles it.
+        // Return the draft if changes were made, or let immer know no changes if !didChange
         return didChange ? draft : undefined; 
       }));
     }, 1000);
@@ -318,51 +319,52 @@ export default function GeoneraPage() {
     if (selectedPredictionLog) {
       const logInCurrentList = predictionLogs.find(log => log.id === selectedPredictionLog.id);
       if (logInCurrentList && currentSelectedPairs.includes(logInCurrentList.currencyPair)) {
-        if (logInCurrentList.status === "SUCCESS" && logInCurrentList.expiresAt && new Date() > new Date(logInCurrentList.expiresAt)) {
-           // Expired, will be cleared below if no other candidate found or becomes the candidate itself if it's the best available (though unlikely for expired)
-        } else {
+        // Check if the log is not expired
+        if (!(logInCurrentList.status === "SUCCESS" && logInCurrentList.expiresAt && new Date() > new Date(logInCurrentList.expiresAt))) {
           newSelectedCandidate = logInCurrentList;
         }
       }
     }
   
-    // If no valid selected log, try to find a new one from active ones
+    // If no valid selected log (or it expired/got filtered), try to find a new one
     if (!newSelectedCandidate && currentSelectedPairs.length > 0) {
+      // Prioritize newest, active, successful predictions for the selected pairs
       const activeSuccessLogs = predictionLogs.filter(log =>
         currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "SUCCESS" &&
         log.expiresAt && new Date(log.expiresAt) > new Date()
-      ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Newest successful first
+      ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       if (activeSuccessLogs.length > 0) {
         newSelectedCandidate = activeSuccessLogs[0];
       } else {
-        // If no active success logs, try pending logs
+        // Fallback to newest pending logs if no active success logs
         const pendingLogs = predictionLogs.filter(log =>
             currentSelectedPairs.includes(log.currencyPair) &&
             log.status === "PENDING"
-          ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Newest pending first
+          ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         if (pendingLogs.length > 0) {
           newSelectedCandidate = pendingLogs[0];
         } else {
-            // Fallback to any relevant log if no success or pending
+            // Fallback to any most recent log for the selected pairs if no success or pending
             const anyRelevantLog = predictionLogs.filter(log => currentSelectedPairs.includes(log.currencyPair))
-                                  .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Newest any first
+                                  .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             if (anyRelevantLog.length > 0) {
                  newSelectedCandidate = anyRelevantLog[0];
             }
         }
       }
     }
-  
-    const plainSelectedPredictionLog = selectedPredictionLog ? JSON.parse(JSON.stringify(selectedPredictionLog)) : null;
-    const plainNewSelectedCandidate = newSelectedCandidate ? JSON.parse(JSON.stringify(newSelectedCandidate)) : null;
+    
+    // Ensure we are setting a plain object, not a proxy, to avoid issues with child components
+    const finalNewSelectedCandidate = newSelectedCandidate ? produce(newSelectedCandidate, draft => draft) : null;
 
-    if (JSON.stringify(plainSelectedPredictionLog) !== JSON.stringify(plainNewSelectedCandidate) ) {
-      setSelectedPredictionLog(plainNewSelectedCandidate);
+    if (JSON.stringify(selectedPredictionLog) !== JSON.stringify(finalNewSelectedCandidate) ) {
+      setSelectedPredictionLog(finalNewSelectedCandidate);
     }
   
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]); // Removed selectedCurrencyPairs as it's covered by ref
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]);
+
 
   if (!isAuthCheckComplete) {
     return (
@@ -389,8 +391,7 @@ export default function GeoneraPage() {
     ? predictionLogs.filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
     : [];
   
-  // Ensure selectedPredictionLog is a plain object to prevent proxy issues with child components
-  const finalSelectedPredictionForChildren = selectedPredictionLog ? JSON.parse(JSON.stringify(selectedPredictionLog)) : null;
+  const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
 
 
   return (
@@ -409,7 +410,7 @@ export default function GeoneraPage() {
             <div className="md:col-span-1">
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="md:col-span-3"> 
+            <div className="md:col-span-2"> 
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -417,7 +418,7 @@ export default function GeoneraPage() {
                 maxLogs={MAX_PREDICTION_LOGS}
               />
             </div>
-            <div className="md:col-span-1">
+            <div className="md:col-span-2">
               <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
           </div>
