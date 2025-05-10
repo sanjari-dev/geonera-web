@@ -128,11 +128,18 @@ export default function GeoneraPage() {
   useEffect(() => {
     const expirationIntervalId = setInterval(() => {
       setPredictionLogs(prevLogs =>
-        prevLogs.map(log => {
-          if (log.status === "SUCCESS" && log.expiresAt && new Date() > new Date(log.expiresAt)) {
-            return { ...log, status: "EXPIRED" };
+        prevLogs.filter(log => {
+          // Keep logs that are not successful, or don't have an expiry, or are not yet expired
+          if (log.status !== "SUCCESS" || !log.expiresAt) {
+            return true; 
           }
-          return log;
+          // If it's a successful log and has an expiry, check if it's expired
+          const isExpired = new Date() > new Date(log.expiresAt);
+          if (isExpired) {
+             // Optionally, notify user that a prediction expired and was removed
+             // toast({ title: "Prediction Expired", description: `Prediction for ${log.currencyPair} (${log.pipsTarget} pips) has expired and was removed.`});
+          }
+          return !isExpired; // Keep if not expired
         })
       );
     }, 1000); // Check for expired predictions every second
@@ -157,8 +164,9 @@ export default function GeoneraPage() {
         </div>
       </main>
       <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
-        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every 5 seconds if parameters are valid. Active predictions expire after ${EXPIRATION_DURATION_MS / 1000} seconds.
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every 5 seconds if parameters are valid. Active predictions are removed after ${EXPIRATION_DURATION_MS / 1000} seconds.
       </footer>
     </div>
   );
 }
+

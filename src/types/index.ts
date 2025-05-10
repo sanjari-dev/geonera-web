@@ -10,7 +10,7 @@ export interface CurrencyOption {
 
 export type PipsTarget = number;
 
-export type PredictionStatus = "IDLE" | "PENDING" | "SUCCESS" | "ERROR" | "EXPIRED";
+export type PredictionStatus = "IDLE" | "PENDING" | "SUCCESS" | "ERROR"; // Removed "EXPIRED"
 
 // This will be the output structure from the modified AI flow
 export interface PipsPredictionOutcome {
@@ -35,3 +35,4 @@ export interface AnalyzePipsInfluenceInput {
   currencyPair: CurrencyPair;
   pipsTarget: PipsTarget;
 }
+
