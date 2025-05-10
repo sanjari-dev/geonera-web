@@ -19,9 +19,10 @@ const AnalyzePipsInfluenceInputSchema = z.object({
   currencyPair: z
     .string()
     .describe('The currency pair to analyze (e.g., XAU/USD, BTC/USD).'),
-  pipsTarget: z
-    .number()
-    .describe('The target number of pips for the prediction (e.g., 10, 20).'),
+  pipsTarget: z.object({
+      min: z.number().describe('The minimum target number of pips for the prediction (e.g., 5, 10).'),
+      max: z.number().describe('The maximum target number of pips for the prediction (e.g., 10, 20).')
+    }).describe('The target pips range for the prediction.'),
 });
 
 const PipsPredictionOutcomeSchema = z.object({
@@ -49,15 +50,15 @@ const prompt = ai.definePrompt({
   name: 'analyzePipsInfluencePrompt',
   input: {schema: AnalyzePipsInfluenceInputSchema},
   output: {schema: PipsPredictionOutcomeSchema},
-  prompt: `You are an expert Forex analyst. Your task is to predict whether the price of {{{currencyPair}}} will move by at least {{{pipsTarget}}} pips in the short term (next 1-15 minutes), based on current market conditions and general knowledge of this currency pair.
+  prompt: `You are an expert Forex analyst. Your task is to predict whether the price of {{{currencyPair}}} will move by at least the minimum of the target pips range ({{{pipsTarget.min}}} - {{{pipsTarget.max}}} pips) in the short term (next 1-15 minutes), based on current market conditions and general knowledge of this currency pair.
 
 Currency Pair: {{{currencyPair}}}
-Target Pips: {{{pipsTarget}}}
+Target Pips Range: {{{pipsTarget.min}}} - {{{pipsTarget.max}}}
 
 Analyze current market sentiment and typical behavior for this pair and provide:
-1.  'tradingSignal': A trading signal (BUY, SELL, HOLD, WAIT, N/A) based on whether the {{{pipsTarget}}} pips movement is likely.
-2.  'signalDetails': A clear statement describing the expected price movement in relation to the {{{pipsTarget}}} pips (e.g., "Likely to increase by at least {{{pipsTarget}}} pips", "Unlikely to reach {{{pipsTarget}}} pips, may decrease", "Neutral, price consolidation expected below {{{pipsTarget}}} pips movement").
-3.  'reasoning': A detailed explanation for your prediction, highlighting key factors and typical price patterns that support your conclusion regarding the pips target and the trading signal.
+1.  'tradingSignal': A trading signal (BUY, SELL, HOLD, WAIT, N/A) based on whether the minimum pips movement ({{{pipsTarget.min}}}) is likely.
+2.  'signalDetails': A clear statement describing the expected price movement in relation to the pips range (e.g., "Likely to increase by at least {{{pipsTarget.min}}} pips, potentially reaching {{{pipsTarget.max}}} pips", "Unlikely to reach {{{pipsTarget.min}}} pips, may decrease", "Neutral, price consolidation expected below {{{pipsTarget.min}}} pips movement").
+3.  'reasoning': A detailed explanation for your prediction, highlighting key factors and typical price patterns that support your conclusion regarding the pips target range and the trading signal.
 `,
 });
 
@@ -75,4 +76,3 @@ const analyzePipsInfluenceFlow = ai.defineFlow(
     return output;
   }
 );
-

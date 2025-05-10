@@ -38,10 +38,10 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
 
 const getSignalBadgeVariant = (signal: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
   switch (signal) {
-    case "BUY": return "default"; // Primary color (e.g., blue/greenish if theme supports)
-    case "SELL": return "destructive"; // Red
-    case "HOLD": return "secondary"; // Gray
-    case "WAIT": return "outline"; // Neutral outline
+    case "BUY": return "default"; 
+    case "SELL": return "destructive"; 
+    case "HOLD": return "secondary"; 
+    case "WAIT": return "outline"; 
     case "N/A": return "secondary";
     default: return "secondary";
   }
@@ -92,7 +92,9 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
                   </TableCell>
                   <TableCell className="p-3 font-medium">{log.currencyPair}</TableCell>
                   <TableCell className="p-3 text-right">
-                    <Badge variant={"secondary"}>{log.pipsTarget}</Badge>
+                    <Badge variant={"secondary"}>
+                      {log.pipsTarget.min} - {log.pipsTarget.max}
+                    </Badge>
                   </TableCell>
                   <TableCell className="p-3 text-sm">
                     {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (

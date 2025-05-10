@@ -6,14 +6,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { AppHeader } from '@/components/geonera/header';
 import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
-import type { PredictionLogItem, CurrencyPair, PipsTarget } from '@/types';
+import type { PredictionLogItem, CurrencyPair, PipsTargetRange } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
 
 
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
-// const EXPIRATION_DURATION_MS = 15000; // Predictions expire after 15 seconds - REMOVED FOR RANDOMIZATION
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 30;
 
@@ -23,14 +22,12 @@ export default function GeoneraPage() {
   const [currentYear, setCurrentYear] = useState<string>('');
 
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyPair>("XAU/USD");
-  const [pipsTarget, setPipsTarget] = useState<PipsTarget>(10);
+  const [pipsTarget, setPipsTarget] = useState<PipsTargetRange>({ min: 10, max: 20 });
   
   const [uuidAvailable, setUuidAvailable] = useState(false);
   
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
-    // Check if window is defined to ensure uuidv4 can be used safely on client if needed
-    // and to avoid hydration errors with direct usage of Math.random as fallback.
     if (typeof window !== 'undefined') {
         setUuidAvailable(true);
     }
@@ -41,10 +38,12 @@ export default function GeoneraPage() {
       try {
         return uuidv4();
       } catch (e) {
+         // Fallback for environments where uuidv4 might fail or during SSR if not guarded properly.
          return Date.now().toString() + Math.random().toString(36).substring(2,7);
       }
     }
-    return Date.now().toString() + (typeof window !== 'undefined' ? Math.random().toString(36).substring(2,7) : "serverid");
+    // Fallback for SSR or when uuid is not available
+    return Date.now().toString() + (typeof window !== 'undefined' ? Math.random().toString(36).substring(2,7) : "serverid" + Math.floor(Math.random() * 10000));
   }, [uuidAvailable]);
 
   const { toast } = useToast();
@@ -53,7 +52,7 @@ export default function GeoneraPage() {
     setSelectedCurrency(value);
   }, []);
 
-  const handlePipsChange = useCallback((value: PipsTarget) => {
+  const handlePipsChange = useCallback((value: PipsTargetRange) => {
     setPipsTarget(value);
   }, []);
 
@@ -67,12 +66,14 @@ export default function GeoneraPage() {
         return;
       }
 
-      if (pipsTarget <= 0 || !selectedCurrency) {
-        const shouldShowPausedToast = predictionLogs.length > 0 || (pipsTarget <= 0 && !!selectedCurrency);
+      const isPipsTargetInvalid = pipsTarget.min <= 0 || pipsTarget.max <= 0 || pipsTarget.min > pipsTarget.max;
+
+      if (isPipsTargetInvalid || !selectedCurrency) {
+        const shouldShowPausedToast = predictionLogs.length > 0 || (isPipsTargetInvalid && !!selectedCurrency);
         if (shouldShowPausedToast) {
              toast({
                 title: "Prediction Paused",
-                description: "Ensure currency and a pips target greater than 0 are set to resume predictions.",
+                description: "Ensure currency is selected and Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
                 variant: "default",
              });
         }
@@ -108,7 +109,6 @@ export default function GeoneraPage() {
           variant: "destructive",
         });
       } else if (result.data) {
-        // Calculate random expiration duration for this specific prediction
         const randomExpirationMs = (Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS) * 1000;
         
         setPredictionLogs(prevLogs => 
@@ -123,7 +123,7 @@ export default function GeoneraPage() {
         );
         toast({
           title: "Prediction Updated",
-          description: `Prediction for ${selectedCurrency} (${pipsTarget} pips) completed. Expires in ${randomExpirationMs / 1000}s.`,
+          description: `Prediction for ${selectedCurrency} (PIPS ${pipsTarget.min}-${pipsTarget.max}) completed. Expires in ${randomExpirationMs / 1000}s.`,
         });
       }
       setIsLoading(false);
@@ -179,4 +179,3 @@ export default function GeoneraPage() {
     </div>
   );
 }
-

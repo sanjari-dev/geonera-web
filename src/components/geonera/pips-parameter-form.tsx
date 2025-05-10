@@ -12,13 +12,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Coins, Bitcoin, Settings2 } from 'lucide-react';
-import type { CurrencyPair, CurrencyOption, PipsTarget } from '@/types';
+import type { CurrencyPair, CurrencyOption, PipsTargetRange, PipsTargetValue } from '@/types';
 
 interface PipsParameterFormProps {
   currencyPair: CurrencyPair;
-  pipsTarget: PipsTarget;
+  pipsTarget: PipsTargetRange;
   onCurrencyChange: (value: CurrencyPair) => void;
-  onPipsChange: (value: PipsTarget) => void;
+  onPipsChange: (value: PipsTargetRange) => void;
   isLoading: boolean;
 }
 
@@ -35,13 +35,16 @@ export function PipsParameterForm({
   isLoading,
 }: PipsParameterFormProps) {
 
-  const handlePipsInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleMinPipsInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
-    if (!isNaN(value)) {
-      onPipsChange(value);
-    } else if (e.target.value === '') {
-      onPipsChange(0); 
-    }
+    const newMin = !isNaN(value) ? value : 0;
+    onPipsChange({ ...pipsTarget, min: newMin });
+  };
+
+  const handleMaxPipsInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    const newMax = !isNaN(value) ? value : 0;
+    onPipsChange({ ...pipsTarget, max: newMax });
   };
   
   return (
@@ -50,8 +53,8 @@ export function PipsParameterForm({
         <Settings2 className="h-6 w-6" />
         <span>Prediction Parameters</span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-1">
           <Label htmlFor="currency-pair" className="text-md font-medium mb-1 block">Currency Pair</Label>
           <Select 
             onValueChange={(value) => onCurrencyChange(value as CurrencyPair)} 
@@ -78,13 +81,26 @@ export function PipsParameterForm({
           </Select>
         </div>
         <div>
-          <Label htmlFor="pips-target" className="text-md font-medium mb-1 block">Target Pips</Label>
+          <Label htmlFor="min-pips-target" className="text-md font-medium mb-1 block">Min Target PIPS</Label>
           <Input
-            id="pips-target"
+            id="min-pips-target"
             type="number"
-            value={pipsTarget}
-            onChange={handlePipsInputChange}
-            placeholder="e.g., 10"
+            value={pipsTarget.min}
+            onChange={handleMinPipsInputChange}
+            placeholder="e.g., 5"
+            className="text-base py-2.5 h-auto"
+            min="1"
+            disabled={isLoading}
+          />
+        </div>
+        <div>
+          <Label htmlFor="max-pips-target" className="text-md font-medium mb-1 block">Max Target PIPS</Label>
+          <Input
+            id="max-pips-target"
+            type="number"
+            value={pipsTarget.max}
+            onChange={handleMaxPipsInputChange}
+            placeholder="e.g., 20"
             className="text-base py-2.5 h-auto"
             min="1"
             disabled={isLoading}
@@ -93,7 +109,7 @@ export function PipsParameterForm({
       </div>
 
        <p className="text-sm text-center text-muted-foreground pt-2">
-        Predictions will be generated automatically every minute based on the parameters above.
+        Predictions will be generated automatically based on the parameters above. Ensure Min PIPS is less than or equal to Max PIPS.
       </p>
     </div>
   );

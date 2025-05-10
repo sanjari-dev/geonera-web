@@ -8,7 +8,11 @@ export interface CurrencyOption {
   icon?: LucideIcon;
 }
 
-export type PipsTarget = number;
+export type PipsTargetValue = number;
+export type PipsTargetRange = {
+  min: PipsTargetValue;
+  max: PipsTargetValue;
+};
 
 export type PredictionStatus = "IDLE" | "PENDING" | "SUCCESS" | "ERROR";
 
@@ -24,7 +28,7 @@ export interface PredictionLogItem {
   id: string;
   timestamp: Date;
   currencyPair: CurrencyPair;
-  pipsTarget: PipsTarget;
+  pipsTarget: PipsTargetRange; // Updated to PipsTargetRange
   status: PredictionStatus;
   predictionOutcome?: PipsPredictionOutcome;
   error?: string;
@@ -34,5 +38,5 @@ export interface PredictionLogItem {
 // This will be the input for the AI flow
 export interface AnalyzePipsInfluenceInput {
   currencyPair: CurrencyPair;
-  pipsTarget: PipsTarget;
+  pipsTarget: PipsTargetRange; // Updated to PipsTargetRange
 }
