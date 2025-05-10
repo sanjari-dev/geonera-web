@@ -13,21 +13,21 @@ interface CountdownTimerProps extends HTMLAttributes<HTMLSpanElement> {
 
 export function CountdownTimer({ expiresAt, onExpire, className, ...props }: CountdownTimerProps) {
   const targetDateRef = useRef(new Date(expiresAt));
-  const [remainingTime, setRemainingTime] = useState<string>("--:--");
+  const [remainingTime, setRemainingTime] = useState<string>("-- --:--:--");
   const [isExpired, setIsExpired] = useState(false);
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     targetDateRef.current = new Date(expiresAt); // Update targetDate if expiresAt prop changes
     setIsExpired(false); // Reset expired state if expiresAt changes
-    setRemainingTime("--:--"); // Reset display
+    setRemainingTime("-- --:--:--"); // Reset display
 
     const calculateRemainingTime = () => {
       const now = new Date();
-      const secondsLeft = differenceInSeconds(targetDateRef.current, now);
+      let secondsLeft = differenceInSeconds(targetDateRef.current, now);
 
       if (secondsLeft <= 0) {
-        setRemainingTime("00:00");
+        setRemainingTime("Expired");
         setIsExpired(true);
         if (onExpire) {
           onExpire();
@@ -38,9 +38,19 @@ export function CountdownTimer({ expiresAt, onExpire, className, ...props }: Cou
         return;
       }
 
+      const days = Math.floor(secondsLeft / (24 * 60 * 60));
+      secondsLeft -= days * 24 * 60 * 60;
+      const hours = Math.floor(secondsLeft / (60 * 60));
+      secondsLeft -= hours * 60 * 60;
       const minutes = Math.floor(secondsLeft / 60);
       const seconds = secondsLeft % 60;
-      setRemainingTime(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+
+      const formattedDays = String(days).padStart(2, '0');
+      const formattedHours = String(hours).padStart(2, '0');
+      const formattedMinutes = String(minutes).padStart(2, '0');
+      const formattedSeconds = String(seconds).padStart(2, '0');
+
+      setRemainingTime(`${formattedDays} ${formattedHours}:${formattedMinutes}:${formattedSeconds}`);
       setIsExpired(false);
     };
 
@@ -61,11 +71,12 @@ export function CountdownTimer({ expiresAt, onExpire, className, ...props }: Cou
     <span
       className={cn(
         isExpired ? "text-destructive/80" : "text-foreground",
+        "min-w-[80px] text-center", // Added min-width and text-center for better alignment
         className
       )}
       {...props}
     >
-      {isExpired ? "Expired" : remainingTime}
+      {remainingTime}
     </span>
   );
 }
