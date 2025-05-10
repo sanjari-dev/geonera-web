@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 
-export type CurrencyPair = "XAU/USD" | "BTC/USD"; // Add more as needed
+export type CurrencyPair = "XAU/USD" | "BTC/USD" | "EUR/USD" | "GBP/USD" | "USD/JPY" | "AUD/USD" | "USD/CAD"; // Add more as needed
 
 export interface CurrencyOption {
   value: CurrencyPair;
@@ -32,17 +32,18 @@ export interface PipsPredictionOutcome {
 export interface PredictionLogItem {
   id: string;
   timestamp: Date;
-  currencyPair: CurrencyPair;
-  pipsTarget: PipsTargetRange; // Updated to PipsTargetRange
+  currencyPair: CurrencyPair; // A single currency pair for this specific log item
+  pipsTarget: PipsTargetRange;
   status: PredictionStatus;
   predictionOutcome?: PipsPredictionOutcome;
   error?: string;
   expiresAt?: Date;
 }
 
-// This will be the input for the AI flow
+// This will be the input for the AI flow (or mock generator)
 export interface AnalyzePipsInfluenceInput {
-  currencyPair: CurrencyPair;
-  pipsTarget: PipsTargetRange; // Updated to PipsTargetRange
+  currencyPair: CurrencyPair; // AI or mock generator processes one pair at a time
+  pipsTarget: PipsTargetRange;
 }
 
+```

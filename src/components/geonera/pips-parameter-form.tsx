@@ -4,20 +4,23 @@
 import type { ChangeEvent } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Coins, Bitcoin, Settings2 } from 'lucide-react';
-import type { CurrencyPair, CurrencyOption, PipsTargetRange, PipsTargetValue } from '@/types';
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Coins, Bitcoin, Settings2, Euro, Landmark, ChevronDown } from 'lucide-react';
+import type { CurrencyPair, CurrencyOption, PipsTargetRange } from '@/types';
+import { cn } from '@/lib/utils';
 
 interface PipsParameterFormProps {
-  currencyPair: CurrencyPair;
+  selectedCurrencyPairs: CurrencyPair[];
   pipsTarget: PipsTargetRange;
-  onCurrencyChange: (value: CurrencyPair) => void;
+  onSelectedCurrencyPairsChange: (value: CurrencyPair[]) => void;
   onPipsChange: (value: PipsTargetRange) => void;
   isLoading: boolean;
 }
@@ -25,15 +28,34 @@ interface PipsParameterFormProps {
 const currencyOptions: CurrencyOption[] = [
   { value: "XAU/USD", label: "Gold (XAU/USD)", icon: Coins },
   { value: "BTC/USD", label: "Bitcoin (BTC/USD)", icon: Bitcoin },
+  { value: "EUR/USD", label: "Euro/USD (EUR/USD)", icon: Euro },
+  { value: "GBP/USD", label: "Pound/USD (GBP/USD)", icon: Landmark },
+  { value: "USD/JPY", label: "USD/Yen (USD/JPY)", icon: Landmark },
+  { value: "AUD/USD", label: "AUD/USD (AUD/USD)", icon: Landmark },
+  { value: "USD/CAD", label: "USD/CAD (USD/CAD)", icon: Landmark },
 ];
 
+const MAX_SELECTED_CURRENCIES = 5;
+
 export function PipsParameterForm({
-  currencyPair,
+  selectedCurrencyPairs,
   pipsTarget,
-  onCurrencyChange,
+  onSelectedCurrencyPairsChange,
   onPipsChange,
   isLoading,
 }: PipsParameterFormProps) {
+
+  const handleCurrencyToggle = (currencyValue: CurrencyPair) => {
+    const newSelectedCurrencies = selectedCurrencyPairs.includes(currencyValue)
+      ? selectedCurrencyPairs.filter(c => c !== currencyValue)
+      : [...selectedCurrencyPairs, currencyValue];
+
+    if (newSelectedCurrencies.length <= MAX_SELECTED_CURRENCIES) {
+      onSelectedCurrencyPairsChange(newSelectedCurrencies);
+    } else {
+      // Optionally, provide feedback that limit is reached, though disabling items is primary
+    }
+  };
 
   const handleMinPipsInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
@@ -46,6 +68,16 @@ export function PipsParameterForm({
     const newMax = !isNaN(value) ? value : 0;
     onPipsChange({ ...pipsTarget, max: newMax });
   };
+
+  const getTriggerLabel = () => {
+    if (selectedCurrencyPairs.length === 0) return "Select currencies...";
+    if (selectedCurrencyPairs.length === 1) {
+      const option = currencyOptions.find(opt => opt.value === selectedCurrencyPairs[0]);
+      return option ? option.label : selectedCurrencyPairs[0];
+    }
+    if (selectedCurrencyPairs.length <= 3) return selectedCurrencyPairs.join(', ');
+    return `${selectedCurrencyPairs.length} currencies selected`;
+  };
   
   return (
     <div className="space-y-6 p-6 bg-card shadow-lg rounded-lg border border-border">
@@ -55,30 +87,48 @@ export function PipsParameterForm({
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-1">
-          <Label htmlFor="currency-pair" className="text-md font-medium mb-1 block">Currency Pair</Label>
-          <Select 
-            onValueChange={(value) => onCurrencyChange(value as CurrencyPair)} 
-            value={currencyPair} 
-            name="currencyPair"
-            disabled={isLoading}
-          >
-            <SelectTrigger id="currency-pair" className="w-full text-base py-2.5 h-auto">
-              <SelectValue placeholder="Select pair" />
-            </SelectTrigger>
-            <SelectContent>
+          <Label htmlFor="currency-pair-multiselect" className="text-md font-medium mb-1 block">
+            Currency Pair(s) (Max {MAX_SELECTED_CURRENCIES})
+          </Label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="currency-pair-multiselect"
+                variant="outline"
+                className={cn(
+                  "w-full justify-between text-base py-2.5 h-auto",
+                  selectedCurrencyPairs.length === 0 && "text-muted-foreground"
+                )}
+                disabled={isLoading}
+              >
+                <span className="truncate">{getTriggerLabel()}</span>
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-full min-w-[var(--radix-dropdown-menu-trigger-width)]">
+              <DropdownMenuLabel>Select up to {MAX_SELECTED_CURRENCIES} currencies</DropdownMenuLabel>
+              <DropdownMenuSeparator />
               {currencyOptions.map(option => {
                 const IconComponent = option.icon;
+                const isSelected = selectedCurrencyPairs.includes(option.value);
+                const isDisabled = !isSelected && selectedCurrencyPairs.length >= MAX_SELECTED_CURRENCIES;
                 return (
-                  <SelectItem key={option.value} value={option.value} className="text-base py-2">
+                  <DropdownMenuCheckboxItem
+                    key={option.value}
+                    checked={isSelected}
+                    onCheckedChange={() => handleCurrencyToggle(option.value)}
+                    disabled={isDisabled || isLoading}
+                    className="text-base py-2"
+                  >
                     <div className="flex items-center">
                       {IconComponent && <IconComponent className="h-5 w-5 mr-2 text-muted-foreground" />}
                       {option.label}
                     </div>
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 );
               })}
-            </SelectContent>
-          </Select>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div>
           <Label htmlFor="min-pips-target" className="text-md font-medium mb-1 block">Min Target PIPS</Label>

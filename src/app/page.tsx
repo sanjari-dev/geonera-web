@@ -7,7 +7,7 @@ import { AppHeader } from '@/components/geonera/header';
 import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
-import { CandlestickDisplay } from '@/components/geonera/candlestick-display'; // New component
+import { CandlestickDisplay } from '@/components/geonera/candlestick-display';
 import type { PredictionLogItem, CurrencyPair, PipsTargetRange } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
@@ -17,13 +17,14 @@ import { v4 as uuidv4 } from 'uuid';
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 30;
+const MAX_LOG_ITEMS = 50; // Max items in prediction log
 
 export default function GeoneraPage() {
   const [predictionLogs, setPredictionLogs] = useState<PredictionLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentYear, setCurrentYear] = useState<string>('');
 
-  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyPair>("XAU/USD");
+  const [selectedCurrencyPairs, setSelectedCurrencyPairs] = useState<CurrencyPair[]>(["XAU/USD"]);
   const [pipsTarget, setPipsTarget] = useState<PipsTargetRange>({ min: 10, max: 20 });
   
   const [uuidAvailable, setUuidAvailable] = useState(false);
@@ -31,7 +32,6 @@ export default function GeoneraPage() {
   
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
-    // Check if uuid is available (client-side)
     if (typeof window !== 'undefined' && typeof uuidv4 === 'function') {
         setUuidAvailable(true);
     }
@@ -42,18 +42,16 @@ export default function GeoneraPage() {
       try {
         return uuidv4();
       } catch (e) {
-         // Fallback for environments where uuidv4 might fail
          return Date.now().toString() + Math.random().toString(36).substring(2,7);
       }
     }
-    // Fallback for SSR or when uuid is not available
     return Date.now().toString() + (typeof window !== 'undefined' ? Math.random().toString(36).substring(2,7) : "serverid" + Math.floor(Math.random() * 10000));
   }, [uuidAvailable]);
 
   const { toast } = useToast();
 
-  const handleCurrencyChange = useCallback((value: CurrencyPair) => {
-    setSelectedCurrency(value);
+  const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
+    setSelectedCurrencyPairs(value);
   }, []);
 
   const handlePipsChange = useCallback((value: PipsTargetRange) => {
@@ -75,13 +73,14 @@ export default function GeoneraPage() {
       }
 
       const isPipsTargetInvalid = pipsTarget.min <= 0 || pipsTarget.max <= 0 || pipsTarget.min > pipsTarget.max;
+      const noCurrenciesSelected = selectedCurrencyPairs.length === 0;
 
-      if (isPipsTargetInvalid || !selectedCurrency) {
-        const shouldShowPausedToast = predictionLogs.length > 0 || (isPipsTargetInvalid && !!selectedCurrency);
+      if (isPipsTargetInvalid || noCurrenciesSelected) {
+        const shouldShowPausedToast = predictionLogs.length > 0 || (isPipsTargetInvalid && !noCurrenciesSelected) || (noCurrenciesSelected && !isPipsTargetInvalid);
         if (shouldShowPausedToast) {
              toast({
                 title: "Prediction Paused",
-                description: "Ensure currency is selected and Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
+                description: noCurrenciesSelected ? "Please select at least one currency pair." : "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
                 variant: "default",
              });
         }
@@ -91,56 +90,90 @@ export default function GeoneraPage() {
       }
 
       setIsLoading(true);
-      const newLogId = generateId(); 
-
-      const pendingLogItem: PredictionLogItem = {
-        id: newLogId,
-        timestamp: new Date(), 
-        currencyPair: selectedCurrency,
-        pipsTarget,
-        status: "PENDING",
-      };
-      setPredictionLogs(prevLogs => [pendingLogItem, ...prevLogs].slice(0, 50)); 
-
-      const result = await getPipsPredictionAction(selectedCurrency, pipsTarget);
       
+      const newPendingLogs: PredictionLogItem[] = [];
+      selectedCurrencyPairs.forEach(currencyPair => {
+        const newLogId = generateId();
+        newPendingLogs.push({
+          id: newLogId,
+          timestamp: new Date(), 
+          currencyPair: currencyPair,
+          pipsTarget,
+          status: "PENDING",
+        });
+      });
 
-      if (result.error) {
-        setPredictionLogs(prevLogs => 
-          prevLogs.map(log => 
-            log.id === newLogId ? { ...log, status: "ERROR", error: result.error } : log
-          )
-        );
-        if (selectedPredictionLog?.id === newLogId) {
-            setSelectedPredictionLog(prev => prev ? { ...prev, status: "ERROR", error: result.error } : null);
-        }
-        toast({
-          title: "Prediction Error",
-          description: result.error,
-          variant: "destructive",
-        });
-      } else if (result.data) {
-        const randomExpirationMs = (Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS) * 1000;
-        const newSuccessfulLog = { 
-            ...pendingLogItem, 
-            status: "SUCCESS" as const, 
-            predictionOutcome: result.data,
-            expiresAt: new Date(Date.now() + randomExpirationMs) 
-        };
-        
-        setPredictionLogs(prevLogs => 
-          prevLogs.map(log => 
-            log.id === newLogId ? newSuccessfulLog : log
-          )
-        );
-        if (selectedPredictionLog?.id === newLogId || !selectedPredictionLog) { // Also select if no prediction is currently selected
-            setSelectedPredictionLog(newSuccessfulLog);
-        }
-        toast({
-          title: "Prediction Updated",
-          description: `Prediction for ${selectedCurrency} (PIPS ${pipsTarget.min}-${pipsTarget.max}) completed. Expires in ${randomExpirationMs / 1000}s.`,
-        });
+      setPredictionLogs(prevLogs => [...newPendingLogs, ...prevLogs].slice(0, MAX_LOG_ITEMS));
+      
+      if (!selectedPredictionLog && newPendingLogs.length > 0) {
+        setSelectedPredictionLog(newPendingLogs[0]);
       }
+
+      const predictionPromises = newPendingLogs.map(async (pendingLog) => {
+        const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsTarget);
+        return { result, pendingLog };
+      });
+
+      const results = await Promise.all(predictionPromises);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      results.forEach(({ result, pendingLog }) => {
+        if (result.error) {
+          errorCount++;
+          setPredictionLogs(prevLogs => 
+            prevLogs.map(log => 
+              log.id === pendingLog.id ? { ...log, status: "ERROR", error: result.error } : log
+            )
+          );
+          if (selectedPredictionLog?.id === pendingLog.id) {
+              setSelectedPredictionLog(prev => prev ? { ...prev, status: "ERROR", error: result.error } : null);
+          }
+        } else if (result.data) {
+          successCount++;
+          const randomExpirationMs = (Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS) * 1000;
+          const newSuccessfulLog: PredictionLogItem = { 
+              ...pendingLog, 
+              status: "SUCCESS", 
+              predictionOutcome: result.data,
+              expiresAt: new Date(Date.now() + randomExpirationMs) 
+          };
+          
+          setPredictionLogs(prevLogs => 
+            prevLogs.map(log => 
+              log.id === pendingLog.id ? newSuccessfulLog : log
+            )
+          );
+          if (selectedPredictionLog?.id === pendingLog.id) {
+              setSelectedPredictionLog(newSuccessfulLog);
+          } else if (!selectedPredictionLog && pendingLog.currencyPair === selectedCurrencyPairs[0]) { // Auto-select first successful if none selected
+              setSelectedPredictionLog(newSuccessfulLog);
+          }
+        }
+      });
+
+      if (results.length > 0) {
+        let toastTitle = "Predictions Updated";
+        let toastDescription = "";
+        if (successCount > 0 && errorCount === 0) {
+          toastDescription = `${successCount} prediction(s) completed for ${selectedCurrencyPairs.join(', ')}.`;
+        } else if (successCount > 0 && errorCount > 0) {
+          toastTitle = "Some Predictions Failed";
+          toastDescription = `${successCount} succeeded, ${errorCount} failed.`;
+        } else if (errorCount > 0 && successCount === 0) {
+          toastTitle = "Prediction Errors";
+          toastDescription = `${errorCount} prediction(s) failed.`;
+        }
+        if (toastDescription) {
+          toast({
+            title: toastTitle,
+            description: toastDescription,
+            variant: errorCount > 0 && successCount === 0 ? "destructive" : "default",
+          });
+        }
+      }
+
       setIsLoading(false);
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
@@ -152,7 +185,7 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [selectedCurrency, pipsTarget, toast, generateId, isLoading, predictionLogs.length, selectedPredictionLog]); 
+  }, [selectedCurrencyPairs, pipsTarget, toast, generateId, isLoading, predictionLogs.length, selectedPredictionLog]);
 
 
   useEffect(() => {
@@ -165,7 +198,8 @@ export default function GeoneraPage() {
           }
           const isExpired = now > new Date(log.expiresAt);
           if (isExpired && selectedPredictionLog?.id === log.id) {
-            setSelectedPredictionLog(null); // Clear selection if it expires
+            const nextAvailableLog = prevLogs.find(p => p.id !== log.id && p.status === "SUCCESS" && p.expiresAt && new Date(p.expiresAt) > now);
+            setSelectedPredictionLog(nextAvailableLog || null);
           }
           return !isExpired;
         })
@@ -180,11 +214,11 @@ export default function GeoneraPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <AppHeader />
       <main className="flex-grow container mx-auto px-4 py-4">
-        <div className="max-w-7xl mx-auto space-y-4"> {/* Increased max-width for 3 columns */}
+        <div className="max-w-7xl mx-auto space-y-4">
           <PipsParameterForm
-            currencyPair={selectedCurrency}
+            selectedCurrencyPairs={selectedCurrencyPairs}
             pipsTarget={pipsTarget}
-            onCurrencyChange={handleCurrencyChange}
+            onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
             onPipsChange={handlePipsChange}
             isLoading={isLoading} 
           />
