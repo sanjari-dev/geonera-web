@@ -128,7 +128,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                     onClick={() => onRowClick(log)}
                     className={cn(
                       "cursor-pointer hover:bg-muted/50 transition-colors",
-                      selectedPredictionId === log.id && "bg-accent text-accent-foreground hover:bg-accent/90"
+                      selectedPredictionId === log.id && "bg-secondary text-secondary-foreground hover:bg-muted"
                     )}
                   >
                     <TableCell className="p-3">
@@ -139,15 +139,16 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                     </TableCell>
                     <TableCell className="p-3 font-medium">{log.currencyPair}</TableCell>
                     <TableCell className="p-3 text-right">
-                      <Badge variant={selectedPredictionId === log.id ? "outline" : "secondary"} 
-                             className={selectedPredictionId === log.id ? "border-accent-foreground/50 text-accent-foreground bg-accent/20" : ""}>
+                      <Badge variant={selectedPredictionId === log.id ? "default" : "secondary"}>
                         {log.pipsTarget.min} - {log.pipsTarget.max}
                       </Badge>
                     </TableCell>
                     <TableCell className="p-3 text-sm">
                       {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
-                        <Badge variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
-                               className={selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : ""}>
+                        <Badge 
+                          variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
+                          className={selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : ""}
+                        >
                           {log.predictionOutcome.tradingSignal}
                         </Badge>
                       ) : log.status === "PENDING" ? (
