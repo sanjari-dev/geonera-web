@@ -12,10 +12,11 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, TimerOff } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus } from '@/types';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface PredictionsTableProps {
   predictions: PredictionLogItem[];
@@ -31,6 +32,8 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
       return <AlertCircle className="h-4 w-4 text-red-500" />;
     case "IDLE":
        return <Info className="h-4 w-4 text-gray-400" />;
+    case "EXPIRED":
+      return <TimerOff className="h-4 w-4 text-orange-500" />;
     default:
       return null;
   }
@@ -51,7 +54,7 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
     <Card className="shadow-xl overflow-hidden">
       <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
          <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
-         <CardDescription className="text-sm text-primary/80">Tracks predictions based on your parameters.</CardDescription>
+         <CardDescription className="text-sm text-primary/80">Tracks predictions based on your parameters. Active predictions expire.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[280px] md:h-[320px]"> {/* Adjusted height */}
@@ -68,7 +71,13 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
             </TableHeader>
             <TableBody>
               {predictions.map((log) => (
-                <TableRow key={log.id} className="hover:bg-muted/50 transition-colors">
+                <TableRow 
+                  key={log.id} 
+                  className={cn(
+                    "hover:bg-muted/50 transition-colors",
+                    log.status === "EXPIRED" && "opacity-70"
+                  )}
+                >
                   <TableCell className="p-3">
                     <StatusIndicator status={log.status} />
                   </TableCell>
@@ -77,20 +86,26 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
                   </TableCell>
                   <TableCell className="p-3 font-medium">{log.currencyPair}</TableCell>
                   <TableCell className="p-3 text-right">
-                    <Badge variant="secondary">{log.pipsTarget}</Badge>
+                    <Badge variant={log.status === "EXPIRED" ? "outline" : "secondary"}>{log.pipsTarget}</Badge>
                   </TableCell>
                   <TableCell className="p-3 text-sm">
                     {log.status === "SUCCESS" && log.predictionOutcome?.outcome
                       ? log.predictionOutcome.outcome
                       : log.status === "PENDING"
                       ? "Awaiting prediction..."
+                      : log.status === "EXPIRED" 
+                      ? log.predictionOutcome?.outcome || "Prediction Expired" // Show old outcome or "Prediction Expired"
                       : "N/A"}
                   </TableCell>
-                  <TableCell className="p-3 text-xs max-w-[150px] md:max-w-xs truncate hover:whitespace-normal hover:max-w-none hover:overflow-visible" title={log.status === "SUCCESS" ? log.predictionOutcome?.reasoning : log.error}>
+                  <TableCell className="p-3 text-xs max-w-[150px] md:max-w-xs truncate hover:whitespace-normal hover:max-w-none hover:overflow-visible" title={log.status === "SUCCESS" || log.status === "EXPIRED" ? log.predictionOutcome?.reasoning : log.error}>
                     {log.status === "SUCCESS" && log.predictionOutcome?.reasoning
                       ? log.predictionOutcome.reasoning
                       : log.status === "ERROR"
                       ? log.error
+                      : log.status === "EXPIRED" && log.predictionOutcome?.reasoning
+                      ? log.predictionOutcome.reasoning // Show old reasoning
+                      : log.status === "EXPIRED"
+                      ? "Data is no longer valid."
                       : "-"}
                   </TableCell>
                 </TableRow>

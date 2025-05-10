@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
+const EXPIRATION_DURATION_MS = 15000; // Predictions expire after 15 seconds
 
 export default function GeoneraPage() {
   const [predictionLogs, setPredictionLogs] = useState<PredictionLogItem[]>([]);
@@ -26,7 +27,6 @@ export default function GeoneraPage() {
   
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
-    // Check if window is defined (client-side) before attempting to use uuidv4 which might rely on browser APIs
     if (typeof window !== 'undefined') {
         setUuidAvailable(true);
     }
@@ -37,11 +37,9 @@ export default function GeoneraPage() {
       try {
         return uuidv4();
       } catch (e) {
-         // Fallback if uuidv4 fails for any reason (e.g., crypto API not available in a very restricted environment)
          return Date.now().toString() + Math.random().toString(36).substring(2,7);
       }
     }
-    // Fallback for initial server render or if uuidv4 is not available
     return Date.now().toString() + Math.random().toString(36).substring(2,7);
   }, [uuidAvailable]);
 
@@ -60,21 +58,18 @@ export default function GeoneraPage() {
 
     const performPrediction = async () => {
       if (isLoading) {
-        // If a prediction is already in progress, reschedule and return
         timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
         return;
       }
 
       if (pipsTarget <= 0 || !selectedCurrency) {
-        // Only show toast if there were previous logs or if both conditions are met for an initial pause.
         if (predictionLogs.length > 0 || (pipsTarget <= 0 && selectedCurrency)) { 
              toast({
                 title: "Prediction Paused",
                 description: "Ensure currency and pips target (>0) are set.",
-                variant: "default", // Using "default" as it's an informational message
+                variant: "default",
              });
         }
-        // Reschedule even if parameters are invalid
         timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
         return;
       }
@@ -89,7 +84,7 @@ export default function GeoneraPage() {
         pipsTarget,
         status: "PENDING",
       };
-      setPredictionLogs(prevLogs => [pendingLogItem, ...prevLogs].slice(0, 50)); // Keep max 50 logs
+      setPredictionLogs(prevLogs => [pendingLogItem, ...prevLogs].slice(0, 50)); 
 
       const result = await getPipsPredictionAction(selectedCurrency, pipsTarget);
       
@@ -107,7 +102,12 @@ export default function GeoneraPage() {
       } else if (result.data) {
         setPredictionLogs(prevLogs => 
           prevLogs.map(log => 
-            log.id === newLogId ? { ...log, status: "SUCCESS", predictionOutcome: result.data } : log
+            log.id === newLogId ? { 
+              ...log, 
+              status: "SUCCESS", 
+              predictionOutcome: result.data,
+              expiresAt: new Date(Date.now() + EXPIRATION_DURATION_MS) // Set expiration time for successful prediction
+            } : log
           )
         );
         toast({
@@ -116,16 +116,29 @@ export default function GeoneraPage() {
         });
       }
       setIsLoading(false);
-      // Schedule the next prediction
       timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
     };
 
-    // Start the prediction loop
     performPrediction();
 
-    // Cleanup function to clear the timeout when the component unmounts or dependencies change
     return () => clearTimeout(timeoutId);
-  }, [selectedCurrency, pipsTarget, isLoading, toast, generateId, predictionLogs.length]); // Added predictionLogs.length to deps for toast logic
+  }, [selectedCurrency, pipsTarget, isLoading, toast, generateId, predictionLogs.length]);
+
+
+  useEffect(() => {
+    const expirationIntervalId = setInterval(() => {
+      setPredictionLogs(prevLogs =>
+        prevLogs.map(log => {
+          if (log.status === "SUCCESS" && log.expiresAt && new Date() > new Date(log.expiresAt)) {
+            return { ...log, status: "EXPIRED" };
+          }
+          return log;
+        })
+      );
+    }, 1000); // Check for expired predictions every second
+
+    return () => clearInterval(expirationIntervalId);
+  }, []);
 
 
   return (
@@ -144,9 +157,8 @@ export default function GeoneraPage() {
         </div>
       </main>
       <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
-        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every 5 seconds if parameters are valid.
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every 5 seconds if parameters are valid. Active predictions expire after ${EXPIRATION_DURATION_MS / 1000} seconds.
       </footer>
     </div>
   );
 }
-
