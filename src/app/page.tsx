@@ -1,7 +1,6 @@
 // src/app/page.tsx
 "use client";
 
-import type { ChangeEvent } from 'react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { produce } from 'immer';
@@ -16,8 +15,6 @@ import type {
   CurrencyPair,
   PipsTargetRange,
   User,
-  PredictionStatus,
-  PipsPredictionOutcome,
   StatusFilterType,
   SignalFilterType,
   SortConfig,
@@ -32,7 +29,7 @@ import { Loader2 } from 'lucide-react';
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 604800; // 7 days in seconds (7 * 24 * 60 * 60)
-const MAX_PREDICTION_LOGS = 1500; // Maximum number of prediction logs to keep
+const MAX_PREDICTION_LOGS = 15; // Maximum number of prediction logs to keep
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -461,11 +458,11 @@ export default function GeoneraPage() {
 
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background">
       <AppHeader user={currentUser} onLogout={handleLogout} />
-      <main className="flex-grow container mx-auto py-4 flex flex-col">
-        <div className="max-w-screen-2xl mx-auto space-y-4 flex flex-col flex-grow w-full min-h-0"> {/* Added min-h-0 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <main className="flex-grow container mx-auto py-2 flex flex-col">
+        <div className="max-w-screen-2xl space-y-2 flex flex-col flex-grow w-full min-h-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <PipsParameterForm
               selectedCurrencyPairs={selectedCurrencyPairs}
               pipsTarget={pipsTarget}
@@ -480,11 +477,11 @@ export default function GeoneraPage() {
               onFilterSignalChange={setFilterSignal}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(theme(spacing.64),1fr)_auto_theme(spacing.80)] gap-4 flex-grow min-h-0"> {/* Added min-h-0 */}
-            <div className="flex flex-col min-h-0"> {/* Added min-h-0 */}
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(theme(spacing.64),1fr)_auto_theme(spacing.80)] gap-2 flex-grow min-h-0">
+            <div className="flex flex-col min-h-0">
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="max-w-max flex flex-col min-h-0"> {/* Added min-h-0 */}
+            <div className="max-w-max flex flex-col min-h-0">
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -494,13 +491,13 @@ export default function GeoneraPage() {
                 onSort={handleSort}
               />
             </div>
-            <div className="flex flex-col min-h-0"> {/* Added min-h-0 */}
+            <div className="flex flex-col min-h-0">
               <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
           </div>
         </div>
       </main>
-      <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
+      <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-stone-300">
         {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved.
       </footer>
     </div>

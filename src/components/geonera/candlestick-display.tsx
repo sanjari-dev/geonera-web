@@ -80,7 +80,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
 
   return (
     <Card className="shadow-xl h-full flex flex-col">
-      <CardHeader className="bg-secondary/30 p-4 rounded-t-lg">
+      <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
         <CardTitle className="text-xl font-semibold text-primary flex items-center">
           <TrendingUp className="h-6 w-6 mr-2" />
           Candlestick View

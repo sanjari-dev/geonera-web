@@ -71,14 +71,14 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
   return (
     <Card className="shadow-xl h-full flex flex-col">
-      <CardHeader className="bg-secondary/30 p-4 rounded-t-lg">
+      <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
         <CardTitle className="text-xl font-semibold text-primary whitespace-nowrap">Prediction Details</CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
           {selectedPrediction ? <span className="whitespace-nowrap">{`Details for ${selectedPrediction.currencyPair}`}</span> : "Select a prediction from the log to view its details."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-0 flex-grow">
-        <ScrollArea className="h-full">
+      <CardContent className="p-0 flex-grow flex flex-col min-h-0">
+        <ScrollArea className="flex-grow">
           <div className="p-4 space-y-3">
             {!selectedPrediction ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
@@ -102,7 +102,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                   <span className="font-medium whitespace-nowrap">Timestamp:</span>
                   <span className="text-sm whitespace-nowrap">{format(new Date(selectedPrediction.timestamp), "yyyy-MM-dd HH:mm:ss")}</span>
                 </div>
-                 <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2">
                   <div className="flex items-center justify-center h-5 w-5"> {/* Ensure icon wrapper size consistency */}
                     <StatusIcon status={selectedPrediction.status} />
                   </div>
@@ -119,9 +119,9 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                 {selectedPrediction.status === "SUCCESS" && selectedPrediction.predictionOutcome && (
                   <>
                     <div className="flex items-center space-x-2">
-                       <div className="flex items-center justify-center h-5 w-5"> {/* Ensure icon wrapper size consistency */}
+                        <div className="flex items-center justify-center h-5 w-5"> {/* Ensure icon wrapper size consistency */}
                         <SignalIcon signal={selectedPrediction.predictionOutcome.tradingSignal} />
-                       </div>
+                        </div>
                       <span className="font-medium whitespace-nowrap">Trading Signal:</span>
                       <Badge variant={getSignalBadgeVariant(selectedPrediction.predictionOutcome.tradingSignal)}>
                         {selectedPrediction.predictionOutcome.tradingSignal}
@@ -146,20 +146,18 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                 )}
                 
                 {selectedPrediction.status === "PENDING" && (
-                   <div className="flex items-center space-x-2 text-muted-foreground">
-                     <Loader2 className="h-4 w-4 animate-spin" />
-                     <span className="whitespace-nowrap">Awaiting analysis...</span>
-                   </div>
+                    <div className="flex items-center space-x-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="whitespace-nowrap">Awaiting analysis...</span>
+                    </div>
                 )}
-
-                {/* Market Data Section */}
                 {marketDataAvailable && ohlcData && (
                   <div className="pt-3 mt-3 border-t border-border space-y-2">
-                     <div className="flex items-center space-x-2 mb-1">
+                      <div className="flex items-center space-x-2 mb-1">
                         <Briefcase className="h-5 w-5 text-primary" />
                         <span className="font-semibold text-primary whitespace-nowrap">Market Data:</span>
                     </div>
-                    <div className="pl-2 space-y-1"> {/* Indent market data items */}
+                    <div className="pl-2 space-y-1">
                       {ohlcData.openPrice !== undefined && (
                         <div className="flex items-center space-x-2">
                           <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
