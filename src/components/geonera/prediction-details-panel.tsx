@@ -4,7 +4,7 @@
 import type { PredictionLogItem, PipsPredictionOutcome, CurrencyPair } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Tag, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Landmark } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark } from "lucide-react";
 import { format } from 'date-fns';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -46,18 +46,6 @@ const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status 
   }
 };
 
-const formatPrice = (price?: number, currencyPair?: CurrencyPair) => {
-    if (price === undefined || price === null) return "N/A";
-    const fractionDigits = currencyPair === "BTC/USD" ? 0 : 2;
-    return price.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
-};
-
-const formatVolume = (volume?: number) => {
-    if (volume === undefined || volume === null) return "N/A";
-    return volume.toLocaleString();
-}
-
-
 export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetailsPanelProps) {
   return (
     <Card className="shadow-xl h-full">
@@ -68,7 +56,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]">
+        <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]"> {/* Consider dynamic height based on content or fixed with scroll */}
           <div className="p-4 space-y-3">
             {!selectedPrediction ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
@@ -118,58 +106,13 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                       </Badge>
                     </div>
                     <div className="space-y-1">
-                      <span className="font-medium text-primary block whitespace-nowrap">Signal Details:</span>
+                      <span className="font-medium text-primary block">Signal Details:</span>
                       <p className="text-sm bg-muted/50 p-2 rounded">{selectedPrediction.predictionOutcome.signalDetails}</p>
                     </div>
                     <div className="space-y-1">
-                      <span className="font-medium text-primary block whitespace-nowrap">Reasoning:</span>
+                      <span className="font-medium text-primary block">Reasoning:</span>
                       <p className="text-sm bg-muted/50 p-2 rounded">{selectedPrediction.predictionOutcome.reasoning}</p>
                     </div>
-                    
-                    { (selectedPrediction.predictionOutcome.openPrice !== undefined ||
-                        selectedPrediction.predictionOutcome.closePrice !== undefined ||
-                        selectedPrediction.predictionOutcome.highPrice !== undefined ||
-                        selectedPrediction.predictionOutcome.lowPrice !== undefined ||
-                        selectedPrediction.predictionOutcome.volume !== undefined) && (
-                    <div className="pt-2 border-t mt-3 space-y-2">
-                        <h4 className="text-md font-semibold text-primary mb-1 whitespace-nowrap">Market Data</h4>
-                        {selectedPrediction.predictionOutcome.openPrice !== undefined && (
-                        <div className="flex items-center space-x-2">
-                            <LogIn className="h-5 w-5 text-primary opacity-80" />
-                            <span className="font-medium whitespace-nowrap">Open Price:</span>
-                            <span className="whitespace-nowrap">{formatPrice(selectedPrediction.predictionOutcome.openPrice, selectedPrediction.currencyPair)}</span>
-                        </div>
-                        )}
-                        {selectedPrediction.predictionOutcome.closePrice !== undefined && (
-                        <div className="flex items-center space-x-2">
-                            <LogOut className="h-5 w-5 text-primary opacity-80" />
-                            <span className="font-medium whitespace-nowrap">Close Price:</span>
-                            <span className="whitespace-nowrap">{formatPrice(selectedPrediction.predictionOutcome.closePrice, selectedPrediction.currencyPair)}</span>
-                        </div>
-                        )}
-                        {selectedPrediction.predictionOutcome.highPrice !== undefined && (
-                        <div className="flex items-center space-x-2">
-                            <ArrowUpCircle className="h-5 w-5 text-green-600" />
-                            <span className="font-medium whitespace-nowrap">High Price:</span>
-                            <span className="whitespace-nowrap">{formatPrice(selectedPrediction.predictionOutcome.highPrice, selectedPrediction.currencyPair)}</span>
-                        </div>
-                        )}
-                        {selectedPrediction.predictionOutcome.lowPrice !== undefined && (
-                        <div className="flex items-center space-x-2">
-                            <ArrowDownCircle className="h-5 w-5 text-red-600" />
-                            <span className="font-medium whitespace-nowrap">Low Price:</span>
-                            <span className="whitespace-nowrap">{formatPrice(selectedPrediction.predictionOutcome.lowPrice, selectedPrediction.currencyPair)}</span>
-                        </div>
-                        )}
-                        {selectedPrediction.predictionOutcome.volume !== undefined && (
-                        <div className="flex items-center space-x-2">
-                            <BarChart3 className="h-5 w-5 text-primary opacity-80" />
-                            <span className="font-medium whitespace-nowrap">Volume:</span>
-                            <span className="whitespace-nowrap">{formatVolume(selectedPrediction.predictionOutcome.volume)}</span>
-                        </div>
-                        )}
-                    </div>
-                    )}
                   </>
                 )}
 
@@ -205,4 +148,3 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
