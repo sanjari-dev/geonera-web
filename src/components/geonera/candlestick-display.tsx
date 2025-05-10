@@ -2,8 +2,8 @@
 "use client";
 
 import type { PredictionLogItem, CurrencyPair } from '@/types';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Info, TrendingUp, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Info, TrendingUp } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -11,16 +11,11 @@ interface CandlestickDisplayProps {
   selectedPrediction: PredictionLogItem | null;
 }
 
-// Helper functions (moved from PredictionDetailsPanel or similar)
+// Helper function for formatting price, kept here for potential future use or if shared
 const formatPrice = (price?: number, currencyPair?: CurrencyPair) => {
     if (price === undefined || price === null) return "N/A";
     const fractionDigits = currencyPair === "BTC/USD" ? 0 : (currencyPair === "USD/JPY" ? 3 : 2);
     return price.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
-};
-
-const formatVolume = (volume?: number) => {
-    if (volume === undefined || volume === null) return "N/A";
-    return volume.toLocaleString();
 };
 
 
@@ -32,7 +27,7 @@ const CandlestickShape = (props: any) => {
   const [low, open, close, high] = payload.ohlc;
   const isBullish = close >= open;
   
-  const fillColor = isBullish ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'; // Using HSL variables
+  const fillColor = isBullish ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'; 
   const strokeColor = fillColor;
 
 
@@ -77,18 +72,11 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
         currencyPair: selectedPrediction.currencyPair,
         ohlc: [ohlcData.lowPrice, ohlcData.openPrice, ohlcData.closePrice, ohlcData.highPrice],
         value: ohlcData.highPrice, 
-        domainY: [ohlcData.lowPrice * 0.995, ohlcData.highPrice * 1.005]
+        domainY: [ohlcData.lowPrice * 0.995, ohlcData.highPrice * 1.005] 
       }]
     : [];
 
   const yDomain = chartData.length > 0 ? chartData[0].domainY : ['auto', 'auto'];
-  const marketDataAvailable = selectedPrediction && ohlcData && (
-    ohlcData.openPrice !== undefined ||
-    ohlcData.closePrice !== undefined ||
-    ohlcData.highPrice !== undefined ||
-    ohlcData.lowPrice !== undefined ||
-    ohlcData.volume !== undefined
-  );
 
   return (
     <Card className="shadow-xl h-full flex flex-col">
@@ -101,7 +89,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
           {selectedPrediction ? `Visual for ${selectedPrediction.currencyPair}` : "Select a prediction."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-4 flex-grow"> {/* Removed explicit height calculation, rely on flex-grow */}
+      <CardContent className="p-4 flex-grow">
         {!selectedPrediction || chartData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Info className="h-12 w-12 mb-3" />
@@ -160,48 +148,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
           </ChartContainer>
         )}
       </CardContent>
-      {marketDataAvailable && selectedPrediction && ohlcData && (
-        <CardFooter className="p-3 border-t bg-secondary/20 rounded-b-lg">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-1.5 text-xs w-full">
-            {ohlcData.openPrice !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <LogIn className="h-3.5 w-3.5 text-primary opacity-80" />
-                <span className="font-medium">Open:</span>
-                <span>{formatPrice(ohlcData.openPrice, selectedPrediction.currencyPair)}</span>
-            </div>
-            )}
-            {ohlcData.highPrice !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <ArrowUpCircle className="h-3.5 w-3.5 text-green-600" />
-                <span className="font-medium">High:</span>
-                <span>{formatPrice(ohlcData.highPrice, selectedPrediction.currencyPair)}</span>
-            </div>
-            )}
-            {ohlcData.lowPrice !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <ArrowDownCircle className="h-3.5 w-3.5 text-red-600" />
-                <span className="font-medium">Low:</span>
-                <span>{formatPrice(ohlcData.lowPrice, selectedPrediction.currencyPair)}</span>
-            </div>
-            )}
-            {ohlcData.closePrice !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <LogOut className="h-3.5 w-3.5 text-primary opacity-80" />
-                <span className="font-medium">Close:</span>
-                <span>{formatPrice(ohlcData.closePrice, selectedPrediction.currencyPair)}</span>
-            </div>
-            )}
-            {ohlcData.volume !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <BarChart3 className="h-3.5 w-3.5 text-primary opacity-80" />
-                <span className="font-medium">Volume:</span>
-                <span>{formatVolume(ohlcData.volume)}</span>
-            </div>
-            )}
-          </div>
-        </CardFooter>
-      )}
+      {/* Market data display removed from here */}
     </Card>
   );
 }
-

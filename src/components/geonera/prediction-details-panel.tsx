@@ -2,9 +2,9 @@
 "use client";
 
 import type { PredictionLogItem, PipsPredictionOutcome, CurrencyPair } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3 } from "lucide-react";
 import { format } from 'date-fns';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,19 @@ import { cn } from '@/lib/utils';
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
 }
+
+// Helper functions (re-added or ensured present)
+const formatPrice = (price?: number, currencyPair?: CurrencyPair) => {
+    if (price === undefined || price === null) return "N/A";
+    const fractionDigits = currencyPair === "BTC/USD" ? 0 : (currencyPair === "USD/JPY" ? 3 : 2);
+    return price.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
+};
+
+const formatVolume = (volume?: number) => {
+    if (volume === undefined || volume === null) return "N/A";
+    return volume.toLocaleString();
+};
+
 
 const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
   if (!signal) return "secondary";
@@ -47,16 +60,25 @@ const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status 
 };
 
 export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetailsPanelProps) {
+  const ohlcData = selectedPrediction?.predictionOutcome;
+  const marketDataAvailable = selectedPrediction && ohlcData && (
+    ohlcData.openPrice !== undefined ||
+    ohlcData.closePrice !== undefined ||
+    ohlcData.highPrice !== undefined ||
+    ohlcData.lowPrice !== undefined ||
+    ohlcData.volume !== undefined
+  );
+
   return (
-    <Card className="shadow-xl h-full">
+    <Card className="shadow-xl h-full flex flex-col">
       <CardHeader className="bg-secondary/30 p-4 rounded-t-lg">
         <CardTitle className="text-xl font-semibold text-primary whitespace-nowrap">Prediction Details</CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
           {selectedPrediction ? <span className="whitespace-nowrap">{`Details for ${selectedPrediction.currencyPair}`}</span> : "Select a prediction from the log to view its details."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]"> {/* Consider dynamic height based on content or fixed with scroll */}
+      <CardContent className="p-0 flex-grow"> {/* Use flex-grow for scrollarea parent */}
+        <ScrollArea className="h-full"> {/* ScrollArea takes full height of its parent */}
           <div className="p-4 space-y-3">
             {!selectedPrediction ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
@@ -142,6 +164,47 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
           </div>
         </ScrollArea>
       </CardContent>
+      {marketDataAvailable && selectedPrediction && ohlcData && (
+        <CardFooter className="p-3 border-t bg-secondary/20 rounded-b-lg">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-1.5 text-xs w-full">
+            {ohlcData.openPrice !== undefined && (
+            <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                <LogIn className="h-3.5 w-3.5 text-primary opacity-80" />
+                <span className="font-medium">Open:</span>
+                <span>{formatPrice(ohlcData.openPrice, selectedPrediction.currencyPair)}</span>
+            </div>
+            )}
+            {ohlcData.highPrice !== undefined && (
+            <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                <ArrowUpCircle className="h-3.5 w-3.5 text-green-600" />
+                <span className="font-medium">High:</span>
+                <span>{formatPrice(ohlcData.highPrice, selectedPrediction.currencyPair)}</span>
+            </div>
+            )}
+            {ohlcData.lowPrice !== undefined && (
+            <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                <ArrowDownCircle className="h-3.5 w-3.5 text-red-600" />
+                <span className="font-medium">Low:</span>
+                <span>{formatPrice(ohlcData.lowPrice, selectedPrediction.currencyPair)}</span>
+            </div>
+            )}
+            {ohlcData.closePrice !== undefined && (
+            <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                <LogOut className="h-3.5 w-3.5 text-primary opacity-80" />
+                <span className="font-medium">Close:</span>
+                <span>{formatPrice(ohlcData.closePrice, selectedPrediction.currencyPair)}</span>
+            </div>
+            )}
+            {ohlcData.volume !== undefined && (
+            <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                <BarChart3 className="h-3.5 w-3.5 text-primary opacity-80" />
+                <span className="font-medium">Volume:</span>
+                <span>{formatVolume(ohlcData.volume)}</span>
+            </div>
+            )}
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 }
