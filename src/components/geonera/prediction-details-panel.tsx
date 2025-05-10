@@ -159,35 +159,45 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-xs w-full">
                       {ohlcData.openPrice !== undefined && (
                         <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                            <LogIn className="h-3.5 w-3.5 text-primary opacity-80" />
+                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
+                                <LogIn className="h-4 w-4 text-primary" />
+                            </div>
                             <span className="font-medium">Open:</span>
                             <span>{formatPrice(ohlcData.openPrice, selectedPrediction.currencyPair)}</span>
                         </div>
                       )}
                       {ohlcData.highPrice !== undefined && (
                         <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                            <ArrowUpCircle className="h-3.5 w-3.5 text-green-600" />
+                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
+                                <ArrowUpCircle className="h-4 w-4 text-green-500" />
+                            </div>
                             <span className="font-medium">High:</span>
                             <span>{formatPrice(ohlcData.highPrice, selectedPrediction.currencyPair)}</span>
                         </div>
                       )}
                       {ohlcData.lowPrice !== undefined && (
                         <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                            <ArrowDownCircle className="h-3.5 w-3.5 text-red-600" />
+                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
+                                <ArrowDownCircle className="h-4 w-4 text-red-500" />
+                            </div>
                             <span className="font-medium">Low:</span>
                             <span>{formatPrice(ohlcData.lowPrice, selectedPrediction.currencyPair)}</span>
                         </div>
                       )}
                       {ohlcData.closePrice !== undefined && (
                         <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                            <LogOut className="h-3.5 w-3.5 text-primary opacity-80" />
+                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
+                                <LogOut className="h-4 w-4 text-primary" />
+                            </div>
                             <span className="font-medium">Close:</span>
                             <span>{formatPrice(ohlcData.closePrice, selectedPrediction.currencyPair)}</span>
                         </div>
                       )}
                       {ohlcData.volume !== undefined && (
                         <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                            <BarChart3 className="h-3.5 w-3.5 text-primary opacity-80" />
+                             <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
+                                <BarChart3 className="h-4 w-4 text-primary" />
+                            </div>
                             <span className="font-medium">Volume:</span>
                             <span>{formatVolume(ohlcData.volume)}</span>
                         </div>
@@ -219,3 +229,4 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
