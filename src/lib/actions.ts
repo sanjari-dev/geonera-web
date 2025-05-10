@@ -6,16 +6,12 @@ import type { CurrencyPair, PipsTarget, PipsPredictionOutcome, AnalyzePipsInflue
 
 export async function getPipsPredictionAction(
   currencyPair: CurrencyPair,
-  pipsTarget: PipsTarget,
-  historicalData: string,
-  marketNews: string
+  pipsTarget: PipsTarget
 ): Promise<{ data?: PipsPredictionOutcome; error?: string }> {
   try {
     const input: AnalyzePipsInfluenceInput = {
       currencyPair,
       pipsTarget,
-      historicalData,
-      marketNews,
     };
     const predictionOutcome = await analyzePipsInfluence(input);
     
@@ -29,3 +25,4 @@ export async function getPipsPredictionAction(
     return { error: `Failed to get prediction: ${errorMessage}` };
   }
 }
+

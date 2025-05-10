@@ -27,14 +27,11 @@ export interface PredictionLogItem {
   status: PredictionStatus;
   predictionOutcome?: PipsPredictionOutcome;
   error?: string;
-  historicalDataSnapshot?: string; // Optional: snapshot of data used for this prediction
-  marketNewsSnapshot?: string; // Optional: snapshot of news used
 }
 
 // This will be the input for the modified AI flow
 export interface AnalyzePipsInfluenceInput {
   currencyPair: CurrencyPair;
   pipsTarget: PipsTarget;
-  historicalData: string;
-  marketNews: string;
 }
+

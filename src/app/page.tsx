@@ -6,21 +6,11 @@ import { useState, useCallback, useEffect } from 'react';
 import { AppHeader } from '@/components/geonera/header';
 import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
-import type { PredictionLogItem, CurrencyPair, PipsTarget, PipsPredictionOutcome } from '@/types';
+import type { PredictionLogItem, CurrencyPair, PipsTarget } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
 
-// Default templates, moved here from PipsParameterForm
-const defaultHistoricalDataTemplates: Record<CurrencyPair, string> = {
-  "XAU/USD": "Historical data for XAU/USD (last 24h):\n- Price range: $2310 - $2335\n- Key support: $2305\n- Key resistance: $2340\n- Current trend: Mildly bullish on H1 chart.",
-  "BTC/USD": "Historical data for BTC/USD (last 24h):\n- Price range: $62,500 - $64,800\n- Key support: $62,000\n- Key resistance: $65,000\n- Volume: Moderate, slight increase in last 4 hours.",
-};
-
-const defaultMarketNewsTemplates: Record<CurrencyPair, string> = {
-  "XAU/USD": "Recent market news for XAU/USD:\n- US CPI data released: slightly higher than expected.\n- Geopolitical tensions in [Region] remain elevated.\n- Central bank statements: [Bank] maintained a hawkish stance.",
-  "BTC/USD": "Recent market news for BTC/USD:\n- Upcoming halving event anticipation.\n- Regulatory news: [Country] considering new crypto framework.\n- ETF inflows/outflows: Net positive inflows reported yesterday.",
-};
 
 const PREDICTION_INTERVAL_MS = 60000; // 1 minute
 
@@ -31,20 +21,17 @@ export default function GeoneraPage() {
 
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyPair>("XAU/USD");
   const [pipsTarget, setPipsTarget] = useState<PipsTarget>(10);
-  const [historicalData, setHistoricalData] = useState(defaultHistoricalDataTemplates["XAU/USD"]);
-  const [marketNews, setMarketNews] = useState(defaultMarketNewsTemplates["XAU/USD"]);
   
   const [uuidAvailable, setUuidAvailable] = useState(false);
   
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
-    import('uuid').then(uuid => {
-      if (uuid && uuid.v4) {
+    // Check if uuid is available client-side to avoid hydration issues if it's used during SSR
+    // For this specific use case (generating IDs on client actions), direct import is fine.
+    // However, if uuidv4 were used in initial render logic, this useEffect approach would be better.
+    if (typeof window !== 'undefined') {
         setUuidAvailable(true);
-      }
-    }).catch(() => {
-      console.warn("uuid library not available, using timestamp for IDs.");
-    });
+    }
   }, []);
 
   const generateId = useCallback(() => {
@@ -52,9 +39,12 @@ export default function GeoneraPage() {
       try {
         return uuidv4();
       } catch (e) {
+         // Fallback if uuidv4 fails for some reason, though unlikely
          return Date.now().toString() + Math.random().toString(36).substring(2,7);
       }
     }
+    // Fallback if uuid library is not yet confirmed available (e.g. during initial hydration phase if not careful)
+    // or if there was an issue importing it (though PipsParameterForm already uses it directly).
     return Date.now().toString() + Math.random().toString(36).substring(2,7);
   }, [uuidAvailable]);
 
@@ -62,20 +52,10 @@ export default function GeoneraPage() {
 
   const handleCurrencyChange = useCallback((value: CurrencyPair) => {
     setSelectedCurrency(value);
-    setHistoricalData(defaultHistoricalDataTemplates[value]);
-    setMarketNews(defaultMarketNewsTemplates[value]);
   }, []);
 
   const handlePipsChange = useCallback((value: PipsTarget) => {
     setPipsTarget(value);
-  }, []);
-
-  const handleHistoricalDataChange = useCallback((value: string) => {
-    setHistoricalData(value);
-  }, []);
-
-  const handleMarketNewsChange = useCallback((value: string) => {
-    setMarketNews(value);
   }, []);
 
   useEffect(() => {
@@ -83,18 +63,16 @@ export default function GeoneraPage() {
 
     const performPrediction = async () => {
       if (isLoading) {
-        // If already loading, schedule next check without making a call
         timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
         return;
       }
 
-      if (!historicalData.trim() || !marketNews.trim() || pipsTarget <= 0) {
+      if (pipsTarget <= 0 || !selectedCurrency) {
         toast({
           title: "Prediction Paused",
-          description: "Please ensure all parameters (currency, pips, historical data, market news) are valid to start automatic predictions.",
+          description: "Please ensure currency pair and a valid pips target (greater than 0) are set to start automatic predictions.",
           variant: "default",
         });
-        // Schedule next check, parameters might become valid
         timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
         return;
       }
@@ -108,12 +86,10 @@ export default function GeoneraPage() {
         currencyPair: selectedCurrency,
         pipsTarget,
         status: "PENDING",
-        historicalDataSnapshot: historicalData,
-        marketNewsSnapshot: marketNews,
       };
-      setPredictionLogs(prevLogs => [pendingLogItem, ...prevLogs].slice(0, 50)); // Keep last 50 logs
+      setPredictionLogs(prevLogs => [pendingLogItem, ...prevLogs].slice(0, 50)); 
 
-      const result = await getPipsPredictionAction(selectedCurrency, pipsTarget, historicalData, marketNews);
+      const result = await getPipsPredictionAction(selectedCurrency, pipsTarget);
       
       if (result.error) {
         setPredictionLogs(prevLogs => 
@@ -138,13 +114,13 @@ export default function GeoneraPage() {
         });
       }
       setIsLoading(false);
-      timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS); // Schedule next call
+      timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
     };
 
-    performPrediction(); // Initial call
+    performPrediction();
 
-    return () => clearTimeout(timeoutId); // Cleanup on unmount or when dependencies change
-  }, [selectedCurrency, pipsTarget, historicalData, marketNews, isLoading, toast, generateId]); // remove uuidAvailable if generateId is stable
+    return () => clearTimeout(timeoutId);
+  }, [selectedCurrency, pipsTarget, isLoading, toast, generateId]);
 
 
   return (
@@ -155,12 +131,8 @@ export default function GeoneraPage() {
           <PipsParameterForm
             currencyPair={selectedCurrency}
             pipsTarget={pipsTarget}
-            historicalData={historicalData}
-            marketNews={marketNews}
             onCurrencyChange={handleCurrencyChange}
             onPipsChange={handlePipsChange}
-            onHistoricalDataChange={handleHistoricalDataChange}
-            onMarketNewsChange={handleMarketNewsChange}
             isLoading={isLoading}
           />
           <PredictionsTable predictions={predictionLogs} />
