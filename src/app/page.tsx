@@ -397,7 +397,7 @@ export default function GeoneraPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <AppHeader user={currentUser} onLogout={handleLogout} />
-      <main className="flex-grow container mx-auto px-4 py-4">
+      <main className="flex-grow container mx-auto py-4">
         <div className="max-w-7xl mx-auto space-y-4">
           <PipsParameterForm
             selectedCurrencyPairs={selectedCurrencyPairs}
@@ -406,11 +406,11 @@ export default function GeoneraPage() {
             onPipsChange={handlePipsChange}
             isLoading={isLoading}
           />
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="md:col-span-1">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-2">
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="md:col-span-3"> 
+            <div className="md:col-span-7"> 
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -418,7 +418,7 @@ export default function GeoneraPage() {
                 maxLogs={MAX_PREDICTION_LOGS}
               />
             </div>
-            <div className="md:col-span-1">
+            <div className="md:col-span-3">
               <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
           </div>
