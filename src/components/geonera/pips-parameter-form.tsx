@@ -88,7 +88,7 @@ export function PipsParameterForm({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-1">
           <Label htmlFor="currency-pair-multiselect" className="text-md font-medium mb-1 block">
-            Currency Pair(s) (Max {MAX_SELECTED_CURRENCIES})
+            Currency Pair(s)
           </Label>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
