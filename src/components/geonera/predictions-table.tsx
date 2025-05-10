@@ -136,7 +136,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {predictions.slice().reverse().map((log) => ( // Display latest logs at the top by reversing a copy
+                {predictions.map((log) => ( // Display logs oldest first
                   <TableRow 
                     key={log.id} 
                     onClick={() => onRowClick(log)}
@@ -198,5 +198,3 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
-

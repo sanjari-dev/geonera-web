@@ -108,9 +108,9 @@ export default function GeoneraPage() {
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
     const logFromState = predictionLogs.find(l => l.id === log.id);
      if (logFromState) {
-      setSelectedPredictionLog(produce(logFromState, draft => { return draft; })); // Return the draft
+      setSelectedPredictionLog(produce(logFromState, draft => { return draft; })); 
     } else {
-      setSelectedPredictionLog(produce(log, draft => { return draft; })); // Return the draft
+      setSelectedPredictionLog(produce(log, draft => { return draft; })); 
     }
   }, [predictionLogs]);
 
@@ -183,7 +183,7 @@ export default function GeoneraPage() {
         if (draft.length > MAX_PREDICTION_LOGS) {
           draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
-        return draft; // Ensure Immer returns the modified draft
+        // No need to return draft explicitly, Immer handles it if draft is modified
       }));
       
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
@@ -227,7 +227,7 @@ export default function GeoneraPage() {
         if (draft.length > MAX_PREDICTION_LOGS) {
           draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
-        return draft; // Ensure Immer returns the modified draft
+       // No need to return draft explicitly
       }));
 
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
@@ -281,87 +281,79 @@ export default function GeoneraPage() {
           const log = draft[i];
           let removeLog = false;
 
+          // Remove if currency pair is no longer selected (applies to PENDING or SUCCESS)
           if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS")) {
             removeLog = true;
           }
 
+          // Remove if SUCCESS log is expired
           if (log.status === "SUCCESS" && log.expiresAt && now > new Date(log.expiresAt)) {
             removeLog = true;
           }
           
           if (removeLog) {
+            const removedLogId = draft[i].id;
             draft.splice(i, 1);
             didChange = true;
-             // If the removed log was the selected one, clear selection
-            if (selectedPredictionLog && selectedPredictionLog.id === log.id) {
-              setSelectedPredictionLog(null); 
+            if (selectedPredictionLog && selectedPredictionLog.id === removedLogId) {
+              // Postpone clearing selection to the dedicated effect for selection management
             }
           }
         }
-        if (didChange) return draft;
-        return undefined; // No changes, return undefined for Immer
+        if (!didChange) return undefined; // No changes, return undefined for Immer to optimize
+        // No need to return draft explicitly if modified
       }));
     }, 1000);
 
     return () => clearInterval(expirationIntervalId);
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]);
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); // Removed predictionLogs from dep array to avoid self-triggering loops with produce
 
 
   // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) {
-      if (selectedPredictionLog !== null) {
-        setSelectedPredictionLog(null);
-      }
+      if (selectedPredictionLog !== null) setSelectedPredictionLog(null);
       return;
     }
-  
+
     const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
-    let newSelectedCandidate: PredictionLogItem | null = null;
-  
-    if (selectedPredictionLog) {
-      // Check if the currently selected log is still valid (exists, matches selected pairs, not expired)
-      const logInCurrentList = predictionLogs.find(log => log.id === selectedPredictionLog.id);
-      if (logInCurrentList && 
-          currentSelectedPairs.includes(logInCurrentList.currencyPair) &&
-          !(logInCurrentList.status === "SUCCESS" && logInCurrentList.expiresAt && new Date() > new Date(logInCurrentList.expiresAt))) {
-        newSelectedCandidate = logInCurrentList;
-      }
-    }
-  
-    // If no valid candidate yet, try to find a default one from the current list and pairs
-    if (!newSelectedCandidate && currentSelectedPairs.length > 0 && predictionLogs.length > 0) {
-      const activeSuccessLogs = predictionLogs
+    let newSelectedLogCandidate: PredictionLogItem | null = null;
+
+    if (currentSelectedPairs.length > 0 && predictionLogs.length > 0) {
+      // Filter logs for selected pairs that are not expired (if SUCCESS) or are PENDING/ERROR
+      const eligibleLogs = predictionLogs
         .filter(log =>
           currentSelectedPairs.includes(log.currencyPair) &&
-          log.status === "SUCCESS" &&
-          log.expiresAt && new Date(log.expiresAt) > new Date()
+          !(log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) < new Date())
         )
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Latest first
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); // Sort OLDEST first
 
-      if (activeSuccessLogs.length > 0) {
-        newSelectedCandidate = activeSuccessLogs[0];
-      } else {
-        // Fallback to latest pending or any relevant log if no active success logs
-        const anyRelevantLog = predictionLogs
-          .filter(log => currentSelectedPairs.includes(log.currencyPair))
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        if (anyRelevantLog.length > 0) {
-          newSelectedCandidate = anyRelevantLog[0];
+      if (eligibleLogs.length > 0) {
+        // If there's an existing selection, try to maintain it if it's still in eligibleLogs
+        const currentSelectionStillEligible = selectedPredictionLog && eligibleLogs.find(log => log.id === selectedPredictionLog.id);
+
+        if (currentSelectionStillEligible) {
+          newSelectedLogCandidate = currentSelectionStillEligible; // Use the (potentially updated) object from eligibleLogs
+        } else {
+          // Otherwise, pick the first (oldest) eligible log
+          newSelectedLogCandidate = eligibleLogs[0];
         }
       }
     }
-    
-    // Create a new object for state update to ensure re-render if candidate changed
-    const finalNewSelectedCandidate = newSelectedCandidate ? produce(newSelectedCandidate, draft => { return draft; }) : null;
+    // If no currentSelectedPairs, or no predictionLogs, or no eligibleLogs, newSelectedLogCandidate remains null.
 
-    if ( (selectedPredictionLog === null && finalNewSelectedCandidate !== null) ||
-         (selectedPredictionLog !== null && finalNewSelectedCandidate === null) ||
-         (selectedPredictionLog !== null && finalNewSelectedCandidate !== null && selectedPredictionLog.id !== finalNewSelectedCandidate.id) ) {
-       setSelectedPredictionLog(finalNewSelectedCandidate);
+    const finalNewSelectedLog = newSelectedLogCandidate ? produce(newSelectedLogCandidate, draft => draft) : null;
+
+    // Update state only if there's a change in selection ID or if the selected object's content changed
+    // or if one is null and the other is not.
+    if (selectedPredictionLog?.id !== finalNewSelectedLog?.id ||
+        (finalNewSelectedLog && selectedPredictionLog && JSON.stringify(selectedPredictionLog) !== JSON.stringify(finalNewSelectedLog)) ||
+        (selectedPredictionLog === null && finalNewSelectedLog !== null) ||
+        (selectedPredictionLog !== null && finalNewSelectedLog === null)
+    ) {
+      setSelectedPredictionLog(finalNewSelectedLog);
     }
-  
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]); // selectedPredictionLog added to dependencies
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]);
 
 
   if (!isAuthCheckComplete) {
@@ -429,5 +421,3 @@ export default function GeoneraPage() {
     </div>
   );
 }
-
-
