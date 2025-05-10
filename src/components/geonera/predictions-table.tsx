@@ -98,13 +98,13 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
   return (
     <TooltipProvider>
-      <Card className="shadow-xl overflow-hidden h-full w-fit">
+      <Card className="shadow-xl overflow-hidden h-full w-fit flex flex-col">
         <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
            <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
            <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100%-theme(spacing.24)+40px)] md:h-[420px]">
+        <CardContent className="p-0 flex-grow">
+          <ScrollArea className="h-full">
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10 border-b border-border">
                 <TableRow>
