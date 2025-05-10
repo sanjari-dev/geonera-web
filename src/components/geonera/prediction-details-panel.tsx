@@ -4,7 +4,7 @@
 import type { PredictionLogItem, PipsPredictionOutcome, CurrencyPair } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase } from "lucide-react";
 import { format } from 'date-fns';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -147,76 +147,82 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                 
                 {selectedPrediction.status === "PENDING" && (
                    <div className="flex items-center space-x-2 text-muted-foreground">
-                     <Loader2 className="h-4 w-4 animate-spin" /> {/* Icon size here is smaller, might be intentional for pending */}
+                     <Loader2 className="h-4 w-4 animate-spin" />
                      <span className="whitespace-nowrap">Awaiting analysis...</span>
                    </div>
                 )}
 
-                {/* Market Data Section - Styled like Expires At items */}
+                {/* Market Data Section */}
                 {marketDataAvailable && ohlcData && (
                   <div className="pt-3 mt-3 border-t border-border space-y-2">
-                    {ohlcData.openPrice !== undefined && (
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                          <LogIn className="h-5 w-5 text-primary" />
+                     <div className="flex items-center space-x-2 mb-1">
+                        <Briefcase className="h-5 w-5 text-primary" />
+                        <span className="font-semibold text-primary whitespace-nowrap">Market Data:</span>
+                    </div>
+                    <div className="pl-2 space-y-1"> {/* Indent market data items */}
+                      {ohlcData.openPrice !== undefined && (
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                            <LogIn className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <span className="font-medium whitespace-nowrap text-sm">Open:</span>
+                          <span className="text-sm whitespace-nowrap">
+                            {formatPrice(ohlcData.openPrice, selectedPrediction.currencyPair)}
+                          </span>
                         </div>
-                        <span className="font-medium whitespace-nowrap">Open:</span>
-                        <span className="text-sm whitespace-nowrap">
-                          {formatPrice(ohlcData.openPrice, selectedPrediction.currencyPair)}
-                        </span>
-                      </div>
-                    )}
-                    {ohlcData.highPrice !== undefined && (
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                          <ArrowUpCircle className="h-5 w-5 text-green-500" />
+                      )}
+                      {ohlcData.highPrice !== undefined && (
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                            <ArrowUpCircle className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <span className="font-medium whitespace-nowrap text-sm">High:</span>
+                          <span className="text-sm whitespace-nowrap">
+                            {formatPrice(ohlcData.highPrice, selectedPrediction.currencyPair)}
+                          </span>
                         </div>
-                        <span className="font-medium whitespace-nowrap">High:</span>
-                        <span className="text-sm whitespace-nowrap">
-                          {formatPrice(ohlcData.highPrice, selectedPrediction.currencyPair)}
-                        </span>
-                      </div>
-                    )}
-                    {ohlcData.lowPrice !== undefined && (
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                          <ArrowDownCircle className="h-5 w-5 text-red-500" />
+                      )}
+                      {ohlcData.lowPrice !== undefined && (
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                            <ArrowDownCircle className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <span className="font-medium whitespace-nowrap text-sm">Low:</span>
+                          <span className="text-sm whitespace-nowrap">
+                            {formatPrice(ohlcData.lowPrice, selectedPrediction.currencyPair)}
+                          </span>
                         </div>
-                        <span className="font-medium whitespace-nowrap">Low:</span>
-                        <span className="text-sm whitespace-nowrap">
-                          {formatPrice(ohlcData.lowPrice, selectedPrediction.currencyPair)}
-                        </span>
-                      </div>
-                    )}
-                    {ohlcData.closePrice !== undefined && (
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                          <LogOut className="h-5 w-5 text-primary" />
+                      )}
+                      {ohlcData.closePrice !== undefined && (
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                            <LogOut className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <span className="font-medium whitespace-nowrap text-sm">Close:</span>
+                          <span className="text-sm whitespace-nowrap">
+                            {formatPrice(ohlcData.closePrice, selectedPrediction.currencyPair)}
+                          </span>
                         </div>
-                        <span className="font-medium whitespace-nowrap">Close:</span>
-                        <span className="text-sm whitespace-nowrap">
-                          {formatPrice(ohlcData.closePrice, selectedPrediction.currencyPair)}
-                        </span>
-                      </div>
-                    )}
-                    {ohlcData.volume !== undefined && (
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                          <BarChart3 className="h-5 w-5 text-primary" />
+                      )}
+                      {ohlcData.volume !== undefined && (
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <span className="font-medium whitespace-nowrap text-sm">Volume:</span>
+                          <span className="text-sm whitespace-nowrap">
+                            {formatVolume(ohlcData.volume)}
+                          </span>
                         </div>
-                        <span className="font-medium whitespace-nowrap">Volume:</span>
-                        <span className="text-sm whitespace-nowrap">
-                          {formatVolume(ohlcData.volume)}
-                        </span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {selectedPrediction.expiresAt && (
                   <div className={cn(
                       "flex items-center space-x-2 pt-2 mt-2",
-                      !marketDataAvailable && "border-t border-border" // Add border if market data wasn't there
+                      !marketDataAvailable && "border-t border-border" 
                     )}
                   >
                     <Clock className="h-5 w-5 text-orange-500" />
