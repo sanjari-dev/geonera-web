@@ -4,8 +4,9 @@
 import type { PredictionLogItem, CurrencyPair } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info, TrendingUp } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import MarketDataDisplay from '@/components/geonera/market-data-display';
 
 interface CandlestickDisplayProps {
   selectedPrediction: PredictionLogItem | null;
@@ -79,8 +80,8 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
   const yDomain = chartData.length > 0 ? chartData[0].domainY : ['auto', 'auto'];
 
   return (
-    <Card className="shadow-xl h-full flex flex-col">
-      <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
+    <Card className="shadow-xl h-full grid grid-rows-[12%_88%]">
+      <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
         <CardTitle className="text-xl font-semibold text-primary flex items-center">
           <TrendingUp className="h-6 w-6 mr-2" />
           Candlestick View
@@ -89,66 +90,66 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
           {selectedPrediction ? `Visual for ${selectedPrediction.currencyPair}` : "Select a prediction."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-4 flex-grow">
-        {!selectedPrediction || chartData.length === 0 ? (
+      <CardContent className="p-2 flex-grow">
+        {!selectedPrediction || chartData.length === 0 || !ohlcData ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Info className="h-12 w-12 mb-3" />
-            <p>No market data available for selected prediction or no prediction selected.</p>
+            <p className="text-center text-sm">No market data available for selected prediction or no prediction selected.</p>
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="w-full h-full min-h-[250px]">
-            <BarChart
-              accessibilityLayer
-              data={chartData}
-              margin={{ top: 20, right: 10, left: -25, bottom: 5 }} 
-            >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="name"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tickFormatter={(value) => value.slice(0, 10)}
-              />
-              <YAxis 
-                tickLine={false} 
-                axisLine={false} 
-                tick={false} 
-                domain={yDomain as [number, number]} 
-              />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent 
-                    labelFormatter={(label, payload) => {
-                       if (payload && payload.length > 0 && payload[0].payload.ohlc) {
-                         return `${payload[0].payload.name}`;
-                       }
-                       return label;
-                    }}
-                    formatter={(value, name, item) => {
-                      if (item.payload.ohlc) {
-                        const [l, o, c, h] = item.payload.ohlc;
-                        return (
-                          <div className="flex flex-col text-xs">
-                            <span>Open: ${formatPrice(o, selectedPrediction?.currencyPair)}</span>
-                            <span>High: ${formatPrice(h, selectedPrediction?.currencyPair)}</span>
-                            <span>Low: ${formatPrice(l, selectedPrediction?.currencyPair)}</span>
-                            <span>Close: ${formatPrice(c, selectedPrediction?.currencyPair)}</span>
-                          </div>
-                        );
-                      }
-                      return value;
-                    }}
-                  />
-                }
-              />
-              <Bar dataKey="value" shape={<CandlestickShape />} barSize={50} />
-            </BarChart>
-          </ChartContainer>
+          <div className="h-full">
+            <ChartContainer config={chartConfig} className="w-full h-[30%]">
+              <BarChart
+                accessibilityLayer
+                data={chartData}
+                margin={{ top: 20, right: 10, left: -25, bottom: 5 }} 
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => value.slice(0, 10)}
+                />
+                <YAxis 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tick={false} 
+                  domain={yDomain as [number, number]} 
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent 
+                      labelFormatter={(label, payload) => {
+                        if (payload && payload.length > 0 && payload[0].payload.ohlc) return `${payload[0].payload.name}`;
+                        return label;
+                      }}
+                      formatter={(value, name, item) => {
+                        if (item.payload.ohlc) {
+                          const [l, o, c, h] = item.payload.ohlc;
+                          return (
+                            <div className="flex flex-col text-xs">
+                              <span>Open: ${formatPrice(o, selectedPrediction?.currencyPair)}</span>
+                              <span>High: ${formatPrice(h, selectedPrediction?.currencyPair)}</span>
+                              <span>Low: ${formatPrice(l, selectedPrediction?.currencyPair)}</span>
+                              <span>Close: ${formatPrice(c, selectedPrediction?.currencyPair)}</span>
+                            </div>
+                          );
+                        }
+                        return value;
+                      }}
+                    />
+                  }
+                />
+                <Bar dataKey="value" shape={<CandlestickShape />} barSize={50} />
+              </BarChart>
+            </ChartContainer>
+            <MarketDataDisplay classHeight="h-[70%]" ohlcData={ohlcData} selectedPrediction={selectedPrediction} />
+          </div>
         )}
       </CardContent>
-      {/* Market data display removed from here */}
     </Card>
   );
 }

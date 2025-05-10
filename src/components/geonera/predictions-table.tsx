@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
@@ -23,6 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CountdownTimer } from "./countdown-timer";
+import { ScrollArea } from "../ui/scroll-area";
 
 
 interface PredictionsTableProps {
@@ -98,12 +98,13 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
   return (
     <TooltipProvider>
-      <Card className="shadow-xl h-full w-fit flex flex-col">
-        <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
-           <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
-           <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
+      <Card className="shadow-xl h-full grid grid-rows-[12%_80%_8%]">
+        <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
+          <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
+          <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
         </CardHeader>
         <CardContent className="p-0 flex-grow">
+          <ScrollArea className="h-full w-full rounded-md border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -164,8 +165,9 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                 ))}
               </TableBody>
             </Table>
+          </ScrollArea>
         </CardContent>
-         {predictions.length > 0 && (
+        {predictions.length > 0 && (
           <CardFooter className="p-3 text-xs text-muted-foreground border-t">
             Displaying {predictions.length} active prediction log(s). Max {maxLogs} logs.
           </CardFooter>
