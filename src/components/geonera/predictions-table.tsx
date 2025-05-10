@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 
 interface PredictionsTableProps {
   predictions: PredictionLogItem[];
+  onRowClick: (log: PredictionLogItem) => void;
+  selectedPredictionId?: string | null;
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -48,7 +50,7 @@ const getSignalBadgeVariant = (signal: PipsPredictionOutcome["tradingSignal"]): 
 };
 
 
-export function PredictionsTable({ predictions }: PredictionsTableProps) {
+export function PredictionsTable({ predictions, onRowClick, selectedPredictionId }: PredictionsTableProps) {
   if (predictions.length === 0) {
     return (
       <div className="p-6 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center">
@@ -63,10 +65,10 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
     <Card className="shadow-xl overflow-hidden">
       <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
          <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
-         <CardDescription className="text-sm text-primary/80">Tracks active predictions. Expired predictions are automatically removed.</CardDescription>
+         <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[280px] md:h-[320px]">
+        <ScrollArea className="h-[280px] md:h-[320px]"> {/* Consistent height with details panel */}
           <Table>
             <TableHeader className="sticky top-0 bg-card z-10">
               <TableRow>
@@ -75,14 +77,17 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
                 <TableHead className="p-3">Pair</TableHead>
                 <TableHead className="text-right p-3">PIPS Target</TableHead>
                 <TableHead className="p-3">Signal (MT5)</TableHead>
-                <TableHead className="p-3">Details / Reasoning</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {predictions.map((log) => (
                 <TableRow 
                   key={log.id} 
-                  className={cn("hover:bg-muted/50 transition-colors")}
+                  onClick={() => onRowClick(log)}
+                  className={cn(
+                    "cursor-pointer hover:bg-muted/50 transition-colors",
+                    selectedPredictionId === log.id && "bg-accent text-accent-foreground hover:bg-accent/90"
+                  )}
                 >
                   <TableCell className="p-3">
                     <StatusIndicator status={log.status} />
@@ -92,13 +97,15 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
                   </TableCell>
                   <TableCell className="p-3 font-medium">{log.currencyPair}</TableCell>
                   <TableCell className="p-3 text-right">
-                    <Badge variant={"secondary"}>
+                    <Badge variant={selectedPredictionId === log.id ? "outline" : "secondary"} 
+                           className={selectedPredictionId === log.id ? "border-accent-foreground/50 text-accent-foreground bg-accent/20" : ""}>
                       {log.pipsTarget.min} - {log.pipsTarget.max}
                     </Badge>
                   </TableCell>
                   <TableCell className="p-3 text-sm">
                     {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
-                      <Badge variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}>
+                      <Badge variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
+                             className={selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : ""}>
                         {log.predictionOutcome.tradingSignal}
                       </Badge>
                     ) : log.status === "PENDING" ? (
@@ -106,22 +113,6 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
                     ) : (
                       "N/A"
                     )}
-                  </TableCell>
-                  <TableCell 
-                    className="p-3 text-xs max-w-[150px] md:max-w-xs truncate hover:whitespace-normal hover:max-w-none hover:overflow-visible" 
-                    title={
-                      log.status === "SUCCESS" && log.predictionOutcome 
-                        ? `${log.predictionOutcome.signalDetails} - ${log.predictionOutcome.reasoning}` 
-                        : log.error
-                    }
-                  >
-                    {log.status === "SUCCESS" && log.predictionOutcome?.signalDetails
-                      ? log.predictionOutcome.signalDetails
-                      : log.status === "ERROR"
-                      ? log.error
-                      : log.status === "PENDING"
-                      ? "Awaiting analysis..."
-                      : "-"}
                   </TableCell>
                 </TableRow>
               ))}
@@ -131,7 +122,7 @@ export function PredictionsTable({ predictions }: PredictionsTableProps) {
       </CardContent>
        {predictions.length > 0 && (
         <CardFooter className="p-3 text-xs text-muted-foreground border-t">
-          Displaying {predictions.length} active prediction log(s). Hover over Details / Reasoning for full text.
+          Displaying {predictions.length} active prediction log(s).
         </CardFooter>
       )}
     </Card>

@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { AppHeader } from '@/components/geonera/header';
 import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
+import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
 import type { PredictionLogItem, CurrencyPair, PipsTargetRange } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,7 @@ export default function GeoneraPage() {
   const [pipsTarget, setPipsTarget] = useState<PipsTargetRange>({ min: 10, max: 20 });
   
   const [uuidAvailable, setUuidAvailable] = useState(false);
+  const [selectedPredictionLog, setSelectedPredictionLog] = useState<PredictionLogItem | null>(null);
   
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
@@ -54,6 +56,10 @@ export default function GeoneraPage() {
 
   const handlePipsChange = useCallback((value: PipsTargetRange) => {
     setPipsTarget(value);
+  }, []);
+
+  const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
+    setSelectedPredictionLog(log);
   }, []);
 
   useEffect(() => {
@@ -103,6 +109,9 @@ export default function GeoneraPage() {
             log.id === newLogId ? { ...log, status: "ERROR", error: result.error } : log
           )
         );
+        if (selectedPredictionLog?.id === newLogId) {
+            setSelectedPredictionLog(prev => prev ? { ...prev, status: "ERROR", error: result.error } : null);
+        }
         toast({
           title: "Prediction Error",
           description: result.error,
@@ -110,17 +119,21 @@ export default function GeoneraPage() {
         });
       } else if (result.data) {
         const randomExpirationMs = (Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS) * 1000;
+        const newSuccessfulLog = { 
+            ...pendingLogItem, 
+            status: "SUCCESS" as const, 
+            predictionOutcome: result.data,
+            expiresAt: new Date(Date.now() + randomExpirationMs) 
+        };
         
         setPredictionLogs(prevLogs => 
           prevLogs.map(log => 
-            log.id === newLogId ? { 
-              ...log, 
-              status: "SUCCESS", 
-              predictionOutcome: result.data,
-              expiresAt: new Date(Date.now() + randomExpirationMs) 
-            } : log
+            log.id === newLogId ? newSuccessfulLog : log
           )
         );
+        if (selectedPredictionLog?.id === newLogId) {
+            setSelectedPredictionLog(newSuccessfulLog);
+        }
         toast({
           title: "Prediction Updated",
           description: `Prediction for ${selectedCurrency} (PIPS ${pipsTarget.min}-${pipsTarget.max}) completed. Expires in ${randomExpirationMs / 1000}s.`,
@@ -137,7 +150,7 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [selectedCurrency, pipsTarget, toast, generateId, isLoading, predictionLogs.length]); 
+  }, [selectedCurrency, pipsTarget, toast, generateId, isLoading, predictionLogs.length, selectedPredictionLog?.id]); 
 
 
   useEffect(() => {
@@ -149,20 +162,23 @@ export default function GeoneraPage() {
             return true; 
           }
           const isExpired = now > new Date(log.expiresAt);
+          if (isExpired && selectedPredictionLog?.id === log.id) {
+            setSelectedPredictionLog(null); // Clear selection if it expires
+          }
           return !isExpired;
         })
       );
     }, 1000); 
 
     return () => clearInterval(expirationIntervalId);
-  }, []); 
+  }, [selectedPredictionLog?.id]); 
 
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <AppHeader />
       <main className="flex-grow container mx-auto px-4 py-4">
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-6xl mx-auto space-y-4">
           <PipsParameterForm
             currencyPair={selectedCurrency}
             pipsTarget={pipsTarget}
@@ -170,7 +186,18 @@ export default function GeoneraPage() {
             onPipsChange={handlePipsChange}
             isLoading={isLoading} 
           />
-          <PredictionsTable predictions={predictionLogs} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <PredictionsTable 
+                predictions={predictionLogs} 
+                onRowClick={handlePredictionSelect}
+                selectedPredictionId={selectedPredictionLog?.id}
+              />
+            </div>
+            <div className="md:col-span-1">
+              <PredictionDetailsPanel selectedPrediction={selectedPredictionLog} />
+            </div>
+          </div>
         </div>
       </main>
       <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
