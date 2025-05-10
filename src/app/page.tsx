@@ -66,6 +66,10 @@ export default function GeoneraPage() {
           localStorage.removeItem('geoneraUser');
         }
       }
+      setIsAuthCheckComplete(true); // Moved here to ensure it's set after attempting to load user
+    } else {
+      // For server-side or non-browser environments, mark auth check as complete.
+      // This scenario might not be typical for this app but handles edge cases.
       setIsAuthCheckComplete(true);
     }
   }, []);
@@ -104,11 +108,12 @@ export default function GeoneraPage() {
   }, []);
 
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
+    // Ensure we're dealing with a plain object, not a proxy, to avoid revoked proxy issues
     const logFromState = predictionLogs.find(l => l.id === log.id);
     if (logFromState) {
-      setSelectedPredictionLog(produce(logFromState, draft => draft));
+      setSelectedPredictionLog(JSON.parse(JSON.stringify(logFromState)));
     } else {
-      setSelectedPredictionLog(produce(log, draft => draft));
+      setSelectedPredictionLog(JSON.parse(JSON.stringify(log)));
     }
   }, [predictionLogs]);
 
@@ -131,21 +136,13 @@ export default function GeoneraPage() {
       const noCurrenciesSelected = currentSelectedPairs.length === 0;
 
       if (noCurrenciesSelected) {
-         if (predictionLogs.some(log => log.status !== 'IDLE') || (isAuthCheckComplete && currentUser)) {
-            // Only toast if there were active predictions or user is logged in and expects something
-            //  toast({
-            //     title: "Prediction Paused",
-            //     description: "Please select at least one currency pair to generate predictions.",
-            //     variant: "default",
-            //  });
-        }
         if (timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
         return;
       }
       
       if (isPipsTargetInvalid) {
-        if (currentSelectedPairs.length > 0) { // Only toast if pairs are selected but pips are invalid
+        if (currentSelectedPairs.length > 0) { 
              toast({
                 title: "Prediction Paused",
                 description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
@@ -162,7 +159,7 @@ export default function GeoneraPage() {
 
       const newPendingLogs: PredictionLogItem[] = [];
       currentSelectedPairs.forEach(currencyPair => {
-        const numPredictionsForPair = Math.floor(Math.random() * 10) + 1; // Random number between 1 and 10
+        const numPredictionsForPair = Math.floor(Math.random() * 10) + 1; 
         for (let i = 0; i < numPredictionsForPair; i++) {
           const newLogId = generateId();
           newPendingLogs.push({
@@ -186,7 +183,6 @@ export default function GeoneraPage() {
         newPendingLogs.forEach(log => {
           draft.unshift(log);
         });
-        // Enforce MAX_PREDICTION_LOGS
         if (draft.length > MAX_PREDICTION_LOGS) {
           draft.splice(MAX_PREDICTION_LOGS, draft.length - MAX_PREDICTION_LOGS);
         }
@@ -230,7 +226,6 @@ export default function GeoneraPage() {
             Object.assign(logToUpdate, { status: "SUCCESS", predictionOutcome: result.data, expiresAt: new Date(Date.now() + randomExpirationMs) });
           }
         });
-         // Enforce MAX_PREDICTION_LOGS again after updates, though less likely to be needed here
         if (draft.length > MAX_PREDICTION_LOGS) {
           draft.splice(MAX_PREDICTION_LOGS, draft.length - MAX_PREDICTION_LOGS);
         }
@@ -282,7 +277,7 @@ export default function GeoneraPage() {
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
 
       setPredictionLogs(produce(draft => {
-        // let didAnyExpireOrGetFilteredOut = false;
+        let didChange = false;
         for (let i = draft.length - 1; i >= 0; i--) {
           const log = draft[i];
           let removeLog = false;
@@ -298,18 +293,19 @@ export default function GeoneraPage() {
           if (removeLog) {
             const removedLogId = log.id;
             draft.splice(i, 1);
-            // didAnyExpireOrGetFilteredOut = true;
-             // If the removed log was the selected one, clear selection
+            didChange = true;
             if (selectedPredictionLog && selectedPredictionLog.id === removedLogId) {
-              setSelectedPredictionLog(null);
+              // Handled by the sync effect below
             }
           }
         }
+        return didChange ? draft : undefined; // Only return new state if changed
       }));
     }, 1000);
 
     return () => clearInterval(expirationIntervalId);
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]);
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); // Removed produce direct setState to avoid conflicts
+
 
   // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
   useEffect(() => {
@@ -320,56 +316,61 @@ export default function GeoneraPage() {
       return;
     }
   
-    const currentSelectedPairs = latestSelectedCurrencyPairsRef.current; // Use ref here
+    const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
     let newSelectedCandidate: PredictionLogItem | null = null;
   
     if (selectedPredictionLog) {
       const logInCurrentList = predictionLogs.find(log => log.id === selectedPredictionLog.id);
       if (logInCurrentList && currentSelectedPairs.includes(logInCurrentList.currencyPair)) {
         if (logInCurrentList.status === "SUCCESS" && logInCurrentList.expiresAt && new Date() > new Date(logInCurrentList.expiresAt)) {
-           // Expired, don't keep selected
+           // Expired
         } else {
           newSelectedCandidate = logInCurrentList;
         }
       }
     }
   
+    // If no valid selected log, try to find a new one
     if (!newSelectedCandidate && currentSelectedPairs.length > 0) {
       const activeSuccessLogs = predictionLogs.filter(log =>
         currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "SUCCESS" &&
         log.expiresAt && new Date(log.expiresAt) > new Date()
-      );
+      ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
       if (activeSuccessLogs.length > 0) {
-        newSelectedCandidate = activeSuccessLogs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+        newSelectedCandidate = activeSuccessLogs[0];
       } else {
         const pendingLogs = predictionLogs.filter(log =>
             currentSelectedPairs.includes(log.currencyPair) &&
             log.status === "PENDING"
-          );
+          ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         if (pendingLogs.length > 0) {
-          newSelectedCandidate = pendingLogs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+          newSelectedCandidate = pendingLogs[0];
         } else {
-            const anyRelevantLog = predictionLogs.filter(log => currentSelectedPairs.includes(log.currencyPair));
+            const anyRelevantLog = predictionLogs.filter(log => currentSelectedPairs.includes(log.currencyPair))
+                                  .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             if (anyRelevantLog.length > 0) {
-                 newSelectedCandidate = anyRelevantLog.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+                 newSelectedCandidate = anyRelevantLog[0];
             }
         }
       }
     }
   
-
-    // Ensure selectedPredictionLog is a plain object, not a proxy, before comparison and setting.
+    // Make plain copies for comparison and setting state to avoid proxy issues.
     const plainSelectedPredictionLog = selectedPredictionLog ? JSON.parse(JSON.stringify(selectedPredictionLog)) : null;
     const plainNewSelectedCandidate = newSelectedCandidate ? JSON.parse(JSON.stringify(newSelectedCandidate)) : null;
 
-    if (plainSelectedPredictionLog?.id !== plainNewSelectedCandidate?.id) {
+    if (plainSelectedPredictionLog?.id !== plainNewSelectedCandidate?.id || 
+        (plainSelectedPredictionLog && plainNewSelectedCandidate && JSON.stringify(plainSelectedPredictionLog) !== JSON.stringify(plainNewSelectedCandidate)) ) {
       setSelectedPredictionLog(plainNewSelectedCandidate);
-    } else if (plainSelectedPredictionLog && plainNewSelectedCandidate && JSON.stringify(plainSelectedPredictionLog) !== JSON.stringify(plainNewSelectedCandidate) ) {
+    } else if (!plainSelectedPredictionLog && plainNewSelectedCandidate) {
        setSelectedPredictionLog(plainNewSelectedCandidate);
+    } else if (plainSelectedPredictionLog && !plainNewSelectedCandidate) {
+       setSelectedPredictionLog(null);
     }
   
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]); // selectedCurrencyPairs removed, using ref now
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]);
   
 
 
@@ -398,7 +399,6 @@ export default function GeoneraPage() {
     ? predictionLogs.filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
     : [];
   
-  // Ensure selectedPredictionLog passed to children is a plain object
   const finalSelectedPredictionForChildren = selectedPredictionLog ? JSON.parse(JSON.stringify(selectedPredictionLog)) : null;
 
 
@@ -414,11 +414,11 @@ export default function GeoneraPage() {
             onPipsChange={handlePipsChange}
             isLoading={isLoading}
           />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4"> {/* Changed md:grid-cols-4 to md:grid-cols-5 */}
             <div className="md:col-span-1">
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="md:col-span-2">
+            <div className="md:col-span-3"> {/* Changed md:col-span-2 to md:col-span-3 */}
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -439,3 +439,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
