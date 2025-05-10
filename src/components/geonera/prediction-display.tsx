@@ -1,4 +1,4 @@
-// src/components/forex-prophet/prediction-display.tsx
+// src/components/geonera/prediction-display.tsx
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertCircle, TrendingUp } from "lucide-react";

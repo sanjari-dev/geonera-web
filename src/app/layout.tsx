@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Forex Prophet',
-  description: 'AI-Powered Forex Predictions',
+  title: 'Geonera',
+  description: 'AI-Powered Forex Predictions for Geonera',
 };
 
 export default function RootLayout({

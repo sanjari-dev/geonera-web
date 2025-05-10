@@ -2,9 +2,9 @@
 "use client";
 
 import { useState, useCallback } from 'react';
-import { AppHeader } from '@/components/forex-prophet/header';
-import { PredictionForm } from '@/components/forex-prophet/prediction-form';
-import { PredictionDisplay } from '@/components/forex-prophet/prediction-display';
+import { AppHeader } from '@/components/geonera/header';
+import { PredictionForm } from '@/components/geonera/prediction-form';
+import { PredictionDisplay } from '@/components/geonera/prediction-display';
 import type { PredictionData, CurrencyPair } from '@/types';
 
 export interface FormState {
@@ -14,7 +14,7 @@ export interface FormState {
   error?: string | null;
 }
 
-export default function ForexProphetPage() { // Renamed from ForexProphetPageFinal to ForexProphetPage as per convention for page.tsx
+export default function GeoneraPage() { 
   const [formState, setFormState] = useState<FormState>({
     currency: "XAU/USD", // Default initial currency
     loading: false,
@@ -50,7 +50,7 @@ export default function ForexProphetPage() { // Renamed from ForexProphetPageFin
         </div>
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t border-border">
-        © {new Date().getFullYear()} Forex Prophet. All rights reserved. AI predictions are for informational purposes only.
+        © {new Date().getFullYear()} Geonera. All rights reserved. AI predictions are for informational purposes only.
       </footer>
     </div>
   );

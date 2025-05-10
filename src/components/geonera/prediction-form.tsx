@@ -1,4 +1,4 @@
-// src/components/forex-prophet/prediction-form.tsx
+// src/components/geonera/prediction-form.tsx
 "use client";
 
 import type { ChangeEvent, FormEvent } from 'react';
@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Coins, Bitcoin } from 'lucide-react';
 import { getForexPredictionAction } from '@/lib/actions';
 import type { CurrencyPair, CurrencyOption } from '@/types';
-import type { FormState } from '@/app/page'; // Assuming page.tsx exports FormState
+import type { FormState } from '@/app/page'; 
 import { useToast } from "@/hooks/use-toast";
 
 interface PredictionFormProps {
@@ -165,4 +165,3 @@ export function PredictionForm({ initialCurrency, onStateChange }: PredictionFor
     </form>
   );
 }
-
