@@ -66,10 +66,8 @@ export default function GeoneraPage() {
           localStorage.removeItem('geoneraUser');
         }
       }
-      setIsAuthCheckComplete(true); // Moved here to ensure it's set after attempting to load user
+      setIsAuthCheckComplete(true); 
     } else {
-      // For server-side or non-browser environments, mark auth check as complete.
-      // This scenario might not be typical for this app but handles edge cases.
       setIsAuthCheckComplete(true);
     }
   }, []);
@@ -108,7 +106,6 @@ export default function GeoneraPage() {
   }, []);
 
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
-    // Ensure we're dealing with a plain object, not a proxy, to avoid revoked proxy issues
     const logFromState = predictionLogs.find(l => l.id === log.id);
     if (logFromState) {
       setSelectedPredictionLog(JSON.parse(JSON.stringify(logFromState)));
@@ -181,10 +178,11 @@ export default function GeoneraPage() {
 
       setPredictionLogs(produce(draft => {
         newPendingLogs.forEach(log => {
-          draft.unshift(log);
+          draft.push(log); // Add new logs to the end (bottom)
         });
         if (draft.length > MAX_PREDICTION_LOGS) {
-          draft.splice(MAX_PREDICTION_LOGS, draft.length - MAX_PREDICTION_LOGS);
+          // Remove oldest logs from the beginning (top)
+          draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
       }));
       
@@ -227,7 +225,8 @@ export default function GeoneraPage() {
           }
         });
         if (draft.length > MAX_PREDICTION_LOGS) {
-          draft.splice(MAX_PREDICTION_LOGS, draft.length - MAX_PREDICTION_LOGS);
+           // Remove oldest logs from the beginning (top)
+          draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
         }
       }));
 
@@ -291,20 +290,17 @@ export default function GeoneraPage() {
           }
           
           if (removeLog) {
-            const removedLogId = log.id;
             draft.splice(i, 1);
             didChange = true;
-            if (selectedPredictionLog && selectedPredictionLog.id === removedLogId) {
-              // Handled by the sync effect below
-            }
+            // selectedPredictionLog update is handled by the sync effect below
           }
         }
-        return didChange ? draft : undefined; // Only return new state if changed
+        return didChange ? draft : undefined; 
       }));
     }, 1000);
 
     return () => clearInterval(expirationIntervalId);
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); // Removed produce direct setState to avoid conflicts
+  }, [currentUser, isAuthCheckComplete]);
 
 
   // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
@@ -323,33 +319,35 @@ export default function GeoneraPage() {
       const logInCurrentList = predictionLogs.find(log => log.id === selectedPredictionLog.id);
       if (logInCurrentList && currentSelectedPairs.includes(logInCurrentList.currencyPair)) {
         if (logInCurrentList.status === "SUCCESS" && logInCurrentList.expiresAt && new Date() > new Date(logInCurrentList.expiresAt)) {
-           // Expired
+           // Expired, will be cleared below if no other candidate found or becomes the candidate itself if it's the best available (though unlikely for expired)
         } else {
           newSelectedCandidate = logInCurrentList;
         }
       }
     }
   
-    // If no valid selected log, try to find a new one
+    // If no valid selected log, try to find a new one from active ones
     if (!newSelectedCandidate && currentSelectedPairs.length > 0) {
       const activeSuccessLogs = predictionLogs.filter(log =>
         currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "SUCCESS" &&
         log.expiresAt && new Date(log.expiresAt) > new Date()
-      ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Newest successful first
 
       if (activeSuccessLogs.length > 0) {
         newSelectedCandidate = activeSuccessLogs[0];
       } else {
+        // If no active success logs, try pending logs
         const pendingLogs = predictionLogs.filter(log =>
             currentSelectedPairs.includes(log.currencyPair) &&
             log.status === "PENDING"
-          ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          ).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Newest pending first
         if (pendingLogs.length > 0) {
           newSelectedCandidate = pendingLogs[0];
         } else {
+            // Fallback to any relevant log if no success or pending
             const anyRelevantLog = predictionLogs.filter(log => currentSelectedPairs.includes(log.currencyPair))
-                                  .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                                  .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Newest any first
             if (anyRelevantLog.length > 0) {
                  newSelectedCandidate = anyRelevantLog[0];
             }
@@ -357,22 +355,14 @@ export default function GeoneraPage() {
       }
     }
   
-    // Make plain copies for comparison and setting state to avoid proxy issues.
     const plainSelectedPredictionLog = selectedPredictionLog ? JSON.parse(JSON.stringify(selectedPredictionLog)) : null;
     const plainNewSelectedCandidate = newSelectedCandidate ? JSON.parse(JSON.stringify(newSelectedCandidate)) : null;
 
-    if (plainSelectedPredictionLog?.id !== plainNewSelectedCandidate?.id || 
-        (plainSelectedPredictionLog && plainNewSelectedCandidate && JSON.stringify(plainSelectedPredictionLog) !== JSON.stringify(plainNewSelectedCandidate)) ) {
+    if (JSON.stringify(plainSelectedPredictionLog) !== JSON.stringify(plainNewSelectedCandidate) ) {
       setSelectedPredictionLog(plainNewSelectedCandidate);
-    } else if (!plainSelectedPredictionLog && plainNewSelectedCandidate) {
-       setSelectedPredictionLog(plainNewSelectedCandidate);
-    } else if (plainSelectedPredictionLog && !plainNewSelectedCandidate) {
-       setSelectedPredictionLog(null);
     }
   
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]);
-  
-
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog]); // Removed selectedCurrencyPairs as it's covered by ref
 
   if (!isAuthCheckComplete) {
     return (
@@ -399,6 +389,7 @@ export default function GeoneraPage() {
     ? predictionLogs.filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
     : [];
   
+  // Ensure selectedPredictionLog is a plain object to prevent proxy issues with child components
   const finalSelectedPredictionForChildren = selectedPredictionLog ? JSON.parse(JSON.stringify(selectedPredictionLog)) : null;
 
 
@@ -414,11 +405,11 @@ export default function GeoneraPage() {
             onPipsChange={handlePipsChange}
             isLoading={isLoading}
           />
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4"> {/* Changed md:grid-cols-4 to md:grid-cols-5 */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="md:col-span-1">
               <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
-            <div className="md:col-span-3"> {/* Changed md:col-span-2 to md:col-span-3 */}
+            <div className="md:col-span-3"> 
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -439,4 +430,3 @@ export default function GeoneraPage() {
     </div>
   );
 }
-
