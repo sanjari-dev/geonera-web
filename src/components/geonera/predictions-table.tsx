@@ -83,7 +83,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
-                  <TableHead className="w-[50px] p-3 text-center whitespace-nowrap">
+                  <TableHead className="w-[50px] p-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Status</TooltipTrigger>
                       <TooltipContent>
@@ -91,7 +91,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="w-[150px] p-3 text-center whitespace-nowrap">
+                  <TableHead className="w-[150px] p-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Timestamp</TooltipTrigger>
                       <TooltipContent>
@@ -99,7 +99,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="p-3 text-center whitespace-nowrap">
+                  <TableHead className="p-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">Pair</TooltipTrigger>
                       <TooltipContent>
@@ -107,7 +107,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="p-3 text-center whitespace-nowrap">
+                  <TableHead className="p-2 text-center whitespace-nowrap">
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">PIPS Target</TooltipTrigger>
                       <TooltipContent>
@@ -115,7 +115,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="p-3 text-center whitespace-nowrap">
+                  <TableHead className="p-2 text-center whitespace-nowrap">
                      <Tooltip>
                       <TooltipTrigger className="cursor-default">Signal (MT5)</TooltipTrigger>
                       <TooltipContent>
@@ -123,7 +123,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="w-[130px] p-3 text-center whitespace-nowrap"> {/* Adjusted width for DD HH:MM:SS + icon */}
+                  <TableHead className="w-[130px] p-2 text-center whitespace-nowrap"> {/* Adjusted width for DD HH:MM:SS + icon */}
                     <Tooltip>
                       <TooltipTrigger className="cursor-default flex items-center justify-center">
                         <Timer className="h-4 w-4 mr-1"/> Expires In
@@ -145,21 +145,21 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       selectedPredictionId === log.id && "bg-secondary text-secondary-foreground hover:bg-muted"
                     )}
                   >
-                    <TableCell className="p-3 text-center whitespace-nowrap">
+                    <TableCell className="p-2 text-center whitespace-nowrap">
                       <div className="flex justify-center">
                         <StatusIndicator status={log.status} />
                       </div>
                     </TableCell>
-                    <TableCell className="p-3 text-xs text-center whitespace-nowrap">
+                    <TableCell className="p-2 text-xs text-center whitespace-nowrap">
                       {format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss")}
                     </TableCell>
-                    <TableCell className="p-3 font-medium text-center whitespace-nowrap">{log.currencyPair}</TableCell>
-                    <TableCell className="p-3 text-center whitespace-nowrap">
+                    <TableCell className="p-2 font-medium text-center whitespace-nowrap">{log.currencyPair}</TableCell>
+                    <TableCell className="p-2 text-center whitespace-nowrap">
                       <Badge variant={selectedPredictionId === log.id ? "default" : "secondary"}>
                         {log.pipsTarget.min} - {log.pipsTarget.max}
                       </Badge>
                     </TableCell>
-                    <TableCell className="p-3 text-sm text-center whitespace-nowrap">
+                    <TableCell className="p-2 text-sm text-center whitespace-nowrap">
                       {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
                         <Badge 
                           variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
@@ -173,7 +173,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                         "N/A"
                       )}
                     </TableCell>
-                    <TableCell className="p-3 text-xs text-center whitespace-nowrap">
+                    <TableCell className="p-2 text-xs text-center whitespace-nowrap">
                       {log.expiresAt && log.status === "SUCCESS" ? (
                         <CountdownTimer expiresAt={log.expiresAt} />
                       ) : (
