@@ -63,7 +63,7 @@ const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]):
 export function PredictionsTable({ predictions, onRowClick, selectedPredictionId, maxLogs }: PredictionsTableProps) {
   if (predictions.length === 0) {
     return (
-      <div className="p-6 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center h-full">
+      <div className="p-2 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center h-full">
         <Info className="h-10 w-10 text-muted-foreground mb-3" />
         <p className="text-lg text-muted-foreground">No active predictions.</p>
         <p className="text-sm text-muted-foreground">Set parameters to start generating predictions. They will appear here and be removed upon expiration.</p>
