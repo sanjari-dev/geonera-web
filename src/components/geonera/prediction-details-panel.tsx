@@ -2,7 +2,7 @@
 "use client";
 
 import type { PredictionLogItem, PipsPredictionOutcome, CurrencyPair } from '@/types';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3 } from "lucide-react";
 import { format } from 'date-fns';
@@ -13,7 +13,7 @@ interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
 }
 
-// Helper functions (re-added or ensured present)
+// Helper functions
 const formatPrice = (price?: number, currencyPair?: CurrencyPair) => {
     if (price === undefined || price === null) return "N/A";
     const fractionDigits = currencyPair === "BTC/USD" ? 0 : (currencyPair === "USD/JPY" ? 3 : 2);
@@ -77,8 +77,8 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
           {selectedPrediction ? <span className="whitespace-nowrap">{`Details for ${selectedPrediction.currencyPair}`}</span> : "Select a prediction from the log to view its details."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-0 flex-grow"> {/* Use flex-grow for scrollarea parent */}
-        <ScrollArea className="h-full"> {/* ScrollArea takes full height of its parent */}
+      <CardContent className="p-0 flex-grow">
+        <ScrollArea className="h-full">
           <div className="p-4 space-y-3">
             {!selectedPrediction ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
@@ -152,8 +152,56 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                    </div>
                 )}
 
+                {/* Market Data Section */}
+                {marketDataAvailable && ohlcData && (
+                  <div className="pt-3 mt-3 border-t border-border space-y-1.5">
+                    <h4 className="text-sm font-medium text-primary mb-1.5 whitespace-nowrap">Market Data</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-xs w-full">
+                      {ohlcData.openPrice !== undefined && (
+                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                            <LogIn className="h-3.5 w-3.5 text-primary opacity-80" />
+                            <span className="font-medium">Open:</span>
+                            <span>{formatPrice(ohlcData.openPrice, selectedPrediction.currencyPair)}</span>
+                        </div>
+                      )}
+                      {ohlcData.highPrice !== undefined && (
+                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                            <ArrowUpCircle className="h-3.5 w-3.5 text-green-600" />
+                            <span className="font-medium">High:</span>
+                            <span>{formatPrice(ohlcData.highPrice, selectedPrediction.currencyPair)}</span>
+                        </div>
+                      )}
+                      {ohlcData.lowPrice !== undefined && (
+                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                            <ArrowDownCircle className="h-3.5 w-3.5 text-red-600" />
+                            <span className="font-medium">Low:</span>
+                            <span>{formatPrice(ohlcData.lowPrice, selectedPrediction.currencyPair)}</span>
+                        </div>
+                      )}
+                      {ohlcData.closePrice !== undefined && (
+                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                            <LogOut className="h-3.5 w-3.5 text-primary opacity-80" />
+                            <span className="font-medium">Close:</span>
+                            <span>{formatPrice(ohlcData.closePrice, selectedPrediction.currencyPair)}</span>
+                        </div>
+                      )}
+                      {ohlcData.volume !== undefined && (
+                        <div className="flex items-center space-x-1.5 whitespace-nowrap">
+                            <BarChart3 className="h-3.5 w-3.5 text-primary opacity-80" />
+                            <span className="font-medium">Volume:</span>
+                            <span>{formatVolume(ohlcData.volume)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {selectedPrediction.expiresAt && (
-                  <div className="flex items-center space-x-2 pt-2 border-t mt-2">
+                  <div className={cn(
+                      "flex items-center space-x-2 pt-2 mt-2",
+                      !marketDataAvailable && "border-t border-border" 
+                    )}
+                  >
                     <Clock className="h-5 w-5 text-orange-500" />
                     <span className="font-medium whitespace-nowrap">Expires At:</span>
                     <span className="text-sm whitespace-nowrap">{format(new Date(selectedPrediction.expiresAt), "yyyy-MM-dd HH:mm:ss")}</span>
@@ -164,47 +212,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
           </div>
         </ScrollArea>
       </CardContent>
-      {marketDataAvailable && selectedPrediction && ohlcData && (
-        <CardFooter className="p-3 border-t bg-secondary/20 rounded-b-lg">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-1.5 text-xs w-full">
-            {ohlcData.openPrice !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <LogIn className="h-3.5 w-3.5 text-primary opacity-80" />
-                <span className="font-medium">Open:</span>
-                <span>{formatPrice(ohlcData.openPrice, selectedPrediction.currencyPair)}</span>
-            </div>
-            )}
-            {ohlcData.highPrice !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <ArrowUpCircle className="h-3.5 w-3.5 text-green-600" />
-                <span className="font-medium">High:</span>
-                <span>{formatPrice(ohlcData.highPrice, selectedPrediction.currencyPair)}</span>
-            </div>
-            )}
-            {ohlcData.lowPrice !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <ArrowDownCircle className="h-3.5 w-3.5 text-red-600" />
-                <span className="font-medium">Low:</span>
-                <span>{formatPrice(ohlcData.lowPrice, selectedPrediction.currencyPair)}</span>
-            </div>
-            )}
-            {ohlcData.closePrice !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <LogOut className="h-3.5 w-3.5 text-primary opacity-80" />
-                <span className="font-medium">Close:</span>
-                <span>{formatPrice(ohlcData.closePrice, selectedPrediction.currencyPair)}</span>
-            </div>
-            )}
-            {ohlcData.volume !== undefined && (
-            <div className="flex items-center space-x-1.5 whitespace-nowrap">
-                <BarChart3 className="h-3.5 w-3.5 text-primary opacity-80" />
-                <span className="font-medium">Volume:</span>
-                <span>{formatVolume(ohlcData.volume)}</span>
-            </div>
-            )}
-          </div>
-        </CardFooter>
-      )}
+      {/* CardFooter is removed as its content (Market Data) is moved into CardContent */}
     </Card>
   );
 }
