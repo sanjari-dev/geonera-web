@@ -16,6 +16,12 @@ import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome } from 
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PredictionsTableProps {
   predictions: PredictionLogItem[];
@@ -62,72 +68,110 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
   }
 
   return (
-    <Card className="shadow-xl overflow-hidden">
-      <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
-         <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
-         <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[280px] md:h-[320px]"> {/* Consistent height with details panel */}
-          <Table>
-            <TableHeader className="sticky top-0 bg-card z-10">
-              <TableRow>
-                <TableHead className="w-[50px] p-3">Status</TableHead>
-                <TableHead className="w-[150px] p-3">Timestamp</TableHead>
-                <TableHead className="p-3">Pair</TableHead>
-                <TableHead className="text-right p-3">PIPS Target</TableHead>
-                <TableHead className="p-3">Signal (MT5)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {predictions.map((log) => (
-                <TableRow 
-                  key={log.id} 
-                  onClick={() => onRowClick(log)}
-                  className={cn(
-                    "cursor-pointer hover:bg-muted/50 transition-colors",
-                    selectedPredictionId === log.id && "bg-accent text-accent-foreground hover:bg-accent/90"
-                  )}
-                >
-                  <TableCell className="p-3">
-                    <StatusIndicator status={log.status} />
-                  </TableCell>
-                  <TableCell className="p-3 text-xs">
-                    {format(log.timestamp, "yyyy-MM-dd HH:mm:ss")}
-                  </TableCell>
-                  <TableCell className="p-3 font-medium">{log.currencyPair}</TableCell>
-                  <TableCell className="p-3 text-right">
-                    <Badge variant={selectedPredictionId === log.id ? "outline" : "secondary"} 
-                           className={selectedPredictionId === log.id ? "border-accent-foreground/50 text-accent-foreground bg-accent/20" : ""}>
-                      {log.pipsTarget.min} - {log.pipsTarget.max}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="p-3 text-sm">
-                    {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
-                      <Badge variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
-                             className={selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : ""}>
-                        {log.predictionOutcome.tradingSignal}
-                      </Badge>
-                    ) : log.status === "PENDING" ? (
-                      "..."
-                    ) : (
-                      "N/A"
-                    )}
-                  </TableCell>
+    <TooltipProvider>
+      <Card className="shadow-xl overflow-hidden">
+        <CardHeader className="bg-primary/10 p-4 rounded-t-lg">
+           <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
+           <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[280px] md:h-[320px]"> {/* Consistent height with details panel */}
+            <Table>
+              <TableHeader className="sticky top-0 bg-card z-10">
+                <TableRow>
+                  <TableHead className="w-[50px] p-3">
+                    <Tooltip>
+                      <TooltipTrigger className="cursor-default">Status</TooltipTrigger>
+                      <TooltipContent>
+                        <p>Indicates the current state of the prediction (Pending, Success, Error).</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="w-[150px] p-3">
+                    <Tooltip>
+                      <TooltipTrigger className="cursor-default">Timestamp</TooltipTrigger>
+                      <TooltipContent>
+                        <p>The date and time when the prediction was generated.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="p-3">
+                    <Tooltip>
+                      <TooltipTrigger className="cursor-default">Pair</TooltipTrigger>
+                      <TooltipContent>
+                        <p>The currency pair for which the prediction is made (e.g., XAU/USD).</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="text-right p-3">
+                    <Tooltip>
+                      <TooltipTrigger className="cursor-default">PIPS Target</TooltipTrigger>
+                      <TooltipContent>
+                        <p>The desired PIPS movement range (Min - Max) for the prediction.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="p-3">
+                     <Tooltip>
+                      <TooltipTrigger className="cursor-default">Signal (MT5)</TooltipTrigger>
+                      <TooltipContent>
+                        <p>The recommended trading action based on the prediction (e.g., BUY, SELL, HOLD).</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-      </CardContent>
-       {predictions.length > 0 && (
-        <CardFooter className="p-3 text-xs text-muted-foreground border-t">
-          Displaying {predictions.length} active prediction log(s).
-        </CardFooter>
-      )}
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {predictions.map((log) => (
+                  <TableRow 
+                    key={log.id} 
+                    onClick={() => onRowClick(log)}
+                    className={cn(
+                      "cursor-pointer hover:bg-muted/50 transition-colors",
+                      selectedPredictionId === log.id && "bg-accent text-accent-foreground hover:bg-accent/90"
+                    )}
+                  >
+                    <TableCell className="p-3">
+                      <StatusIndicator status={log.status} />
+                    </TableCell>
+                    <TableCell className="p-3 text-xs">
+                      {format(log.timestamp, "yyyy-MM-dd HH:mm:ss")}
+                    </TableCell>
+                    <TableCell className="p-3 font-medium">{log.currencyPair}</TableCell>
+                    <TableCell className="p-3 text-right">
+                      <Badge variant={selectedPredictionId === log.id ? "outline" : "secondary"} 
+                             className={selectedPredictionId === log.id ? "border-accent-foreground/50 text-accent-foreground bg-accent/20" : ""}>
+                        {log.pipsTarget.min} - {log.pipsTarget.max}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="p-3 text-sm">
+                      {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
+                        <Badge variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
+                               className={selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : ""}>
+                          {log.predictionOutcome.tradingSignal}
+                        </Badge>
+                      ) : log.status === "PENDING" ? (
+                        "..."
+                      ) : (
+                        "N/A"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+         {predictions.length > 0 && (
+          <CardFooter className="p-3 text-xs text-muted-foreground border-t">
+            Displaying {predictions.length} active prediction log(s).
+          </CardFooter>
+        )}
+      </Card>
+    </TooltipProvider>
   );
 }
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
