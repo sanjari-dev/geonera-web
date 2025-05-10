@@ -34,6 +34,7 @@ export default function GeoneraPage() {
   
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
+    // Check if uuidv4 is available (client-side)
     if (typeof window !== 'undefined' && typeof uuidv4 === 'function') {
         setUuidAvailable(true);
     }
@@ -44,9 +45,11 @@ export default function GeoneraPage() {
       try {
         return uuidv4();
       } catch (e) {
+         // Fallback if uuidv4 fails for some reason, though unlikely
          return Date.now().toString() + Math.random().toString(36).substring(2,7);
       }
     }
+    // Server-side or if uuidv4 is not yet available, use a simpler fallback
     return Date.now().toString() + (typeof window !== 'undefined' ? Math.random().toString(36).substring(2,7) : "serverid" + Math.floor(Math.random() * 10000));
   }, [uuidAvailable]);
 
@@ -76,6 +79,7 @@ export default function GeoneraPage() {
     setSelectedPredictionLog(log);
   }, []);
 
+  // Prediction generation useEffect
   useEffect(() => {
     if (!currentUser) return; // Don't run predictions if not logged in
 
@@ -92,12 +96,16 @@ export default function GeoneraPage() {
       const noCurrenciesSelected = selectedCurrencyPairs.length === 0;
 
       if (isPipsTargetInvalid || noCurrenciesSelected) {
+        // Determine if a toast should be shown:
+        // - Show if logs exist (means predictions were running) OR
+        // - Show if pips target is invalid AND some currencies ARE selected OR
+        // - Show if no currencies selected AND pips target IS valid
         const shouldShowPausedToast = predictionLogs.length > 0 || (isPipsTargetInvalid && !noCurrenciesSelected) || (noCurrenciesSelected && !isPipsTargetInvalid);
         if (shouldShowPausedToast) {
              toast({
                 title: "Prediction Paused",
                 description: noCurrenciesSelected ? "Please select at least one currency pair." : "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
-                variant: "default",
+                variant: "default", // Using default instead of destructive for paused state
              });
         }
         if (timeoutId) clearTimeout(timeoutId);
@@ -109,7 +117,7 @@ export default function GeoneraPage() {
       
       const newPendingLogs: PredictionLogItem[] = [];
       selectedCurrencyPairs.forEach(currencyPair => {
-        const newLogId = generateId();
+        const newLogId = generateId(); // Use the memoized generateId
         newPendingLogs.push({
           id: newLogId,
           timestamp: new Date(), 
@@ -119,8 +127,10 @@ export default function GeoneraPage() {
         });
       });
 
+      // Add new pending logs and ensure the log list doesn't exceed MAX_LOG_ITEMS
       setPredictionLogs(prevLogs => [...newPendingLogs, ...prevLogs].slice(0, MAX_LOG_ITEMS));
       
+      // Auto-select the first pending log if nothing is selected
       if (!selectedPredictionLog && newPendingLogs.length > 0) {
         setSelectedPredictionLog(newPendingLogs[0]);
       }
@@ -143,6 +153,7 @@ export default function GeoneraPage() {
               log.id === pendingLog.id ? { ...log, status: "ERROR", error: result.error } : log
             )
           );
+          // If the errored log was selected, update its details in the panel
           if (selectedPredictionLog?.id === pendingLog.id) {
               setSelectedPredictionLog(prev => prev ? { ...prev, status: "ERROR", error: result.error } : null);
           }
@@ -161,6 +172,7 @@ export default function GeoneraPage() {
               log.id === pendingLog.id ? newSuccessfulLog : log
             )
           );
+          // If the successful log was selected, or if no log is selected and this is the first currency, update details panel
           if (selectedPredictionLog?.id === pendingLog.id) {
               setSelectedPredictionLog(newSuccessfulLog);
           } else if (!selectedPredictionLog && pendingLog.currencyPair === selectedCurrencyPairs[0]) { // Auto-select first successful if none selected
@@ -195,15 +207,18 @@ export default function GeoneraPage() {
       timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
     };
 
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS); 
+    // Initial call to start the prediction loop
+    if (timeoutId) clearTimeout(timeoutId); // Clear any existing timeout before starting a new one
+    timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS); // Start after initial delay or when parameters change
 
+    // Cleanup function to clear the timeout when the component unmounts or dependencies change
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [currentUser, selectedCurrencyPairs, pipsTarget, toast, generateId, isLoading, predictionLogs.length, selectedPredictionLog]);
 
 
+  // Prediction expiration useEffect
   useEffect(() => {
     if (!currentUser) return; // Don't run expiration logic if not logged in
 
@@ -212,20 +227,21 @@ export default function GeoneraPage() {
       setPredictionLogs(prevLogs =>
         prevLogs.filter(log => {
           if (log.status !== "SUCCESS" || !log.expiresAt) {
-            return true; 
+            return true; // Keep non-successful or non-expiring logs
           }
           const isExpired = now > new Date(log.expiresAt);
           if (isExpired && selectedPredictionLog?.id === log.id) {
+            // If the selected log expires, try to select the next available non-expired successful log
             const nextAvailableLog = prevLogs.find(p => p.id !== log.id && p.status === "SUCCESS" && p.expiresAt && new Date(p.expiresAt) > now);
             setSelectedPredictionLog(nextAvailableLog || null);
           }
-          return !isExpired;
+          return !isExpired; // Remove expired logs
         })
       );
-    }, 1000); 
+    }, 1000); // Check for expirations every second
 
-    return () => clearInterval(expirationIntervalId);
-  }, [currentUser, selectedPredictionLog?.id]); 
+    return () => clearInterval(expirationIntervalId); // Cleanup interval on unmount
+  }, [currentUser, selectedPredictionLog?.id]); // Rerun if current user or selected log changes
 
 
   return (
