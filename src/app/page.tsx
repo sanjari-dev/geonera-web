@@ -38,11 +38,15 @@ export default function GeoneraPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Ref to store the latest selectedCurrencyPairs for use in closures
   const latestSelectedCurrencyPairsRef = useRef(selectedCurrencyPairs);
   useEffect(() => {
     latestSelectedCurrencyPairsRef.current = selectedCurrencyPairs;
   }, [selectedCurrencyPairs]);
+
+  const latestPipsTargetRef = useRef(pipsTarget);
+  useEffect(() => {
+    latestPipsTargetRef.current = pipsTarget;
+  }, [pipsTarget]);
 
 
   useEffect(() => {
@@ -86,9 +90,9 @@ export default function GeoneraPage() {
     setCurrentUser(null);
     setPredictionLogs([]);
     setSelectedPredictionLog(null);
-    setSelectedCurrencyPairs([]); // Also reset selected pairs on logout
+    setSelectedCurrencyPairs([]);
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
-    router.push('/login'); // Redirect to login page on logout
+    router.push('/login');
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -100,12 +104,21 @@ export default function GeoneraPage() {
   }, []);
 
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
-    setSelectedPredictionLog(log);
-  }, []);
+    // Ensure we are setting a shallow copy from the current logs, or the clicked log itself if it's from UI.
+    // If log is directly from predictionLogs state, spreading it is a good practice.
+    const logFromState = predictionLogs.find(l => l.id === log.id);
+    if (logFromState) {
+      setSelectedPredictionLog({ ...logFromState });
+    } else {
+      // If the log clicked isn't in the current full list (should not happen ideally),
+      // just use the passed log but spread it to be safe.
+      setSelectedPredictionLog({ ...log });
+    }
+  }, [predictionLogs]);
 
   // Prediction generation useEffect
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !isAuthCheckComplete) return;
 
     let timeoutId: NodeJS.Timeout | undefined = undefined;
 
@@ -117,18 +130,20 @@ export default function GeoneraPage() {
       }
 
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
-      const isPipsTargetInvalid = pipsTarget.min <= 0 || pipsTarget.max <= 0 || pipsTarget.min > pipsTarget.max;
+      const currentPipsTarget = latestPipsTargetRef.current;
+      const isPipsTargetInvalid = currentPipsTarget.min <= 0 || currentPipsTarget.max <= 0 || currentPipsTarget.min > currentPipsTarget.max;
       const noCurrenciesSelected = currentSelectedPairs.length === 0;
 
       if (isPipsTargetInvalid || noCurrenciesSelected) {
         const shouldShowPausedToast = predictionLogs.some(log => currentSelectedPairs.includes(log.currencyPair)) || (isPipsTargetInvalid && !noCurrenciesSelected) || (noCurrenciesSelected && !isPipsTargetInvalid && predictionLogs.length === 0);
-        if (shouldShowPausedToast && currentSelectedPairs.length > 0) { 
+        
+        if (currentSelectedPairs.length > 0 && isPipsTargetInvalid) {
              toast({
                 title: "Prediction Paused",
                 description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
                 variant: "default",
              });
-        } else if (noCurrenciesSelected && (predictionLogs.length > 0 || isPipsTargetInvalid)) { 
+        } else if (noCurrenciesSelected && (predictionLogs.length > 0 || (isAuthCheckComplete && currentUser))) {
              toast({
                 title: "Prediction Paused",
                 description: "Please select at least one currency pair.",
@@ -149,17 +164,18 @@ export default function GeoneraPage() {
           id: newLogId,
           timestamp: new Date(),
           currencyPair: currencyPair,
-          pipsTarget,
+          pipsTarget: currentPipsTarget,
           status: "PENDING",
         });
       });
+      
+      if (newPendingLogs.length === 0) {
+        setIsLoading(false);
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
+        return;
+      }
 
-      const predictionPromises = newPendingLogs.map(async (pendingLog) => {
-        const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsTarget);
-        return { result, pendingLog };
-      });
-
-      // Update state with pending logs using Immer
       setPredictionLogs(produce(draft => {
         newPendingLogs.forEach(log => {
           draft.unshift(log);
@@ -168,33 +184,30 @@ export default function GeoneraPage() {
           draft.splice(MAX_LOG_ITEMS);
         }
       }));
+      
+      const predictionPromises = newPendingLogs.map(async (pendingLog) => {
+        const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsTarget);
+        return { result, pendingLog };
+      });
 
-      // Select the first new pending log if no relevant log is selected
-      if ((!selectedPredictionLog || !currentSelectedPairs.includes(selectedPredictionLog.currencyPair)) && newPendingLogs.length > 0) {
-         setSelectedPredictionLog({...newPendingLogs[0]});
-      }
 
       const results = await Promise.all(predictionPromises);
 
       let successCount = 0;
       let errorCount = 0;
-      const trulySelectedPairsAfterAsync = latestSelectedCurrencyPairsRef.current; // Re-read ref before updating state
-
-      // Update state with results using Immer
+      
       setPredictionLogs(produce(draft => {
+        const activePairsAfterAsync = latestSelectedCurrencyPairsRef.current; // Re-check active pairs
+
         results.forEach(({ result, pendingLog }) => {
           const logIndex = draft.findIndex(log => log.id === pendingLog.id);
           if (logIndex === -1) {
-            console.warn(`Pending log with id ${pendingLog.id} for ${pendingLog.currencyPair} not found for update.`);
             return;
           }
 
-          // If currency pair was deselected while prediction was in progress, remove the log
-          if (!trulySelectedPairsAfterAsync.includes(pendingLog.currencyPair)) {
+          if (!activePairsAfterAsync.includes(pendingLog.currencyPair)) {
               draft.splice(logIndex, 1);
-              if (selectedPredictionLog?.id === pendingLog.id) {
-                  setSelectedPredictionLog(null);
-              }
+              // No need to update selectedPredictionLog here, the sync effect will handle it
               return;
           }
 
@@ -209,25 +222,17 @@ export default function GeoneraPage() {
             const randomExpirationMs = (Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS) * 1000;
             Object.assign(logToUpdate, { status: "SUCCESS", predictionOutcome: result.data, expiresAt: new Date(Date.now() + randomExpirationMs) });
           }
-
-          if (selectedPredictionLog?.id === pendingLog.id) {
-              setSelectedPredictionLog(logToUpdate ? {...logToUpdate} : null);
-          } else if ((!selectedPredictionLog || !trulySelectedPairsAfterAsync.includes(selectedPredictionLog.currencyPair)) &&
-                     trulySelectedPairsAfterAsync.includes(pendingLog.currencyPair)) {
-              if (pendingLog.currencyPair === trulySelectedPairsAfterAsync[0] || trulySelectedPairsAfterAsync.length === 1) {
-                 setSelectedPredictionLog(logToUpdate ? {...logToUpdate} : null);
-              }
-          }
+          // selectedPredictionLog will be updated by the dedicated sync effect
         });
         if (draft.length > MAX_LOG_ITEMS) {
-           draft.splice(MAX_LOG_ITEMS); // Ensure max items is maintained after updates
+           draft.splice(MAX_LOG_ITEMS);
         }
       }));
 
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
         let toastTitle = "Predictions Updated";
         let toastDescription = "";
-        const relevantPairs = trulySelectedPairsAfterAsync.join(', ');
+        const relevantPairs = latestSelectedCurrencyPairsRef.current.join(', ');
 
         if (successCount > 0 && errorCount === 0) {
           toastDescription = `${successCount} prediction(s) completed for ${relevantPairs}.`;
@@ -238,7 +243,7 @@ export default function GeoneraPage() {
           toastTitle = "Prediction Errors";
           toastDescription = `${errorCount} prediction(s) failed for ${relevantPairs}.`;
         }
-        if (toastDescription && trulySelectedPairsAfterAsync.length > 0) { // Only show toast if pairs were actually processed
+        if (toastDescription && latestSelectedCurrencyPairsRef.current.length > 0) {
           toast({
             title: toastTitle,
             description: toastDescription,
@@ -258,91 +263,101 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [currentUser, pipsTarget, toast, generateId, isLoading]);
+  }, [currentUser, isAuthCheckComplete, toast, generateId, isLoading, predictionLogs.length]); // Removed pipsTarget, selectedCurrencyPairs to rely on refs
 
 
-  // Prediction expiration useEffect
+  // Prediction expiration and deselected pair cleanup useEffect
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !isAuthCheckComplete) return;
 
     const expirationIntervalId = setInterval(() => {
       const now = new Date();
-      let didAnyExpireOrGetFilteredOut = false;
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
 
       setPredictionLogs(produce(draft => {
+        let updated = false;
         for (let i = draft.length - 1; i >= 0; i--) {
           const log = draft[i];
 
-          // Remove pending logs if currency pair is deselected
-          if (log.status === "PENDING" && !currentSelectedPairs.includes(log.currencyPair)) {
-            didAnyExpireOrGetFilteredOut = true;
-            if (selectedPredictionLog?.id === log.id) {
-              setSelectedPredictionLog(null);
-            }
+          // Remove pending or successful logs if currency pair is deselected
+          if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS")) {
             draft.splice(i, 1);
+            updated = true;
             continue;
           }
 
           // Remove expired successful logs
           if (log.status === "SUCCESS" && log.expiresAt && now > new Date(log.expiresAt)) {
-            didAnyExpireOrGetFilteredOut = true;
-            if (selectedPredictionLog?.id === log.id) {
-              setSelectedPredictionLog(null);
-            }
             draft.splice(i, 1);
+            updated = true;
           }
         }
       }));
-
-      if (didAnyExpireOrGetFilteredOut && !selectedPredictionLog && currentSelectedPairs.length > 0) {
-         setPredictionLogs(currentLogs => {
-           const firstAvailableForSelectedPairs = currentLogs.find(log =>
-             currentSelectedPairs.includes(log.currencyPair) &&
-             log.status === "SUCCESS" &&
-             log.expiresAt &&
-             new Date(log.expiresAt) > now
-           );
-           if (firstAvailableForSelectedPairs) {
-             setSelectedPredictionLog({...firstAvailableForSelectedPairs});
-           }
-           return currentLogs;
-        });
-      }
     }, 1000);
 
     return () => clearInterval(expirationIntervalId);
-  }, [currentUser, selectedPredictionLog]);
+  }, [currentUser, isAuthCheckComplete]);
 
-  // Effect to reset selectedPredictionLog if its currency pair is deselected or if no log is selected
+  // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
   useEffect(() => {
-    if (!currentUser) return;
-    const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
-
-    if (selectedPredictionLog && !currentSelectedPairs.includes(selectedPredictionLog.currencyPair)) {
-      const nextValidLog = predictionLogs.find(log =>
-        currentSelectedPairs.includes(log.currencyPair) &&
-        log.status === "SUCCESS" &&
-        log.expiresAt && new Date(log.expiresAt) > new Date()
-      ) || predictionLogs.find(log =>
-        currentSelectedPairs.includes(log.currencyPair) &&
-        log.status === "PENDING"
-      );
-      setSelectedPredictionLog(nextValidLog ? {...nextValidLog} : null);
-    } else if (!selectedPredictionLog && currentSelectedPairs.length > 0) {
-      const firstLogForSelectedPairs = predictionLogs.find(log =>
-        currentSelectedPairs.includes(log.currencyPair) &&
-        log.status === "SUCCESS" &&
-        log.expiresAt && new Date(log.expiresAt) > new Date()
-      ) || predictionLogs.find(log =>
-        currentSelectedPairs.includes(log.currencyPair) &&
-        log.status === "PENDING"
-      );
-      if (firstLogForSelectedPairs) {
-        setSelectedPredictionLog({...firstLogForSelectedPairs});
+    if (!currentUser || !isAuthCheckComplete) {
+      if (selectedPredictionLog !== null) {
+        setSelectedPredictionLog(null);
+      }
+      return;
+    }
+  
+    const currentSelectedPairs = selectedCurrencyPairs; // Use state directly for this effect
+    let newSelectedCandidate: PredictionLogItem | undefined = undefined;
+  
+    if (selectedPredictionLog) {
+      // Check if the current selectedPredictionLog is still valid
+      const logInCurrentList = predictionLogs.find(log => log.id === selectedPredictionLog.id);
+      if (logInCurrentList && currentSelectedPairs.includes(logInCurrentList.currencyPair)) {
+        // If it exists and its currency pair is still selected, it's a candidate.
+        // We must use the object from the current predictionLogs to avoid stale proxies.
+        newSelectedCandidate = logInCurrentList;
       }
     }
-  }, [currentUser, selectedCurrencyPairs, selectedPredictionLog, predictionLogs]);
+  
+    // If no valid current selection, or if the current selection might be stale (e.g. status update)
+    // try to find the "best" available log from the current list for selected pairs.
+    if (!newSelectedCandidate && currentSelectedPairs.length > 0) {
+      newSelectedCandidate =
+        predictionLogs.find(log =>
+          currentSelectedPairs.includes(log.currencyPair) &&
+          log.status === "SUCCESS" &&
+          log.expiresAt && new Date(log.expiresAt) > new Date()
+        ) ||
+        predictionLogs.find(log =>
+          currentSelectedPairs.includes(log.currencyPair) &&
+          log.status === "PENDING"
+        ) ||
+        predictionLogs.find(log => // Fallback to any log for selected pairs
+            currentSelectedPairs.includes(log.currencyPair)
+        );
+    }
+  
+    // Update selectedPredictionLog state
+    // Create a new shallow copy ({ ... }) to ensure a fresh object reference for props
+    // and to break potential Immer proxy chains.
+    if (newSelectedCandidate) {
+      // Only update if ID is different OR if it's the same ID but we want to ensure fresh object
+      if (selectedPredictionLog?.id !== newSelectedCandidate.id || selectedPredictionLog === null) {
+        setSelectedPredictionLog({ ...newSelectedCandidate });
+      } else if (selectedPredictionLog?.id === newSelectedCandidate.id) {
+        // If IDs are the same, ensure the object instance is truly from the latest `predictionLogs`
+        // by re-setting it with a spread. This handles cases where the log item's content might have changed.
+        setSelectedPredictionLog({ ...newSelectedCandidate });
+      }
+    } else { // No valid candidate found
+      if (selectedPredictionLog !== null) {
+        setSelectedPredictionLog(null);
+      }
+    }
+  
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedCurrencyPairs]); // selectedPredictionLog removed from deps
+  
 
 
   if (!isAuthCheckComplete) {
@@ -355,11 +370,10 @@ export default function GeoneraPage() {
   }
 
   if (!currentUser) {
-     // Redirect to login if not authenticated and check is complete
-    if (typeof window !== 'undefined') { // Ensure this runs only on client
+    if (typeof window !== 'undefined') {
         router.replace('/login');
     }
-    return ( // Render minimal loading/redirecting UI
+    return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
             <p className="text-lg text-muted-foreground">Redirecting to login...</p>
@@ -367,9 +381,16 @@ export default function GeoneraPage() {
     );
   }
 
-  const logsForTable = latestSelectedCurrencyPairsRef.current.length > 0
-    ? predictionLogs.filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair))
+  const logsForTable = currentUser && selectedCurrencyPairs.length > 0
+    ? predictionLogs.filter(log => selectedCurrencyPairs.includes(log.currencyPair))
     : [];
+  
+  // Ensure selectedPredictionLog passed to children is a fresh copy if it exists
+  const currentSelectedLogForDisplay = selectedPredictionLog 
+    ? (predictionLogs.find(l => l.id === selectedPredictionLog.id) || null) 
+    : null;
+  const finalSelectedPredictionForChildren = currentSelectedLogForDisplay ? { ...currentSelectedLogForDisplay } : null;
+
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -385,17 +406,17 @@ export default function GeoneraPage() {
           />
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-1">
-              <CandlestickDisplay selectedPrediction={selectedPredictionLog} />
+              <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
             <div className="md:col-span-2">
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
-                selectedPredictionId={selectedPredictionLog?.id}
+                selectedPredictionId={finalSelectedPredictionForChildren?.id}
               />
             </div>
             <div className="md:col-span-1">
-              <PredictionDetailsPanel selectedPrediction={selectedPredictionLog} />
+              <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
           </div>
         </div>
@@ -407,3 +428,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
