@@ -464,7 +464,7 @@ export default function GeoneraPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <AppHeader user={currentUser} onLogout={handleLogout} />
       <main className="flex-grow container mx-auto py-4 flex flex-col">
-        <div className="max-w-screen-2xl mx-auto space-y-4 flex flex-col flex-grow w-full">
+        <div className="max-w-screen-2xl mx-auto space-y-4 flex flex-col flex-grow w-full min-h-0"> {/* Added min-h-0 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PipsParameterForm
               selectedCurrencyPairs={selectedCurrencyPairs}
@@ -507,3 +507,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
