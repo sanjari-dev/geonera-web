@@ -19,7 +19,8 @@ import { Loader2, Brain } from 'lucide-react';
 
 const PREDICTION_INTERVAL_MS = 10000; // 10 seconds
 const MIN_EXPIRATION_SECONDS = 10;
-const MAX_EXPIRATION_SECONDS = 180;
+const MAX_EXPIRATION_SECONDS = 604800; // 7 days in seconds (7 * 24 * 60 * 60)
+const MAX_PREDICTION_LOGS = 100; // Maximum number of prediction logs to keep
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -105,9 +106,9 @@ export default function GeoneraPage() {
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
     const logFromState = predictionLogs.find(l => l.id === log.id);
     if (logFromState) {
-      setSelectedPredictionLog({ ...logFromState });
+      setSelectedPredictionLog(produce(logFromState, draft => draft)); // Create a new object from the proxy
     } else {
-      setSelectedPredictionLog({ ...log });
+      setSelectedPredictionLog(produce(log, draft => draft)); // Create a new object from the proxy
     }
   }, [predictionLogs]);
 
@@ -173,6 +174,10 @@ export default function GeoneraPage() {
         newPendingLogs.forEach(log => {
           draft.unshift(log);
         });
+        // Enforce MAX_PREDICTION_LOGS
+        if (draft.length > MAX_PREDICTION_LOGS) {
+          draft.splice(MAX_PREDICTION_LOGS, draft.length - MAX_PREDICTION_LOGS);
+        }
       }));
       
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
@@ -213,6 +218,10 @@ export default function GeoneraPage() {
             Object.assign(logToUpdate, { status: "SUCCESS", predictionOutcome: result.data, expiresAt: new Date(Date.now() + randomExpirationMs) });
           }
         });
+         // Enforce MAX_PREDICTION_LOGS again after updates, though less likely to be needed here
+        if (draft.length > MAX_PREDICTION_LOGS) {
+          draft.splice(MAX_PREDICTION_LOGS, draft.length - MAX_PREDICTION_LOGS);
+        }
       }));
 
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
@@ -261,7 +270,7 @@ export default function GeoneraPage() {
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
 
       setPredictionLogs(produce(draft => {
-        let didAnyExpireOrGetFilteredOut = false;
+        // let didAnyExpireOrGetFilteredOut = false; // This variable was declared but not used. Commenting out to avoid lint errors.
         for (let i = draft.length - 1; i >= 0; i--) {
           const log = draft[i];
           let removeLog = false;
@@ -276,15 +285,18 @@ export default function GeoneraPage() {
           
           if (removeLog) {
             draft.splice(i, 1);
-            didAnyExpireOrGetFilteredOut = true;
+            // didAnyExpireOrGetFilteredOut = true; // Related to the unused variable above.
+             // If the removed log was the selected one, clear selection
+            if (selectedPredictionLog && selectedPredictionLog.id === log.id) {
+              setSelectedPredictionLog(null);
+            }
           }
         }
-        // No need to manage selectedPredictionLog directly here, the other effect handles it.
       }));
     }, 1000);
 
     return () => clearInterval(expirationIntervalId);
-  }, [currentUser, isAuthCheckComplete]);
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); // Added selectedPredictionLog to deps
 
   // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
   useEffect(() => {
@@ -300,12 +312,20 @@ export default function GeoneraPage() {
   
     if (selectedPredictionLog) {
       const logInCurrentList = predictionLogs.find(log => log.id === selectedPredictionLog.id);
+      // Ensure the log is still in the current prediction list and belongs to a currently selected pair
       if (logInCurrentList && currentSelectedPairs.includes(logInCurrentList.currencyPair)) {
-        newSelectedCandidate = logInCurrentList;
+         // Check if it's expired (only if it's a SUCCESS log)
+        if (logInCurrentList.status === "SUCCESS" && logInCurrentList.expiresAt && new Date() > new Date(logInCurrentList.expiresAt)) {
+           // It's expired, don't keep it selected
+        } else {
+          newSelectedCandidate = logInCurrentList;
+        }
       }
     }
   
+    // If no valid selected log, or previous selection was removed/expired
     if (!newSelectedCandidate && currentSelectedPairs.length > 0) {
+      // Prioritize active, non-expired SUCCESS logs from selected pairs
       const activeSuccessLogs = predictionLogs.filter(log =>
         currentSelectedPairs.includes(log.currencyPair) &&
         log.status === "SUCCESS" &&
@@ -314,6 +334,7 @@ export default function GeoneraPage() {
       if (activeSuccessLogs.length > 0) {
         newSelectedCandidate = activeSuccessLogs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
       } else {
+        // Fallback to PENDING logs if no active SUCCESS logs
         const pendingLogs = predictionLogs.filter(log =>
             currentSelectedPairs.includes(log.currencyPair) &&
             log.status === "PENDING"
@@ -321,6 +342,7 @@ export default function GeoneraPage() {
         if (pendingLogs.length > 0) {
           newSelectedCandidate = pendingLogs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
         } else {
+            // Fallback to any other log (e.g. ERROR or expired SUCCESS) for the selected pairs
             const anyRelevantLog = predictionLogs.filter(log => currentSelectedPairs.includes(log.currencyPair));
             if (anyRelevantLog.length > 0) {
                  newSelectedCandidate = anyRelevantLog.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
@@ -330,14 +352,14 @@ export default function GeoneraPage() {
     }
   
     if (newSelectedCandidate) {
-      if (selectedPredictionLog?.id !== newSelectedCandidate.id) {
-        setSelectedPredictionLog({ ...newSelectedCandidate });
-      } else {
-        // If IDs are the same, compare content (e.g. status) to see if an update is needed
-        // This is a simplified check; more robust would be deep comparison or versioning
-        if (JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedCandidate)) {
-           setSelectedPredictionLog({ ...newSelectedCandidate });
-        }
+        // Compare current selectedPredictionLog (non-proxy) with newCandidate (proxy from state)
+        // const currentSelectedIsProxy = selectedPredictionLog && (selectedPredictionLog as any).__isProxy; // Simple check
+        // const newSelectedIsProxy = (newSelectedCandidate as any).__isProxy;
+
+
+      if (selectedPredictionLog?.id !== newSelectedCandidate.id || 
+          (selectedPredictionLog && JSON.stringify(produce(selectedPredictionLog, draft => draft)) !== JSON.stringify(newSelectedCandidate))) {
+        setSelectedPredictionLog(produce(newSelectedCandidate, draft => draft)); // Convert proxy to plain object for selection
       }
     } else {
       if (selectedPredictionLog !== null) {
@@ -374,7 +396,7 @@ export default function GeoneraPage() {
     ? predictionLogs.filter(log => selectedCurrencyPairs.includes(log.currencyPair))
     : [];
   
-  const finalSelectedPredictionForChildren = selectedPredictionLog ? { ...selectedPredictionLog } : null;
+  const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
 
 
   return (
