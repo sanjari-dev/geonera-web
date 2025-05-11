@@ -8,7 +8,6 @@ import { AppHeader } from '@/components/geonera/header';
 import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
-import { CandlestickDisplay } from '@/components/geonera/candlestick-display';
 import { PredictionFilterControls } from '@/components/geonera/prediction-filter-controls';
 import type {
   PredictionLogItem,
@@ -507,7 +506,7 @@ export default function GeoneraPage() {
     <div className="h-screen grid grid-rows-[auto_1fr_auto] bg-background">
       <AppHeader user={currentUser} onLogout={handleLogout} />
       <main className="w-screen px-2 py-1 grid grid-cols-1 md:grid-cols-1 gap-1 overflow-hidden">
-        <div className="w-full grid grid-cols-1 gap-1 h-full min-h-0 grid-rows-[auto_1fr]"> {/* Changed to auto for top row */}
+        <div className="w-full grid grid-cols-1 gap-1 h-full min-h-0 grid-rows-[auto_1fr]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
             <PipsParameterForm
               selectedCurrencyPairs={selectedCurrencyPairs}
@@ -523,14 +522,8 @@ export default function GeoneraPage() {
               onFilterSignalChange={setFilterSignal}
             />
           </div>
-          {/* Bottom row: Candlestick, Table, Details Panel */}
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(theme(spacing.64),1fr)_auto_theme(spacing.80)] gap-1 overflow-hidden">
-            {/* Candlestick Display - takes available space, min-width defined by theme.spacing.64 */}
-            <div className="flex flex-col min-h-0 overflow-hidden">
-              <CandlestickDisplay selectedPrediction={finalSelectedPredictionForChildren} />
-            </div>
-            {/* Predictions Table - auto width based on content, with max-width constraint, scrollable */}
-            <div className="max-w-max flex flex-col min-h-0 overflow-y-auto h-full">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-1 overflow-hidden">
+            <div className="flex flex-col min-h-0 overflow-y-auto h-full">
               <PredictionsTable
                 predictions={logsForTable}
                 onRowClick={handlePredictionSelect}
@@ -540,7 +533,6 @@ export default function GeoneraPage() {
                 onSort={handleSort}
               />
             </div>
-            {/* Prediction Details Panel - fixed width based on theme.spacing.80 */}
             <div className="flex flex-col min-h-0">
               <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>

@@ -100,11 +100,9 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
               </Badge>
             </div>
 
-            {/* Market Data Display */}
             {marketDataAvailable && ohlcData && (
-               <MarketDataDisplay ohlcData={ohlcData} selectedPrediction={selectedPrediction} classHeight={undefined} />
+              <MarketDataDisplay ohlcData={ohlcData} selectedPrediction={selectedPrediction} />
             )}
-
 
             {selectedPrediction.expiresAt && (
               <div className="flex items-center space-x-2">
