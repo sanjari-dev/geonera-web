@@ -94,7 +94,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                   Use the <strong>Prediction Parameters</strong> section above to select currency pair(s) and define your desired PIPS target range (Min/Max).
                 </li>
                 <li>
-                  Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Log</strong> to your left, updating every 5 seconds.
+                  Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Log</strong> to your left, updating every 1 minute.
                 </li>
                 <li>
                   Each prediction has a unique expiration time (DD HH:mm:ss) and will be removed from the log once expired. Max log size is 1500.
@@ -271,3 +271,4 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+

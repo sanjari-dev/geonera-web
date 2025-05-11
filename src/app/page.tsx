@@ -27,7 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
 
 
-const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
+const PREDICTION_INTERVAL_MS = 60000; // 1 minute
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 604800; // 7 days in seconds (7 * 24 * 60 * 60)
 const MAX_PREDICTION_LOGS = 1500; // Maximum number of prediction logs to keep
