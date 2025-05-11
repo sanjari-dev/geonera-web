@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { format } from 'date-fns';
+import { format as formatDateFns } from 'date-fns'; // Renamed to avoid conflict with any potential 'format' variable
 
 interface AppHeaderProps {
   user: User | null;
@@ -25,30 +25,19 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
 
-  const formatCurrentTime = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-
-    const timezoneOffset = -now.getTimezoneOffset();
-    const offsetHours = String(Math.floor(Math.abs(timezoneOffset) / 60)).padStart(2, '0');
-    const offsetMinutes = String(Math.abs(timezoneOffset) % 60).padStart(2, '0');
-    const offsetSign = timezoneOffset >= 0 ? '+' : '-';
-
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${offsetSign}${offsetHours}:${offsetMinutes}`;
-  };
+  const formatCurrentTime = useCallback(() => {
+    // Ensure Date is only created on client-side
+    return formatDateFns(new Date(), "yyyy-MM-dd HH:mm:ss XXX");
+  }, []);
 
   useEffect(() => {
+    // Initialize time on client-side
     setCurrentTime(formatCurrentTime());
     const timerId = setInterval(() => {
       setCurrentTime(formatCurrentTime());
     }, 1000);
     return () => clearInterval(timerId);
-  }, []);
+  }, [formatCurrentTime]);
 
 
   const handleLoginRedirect = () => {
@@ -85,10 +74,10 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
   };
 
   return (
-    <header className="py-1 border-b border-border">
+    <header className="py-1 border-b border-border" aria-label="Application Header">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center">
-          <Brain className="h-8 w-8 text-primary mr-2" />
+          <Brain className="h-8 w-8 text-primary mr-2" aria-hidden="true" />
           <h1 className="text-3xl font-bold text-primary">
             Geonera
           </h1>
@@ -96,8 +85,8 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
 
         <div className="flex items-center gap-2">
            {currentTime && (
-            <div className="hidden md:flex items-center text-sm text-muted-foreground gap-1">
-              <Clock className="h-4 w-4" />
+            <div className="hidden md:flex items-center text-sm text-muted-foreground gap-1" aria-live="polite" aria-atomic="true">
+              <Clock className="h-4 w-4" aria-hidden="true" />
               <span>{currentTime}</span>
             </div>
           )}
@@ -105,7 +94,7 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={toggleFullScreen} className="h-9 w-9" aria-label={isFullScreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
-                  {isFullScreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+                  {isFullScreen ? <Minimize className="h-5 w-5" aria-hidden="true" /> : <Maximize className="h-5 w-5" aria-hidden="true" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -134,14 +123,14 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
-                  <LogOut className="mr-2 h-4 w-4" />
+                  <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
                   <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Button onClick={handleLoginRedirect} variant="outline">
-              <LogInIcon className="mr-2 h-4 w-4" />
+              <LogInIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               Login
             </Button>
           )}

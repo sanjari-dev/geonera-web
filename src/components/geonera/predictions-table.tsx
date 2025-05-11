@@ -12,8 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
-import { format } from 'date-fns';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { format as formatDateFns } from 'date-fns';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -37,13 +37,13 @@ interface PredictionsTableProps {
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
   switch (status) {
     case "PENDING":
-      return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+      return <Loader2 className="h-4 w-4 animate-spin text-blue-500" aria-label="Pending" />;
     case "SUCCESS":
-      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      return <CheckCircle2 className="h-4 w-4 text-green-500" aria-label="Success" />;
     case "ERROR":
-      return <AlertCircle className="h-4 w-4 text-red-500" />;
-    case "IDLE": // Should ideally not happen in active log
-       return <Info className="h-4 w-4 text-gray-400" />;
+      return <AlertCircle className="h-4 w-4 text-red-500" aria-label="Error" />;
+    case "IDLE": 
+       return <Info className="h-4 w-4 text-gray-400" aria-label="Idle" />;
     default:
       return null;
   }
@@ -63,17 +63,17 @@ const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]):
 
 const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: SortableColumnKey }> = ({ sortConfig, columnKey }) => {
   if (!sortConfig || sortConfig.key !== columnKey) {
-    return <ChevronsUpDown className="ml-1 h-3 w-3 opacity-50" />;
+    return <ChevronsUpDown className="ml-1 h-3 w-3 opacity-50" aria-hidden="true" />;
   }
-  return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+  return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" aria-label="Sorted ascending" /> : <ArrowDown className="ml-1 h-3 w-3" aria-label="Sorted descending" />;
 };
 
 
 export function PredictionsTable({ predictions, onRowClick, selectedPredictionId, maxLogs, sortConfig, onSort }: PredictionsTableProps) {
   if (predictions.length === 0) {
     return (
-      <div className="p-2 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center h-full">
-        <Info className="h-10 w-10 text-muted-foreground mb-3" />
+      <div className="p-2 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center h-full" role="status" aria-live="polite">
+        <Info className="h-10 w-10 text-muted-foreground mb-3" aria-hidden="true" />
         <p className="text-lg text-muted-foreground">No active predictions.</p>
         <p className="text-sm text-muted-foreground">Set parameters or adjust filters to see predictions. They will appear here and be removed upon expiration.</p>
       </div>
@@ -84,6 +84,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
     <TableHead
       className="px-1 py-2 text-center whitespace-nowrap cursor-pointer hover:bg-accent/50 transition-colors sticky top-0 bg-card z-10"
       onClick={() => onSort(columnKey)}
+      aria-sort={sortConfig?.key === columnKey ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
       <Tooltip>
         <TooltipTrigger className="cursor-pointer flex items-center justify-center w-full">
@@ -98,12 +99,12 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
   return (
     <TooltipProvider>
-      <Card className="shadow-xl h-full grid grid-rows-[12%_80%_8%]">
+      <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby="prediction-log-title">
         <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
-          <CardTitle className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
+          <CardTitle id="prediction-log-title" className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
           <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
         </CardHeader>
-        <CardContent className="p-0 flex-grow">
+        <CardContent className="p-0 flex-grow min-h-0">
           <ScrollArea className="h-full w-full rounded-md border overflow-hidden">
             <Table>
               <TableHeader>
@@ -125,6 +126,9 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       "cursor-pointer hover:bg-muted/50 transition-colors",
                       selectedPredictionId === log.id && "bg-secondary text-secondary-foreground hover:bg-muted"
                     )}
+                    aria-selected={selectedPredictionId === log.id}
+                    tabIndex={0} // Make row focusable
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onRowClick(log); }}
                   >
                     <TableCell className="px-1 py-0.5 text-center whitespace-nowrap">
                       <div className="flex justify-center">
@@ -132,7 +136,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
                       </div>
                     </TableCell>
                     <TableCell className="px-1 py-0.5 text-xs text-center whitespace-nowrap">
-                      {format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss")}
+                      {formatDateFns(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss XXX")}
                     </TableCell>
                     <TableCell className="px-1 py-0.5 font-medium text-center whitespace-nowrap text-xs">{log.currencyPair}</TableCell>
                     <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-xs">
