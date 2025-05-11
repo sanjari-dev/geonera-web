@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase } from "lucide-react";
 import { format } from 'date-fns';
+import MarketDataDisplay from '@/components/geonera/market-data-display'; // Import MarketDataDisplay
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
@@ -57,7 +58,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
   return (
     <Card className="shadow-xl h-full grid grid-rows-[12%_88%]">
       <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
-        <CardTitle className="text-xl font-semibold text-primary whitespace-nowrap">Prediction Details</CardTitle>
+        <CardTitle className="text-xl font-semibold text-primary dark:text-foreground whitespace-nowrap">Prediction Details</CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
           {selectedPrediction ? <span className="whitespace-nowrap">{`Details for ${selectedPrediction.currencyPair}`}</span> : "Select a prediction for details."}
         </CardDescription>
@@ -98,6 +99,12 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                 {selectedPrediction.status}
               </Badge>
             </div>
+
+            {/* Market Data Display */}
+            {marketDataAvailable && ohlcData && (
+               <MarketDataDisplay ohlcData={ohlcData} selectedPrediction={selectedPrediction} classHeight={undefined} />
+            )}
+
 
             {selectedPrediction.expiresAt && (
               <div className="flex items-center space-x-2">

@@ -82,7 +82,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
   return (
     <Card className="shadow-xl h-full grid grid-rows-[12%_88%]">
       <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
-        <CardTitle className="text-xl font-semibold text-primary flex items-center">
+        <CardTitle className="text-xl font-semibold text-primary dark:text-foreground flex items-center">
           <TrendingUp className="h-6 w-6 mr-2" />
           Candlestick View
         </CardTitle>
@@ -146,7 +146,7 @@ export function CandlestickDisplay({ selectedPrediction }: CandlestickDisplayPro
                 <Bar dataKey="value" shape={<CandlestickShape />} barSize={50} />
               </BarChart>
             </ChartContainer>
-            <MarketDataDisplay classHeight="h-[70%]" ohlcData={ohlcData} selectedPrediction={selectedPrediction} />
+            {/* MarketDataDisplay was here, now moved to PredictionDetailsPanel */}
           </div>
         )}
       </CardContent>

@@ -26,7 +26,7 @@ body {
     --secondary-foreground: 235 62% 29%; /* Primary color text on secondary background */
 
     --muted: 220 16% 85%; /* Muted gray */
-    --muted-foreground: 240 5% 45%; /* Lighter gray for muted text - Darkened for AA contrast */
+    --muted-foreground: 240 6% 35%; /* Darker gray for better contrast - Was 240 5% 45% */
 
     --accent: 187 100% 42%; /* Teal #00BCD4 */
     --accent-foreground: 0 0% 100%; /* White text on accent */
@@ -72,7 +72,7 @@ body {
     --secondary-foreground: 0 0% 93.3%;
 
     --muted: 235 30% 22%;
-    --muted-foreground: 0 0% 70%; /* Lightened for better contrast on dark backgrounds, e.g. input placeholders */
+    --muted-foreground: 0 0% 75%; /* Lightened for better contrast on dark backgrounds - Was 0 0% 70% */
 
     --accent: 235 62% 55%; /* Lighter shade of the original primary blue for accent */
     --accent-foreground: 0 0% 98%;

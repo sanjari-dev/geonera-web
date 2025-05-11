@@ -29,7 +29,7 @@ import { Loader2 } from 'lucide-react';
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 604800; // 7 days in seconds (7 * 24 * 60 * 60)
-const MAX_PREDICTION_LOGS = 59; // Maximum number of prediction logs to keep
+const MAX_PREDICTION_LOGS = 1500; // Maximum number of prediction logs to keep
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -497,7 +497,7 @@ export default function GeoneraPage() {
           </div>
         </div>
       </main>
-      <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-stone-300">
+      <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">
         {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved.
       </footer>
     </div>
