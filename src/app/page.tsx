@@ -28,8 +28,8 @@ import { Loader2 } from 'lucide-react';
 
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
 const MIN_EXPIRATION_SECONDS = 10;
-const MAX_EXPIRATION_SECONDS = 604800; // 7 days in seconds (7 * 24 * 60 * 60)
-const MAX_PREDICTION_LOGS = 1500; // Maximum number of prediction logs to keep
+const MAX_EXPIRATION_SECONDS = 75; // Max expiration 75 seconds
+const MAX_PREDICTION_LOGS = 500; // Maximum number of prediction logs to keep
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
