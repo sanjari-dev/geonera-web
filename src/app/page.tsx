@@ -518,11 +518,11 @@ export default function GeoneraPage() {
           />
         </div>
         <div className="flex flex-col min-h-0"> 
-          <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
+          <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} maxPredictionLogs={MAX_PREDICTION_LOGS} />
         </div>
       </main>
       <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">
-        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions update automatically every 5 seconds if parameters are valid.
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions update automatically every 30 seconds if parameters are valid.
       </footer>
     </div>
   );

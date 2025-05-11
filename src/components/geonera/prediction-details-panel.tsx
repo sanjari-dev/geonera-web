@@ -11,6 +11,7 @@ import type { VariantProps } from 'class-variance-authority';
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
+  maxPredictionLogs: number; // Added prop
 }
 
 const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
@@ -64,7 +65,7 @@ const formatVolume = (volume?: number) => {
 };
 
 
-export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetailsPanelProps) {
+export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }: PredictionDetailsPanelProps) {
   const marketOhlcData = selectedPrediction?.predictionOutcome;
   const marketDataAvailable = selectedPrediction && marketOhlcData && (
     marketOhlcData.openPrice !== undefined ||
@@ -103,7 +104,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                   Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Log</strong> to your left, updating every 30 seconds.
                 </li>
                 <li>
-                  Each prediction has a unique expiration time and will be categorized accordingly. Max log size is {MAX_PREDICTION_LOGS}.
+                  Each prediction has a unique expiration time and will be categorized accordingly. Max log size is {maxPredictionLogs}.
                 </li>
                 <li>
                   Click on any row in the Prediction Log to view its detailed analysis in this panel.
