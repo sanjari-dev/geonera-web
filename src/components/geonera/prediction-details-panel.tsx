@@ -4,7 +4,7 @@
 import type { PredictionLogItem, PipsPredictionOutcome } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain } from "lucide-react";
 import { format as formatDateFns } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { VariantProps } from 'class-variance-authority';
@@ -71,18 +71,49 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
   return (
     <Card className="shadow-xl h-full grid grid-rows-[auto_1fr]" aria-labelledby="prediction-details-title">
       <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
-        <CardTitle id="prediction-details-title" className="text-lg font-semibold text-primary dark:text-foreground whitespace-nowrap">Prediction Details</CardTitle>
+        <CardTitle id="prediction-details-title" className="text-lg font-semibold text-primary dark:text-foreground whitespace-nowrap">
+           {selectedPrediction ? "Prediction Details" : "About Geonera"}
+        </CardTitle>
         <CardDescription className="text-xs text-muted-foreground">
-          {selectedPrediction ? <span className="whitespace-nowrap">{`Details for ${selectedPrediction.currencyPair}`}</span> : "Select a prediction for details."}
+          {selectedPrediction ? <span className="whitespace-nowrap">{`Details for ${selectedPrediction.currencyPair}`}</span> : "Mock Forex Prediction Insights"}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-2 flex-grow flex flex-col min-h-0">
         {!selectedPrediction ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8" role="status" aria-live="polite">
-            <Info className="h-10 w-10 mb-2" aria-hidden="true" />
-            <p className="text-sm">No prediction selected.</p>
-            <p className="text-xs text-center">Click on a row in the Prediction Log to see its details here.</p>
-          </div>
+          <ScrollArea className="h-full w-full">
+            <div className="space-y-1.5 p-1.5 pr-2 text-foreground text-xs">
+              <div className="flex items-center space-x-1.5 text-sm font-semibold text-primary mb-1">
+                <Brain className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                <span>Welcome to Geonera!</span>
+              </div>
+              <p className="leading-relaxed">
+                Geonera is a platform designed to provide mock real-time insights and trading signals for forex currency pairs. Here’s how to get started:
+              </p>
+              <ul className="list-disc list-inside space-y-1 pl-3 leading-relaxed">
+                <li>
+                  Use the <strong>Prediction Parameters</strong> section above to select currency pair(s) and define your desired PIPS target range (Min/Max).
+                </li>
+                <li>
+                  Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Log</strong> to your left, updating every 5 seconds.
+                </li>
+                <li>
+                  Each prediction has a unique expiration time (DD HH:mm:ss) and will be removed from the log once expired. Max log size is 1500.
+                </li>
+                <li>
+                  Click on any row in the Prediction Log to view its detailed analysis in this panel.
+                </li>
+                <li>
+                  Utilize the <strong>Filter Predictions</strong> controls to narrow down the log based on status or trading signal. You can also sort columns by clicking their headers.
+                </li>
+              </ul>
+              <p className="text-[0.7rem] italic pt-1 text-muted-foreground">
+                Please note: All data and predictions provided by Geonera are for informational and demonstration purposes only. They should not be considered as financial advice.
+              </p>
+              <p className="text-xs text-center pt-1 text-accent">
+                When predictions are available in the log, select one to see its details here.
+              </p>
+            </div>
+          </ScrollArea>
         ) : (
           <ScrollArea className="h-full w-full">
             <div className="space-y-1 pr-1.5"> {/* Reduced space-y and padding */}
@@ -240,5 +271,3 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
-    
