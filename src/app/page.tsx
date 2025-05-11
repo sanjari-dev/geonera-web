@@ -460,8 +460,8 @@ export default function GeoneraPage() {
   return (
     <div className="h-screen grid grid-rows-[auto_1fr_auto] bg-background">
       <AppHeader user={currentUser} onLogout={handleLogout} />
-      <main className="container mx-auto py-1 grid grid-cols-1 md:grid-cols-1 gap-1 overflow-hidden">
-        <div className="max-w-screen-2xl w-full grid grid-cols-1 gap-1 h-full min-h-0 grid-rows-[1fr_8fr]">
+      <main className="w-screen px-2 py-1 grid grid-cols-1 md:grid-cols-1 gap-1 overflow-hidden">
+        <div className="w-full grid grid-cols-1 gap-1 h-full min-h-0 grid-rows-[1fr_8fr]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
             <PipsParameterForm
               selectedCurrencyPairs={selectedCurrencyPairs}
