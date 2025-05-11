@@ -27,7 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
 
 
-const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
+const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 604800; // 7 days in seconds (7 * 24 * 60 * 60)
 const MAX_PREDICTION_LOGS = 1500; // Maximum number of prediction logs to keep
@@ -71,22 +71,20 @@ export default function GeoneraPage() {
         setUuidAvailable(true);
     }
 
+    let userFromStorage: User | null = null;
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('geoneraUser');
       if (storedUser) {
         try {
-          const parsedUser = JSON.parse(storedUser);
-          setCurrentUser(parsedUser);
+          userFromStorage = JSON.parse(storedUser);
+          setCurrentUser(userFromStorage);
         } catch (e) {
           console.error("Failed to parse user from localStorage", e);
           localStorage.removeItem('geoneraUser'); // Clear corrupted data
         }
       }
-      setIsAuthCheckComplete(true); 
-    } else {
-      // For SSR or environments where window is not defined initially
-      setIsAuthCheckComplete(true); // Still mark as complete, redirection logic will handle if !currentUser
     }
+    setIsAuthCheckComplete(true); 
   }, []);
 
   useEffect(() => {
@@ -119,7 +117,7 @@ export default function GeoneraPage() {
     setSelectedPredictionLog(null); // Clear selected prediction
     setSelectedCurrencyPairs([]); // Clear selected pairs
     setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default', timestamp: new Date() });
-    // No need to router.push('/login') here if the useEffect for redirection handles it
+    // router.replace('/login') is handled by useEffect [currentUser, isAuthCheckComplete, router]
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -387,7 +385,6 @@ export default function GeoneraPage() {
     }
   }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog, filterStatus, filterSignal, sortConfig]);
 
-
   const handleSort = (key: SortableColumnKey) => {
     setSortConfig(prevConfig => {
       if (prevConfig && prevConfig.key === key) {
@@ -417,6 +414,16 @@ export default function GeoneraPage() {
     }
   };
 
+   useEffect(() => {
+     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(err => {
+         // console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        });
+      }
+     }
+   }, []);
+
 
   if (!isAuthCheckComplete) {
     return (
@@ -427,15 +434,14 @@ export default function GeoneraPage() {
     );
   }
 
-  // Redirection logic is now handled by useEffect [currentUser, isAuthCheckComplete, router]
 
   if (!currentUser) { 
-      // This primarily serves as a guard before `logsForTable` tries to access `currentUser` properties
-      // or if the redirection hasn't happened yet (e.g. during the very brief moment before useEffect runs)
+      // This check is now primarily for the initial render before redirection or if redirection fails.
+      // The useEffect [currentUser, isAuthCheckComplete, router] handles the actual redirection logic.
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-lg text-muted-foreground">Authenticating...</p>
+          <p className="text-lg text-muted-foreground">Redirecting to login...</p>
         </div>
       );
   }
@@ -514,3 +520,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
