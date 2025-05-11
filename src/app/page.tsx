@@ -118,7 +118,7 @@ export default function GeoneraPage() {
     setPredictionLogs([]); // Clear logs on logout
     setSelectedPredictionLog(null); // Clear selected prediction
     setSelectedCurrencyPairs([]); // Clear selected pairs
-    setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default' });
+    setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default', timestamp: new Date() });
     // No need to router.push('/login') here if the useEffect for redirection handles it
   };
 
@@ -168,7 +168,8 @@ export default function GeoneraPage() {
             setLatestNotification({
                 title: "Prediction Paused",
                 description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
-                variant: "default", 
+                variant: "default",
+                timestamp: new Date(), 
              });
         }
         if (timeoutId) clearTimeout(timeoutId);
@@ -272,6 +273,7 @@ export default function GeoneraPage() {
             title: toastTitle,
             description: toastDescription,
             variant: errorCount > 0 && successCount === 0 ? "destructive" : (successCount > 0 ? "success" : "default"),
+            timestamp: new Date(),
           });
         }
       }

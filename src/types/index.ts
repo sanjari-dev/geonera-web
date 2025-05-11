@@ -68,4 +68,5 @@ export interface NotificationMessage {
   title: string;
   description: string;
   variant?: 'destructive' | 'default' | 'success';
+  timestamp?: Date;
 }

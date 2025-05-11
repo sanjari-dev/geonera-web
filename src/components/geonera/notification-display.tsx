@@ -4,8 +4,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { NotificationMessage } from "@/types";
-import { Bell, AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { Bell, AlertTriangle, CheckCircle2, Info, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from 'date-fns';
 
 interface NotificationDisplayProps {
   notification: NotificationMessage | null;
@@ -47,6 +48,12 @@ export function NotificationDisplay({ notification, className }: NotificationDis
               >
                 {notification.description}
               </p>
+              {notification.timestamp && (
+                <div className="flex items-center text-xs text-muted-foreground ml-7 mt-1">
+                  <Clock className="h-3 w-3 mr-1" />
+                  <span>{format(new Date(notification.timestamp), "yyyy-MM-dd HH:mm:ss")}</span>
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground italic">No new notifications.</p>
