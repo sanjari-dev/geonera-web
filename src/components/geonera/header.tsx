@@ -32,11 +32,13 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
 
   useEffect(() => {
     // Initialize time on client-side
-    setCurrentTime(formatCurrentTime());
-    const timerId = setInterval(() => {
+    if (typeof window !== 'undefined') {
       setCurrentTime(formatCurrentTime());
-    }, 1000);
-    return () => clearInterval(timerId);
+      const timerId = setInterval(() => {
+        setCurrentTime(formatCurrentTime());
+      }, 1000);
+      return () => clearInterval(timerId);
+    }
   }, [formatCurrentTime]);
 
 
@@ -53,25 +55,46 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.addEventListener('fullscreenchange', handleFullscreenChange);
+      // Initial check
+      setIsFullScreen(!!document.fullscreenElement);
       return () => {
         document.removeEventListener('fullscreenchange', handleFullscreenChange);
       };
     }
   }, [handleFullscreenChange]);
 
-  const toggleFullScreen = () => {
+  const toggleFullScreen = async () => {
     if (typeof document === 'undefined') return;
 
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-      });
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch (err) {
+         console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+         // Optionally, provide feedback to the user that fullscreen was blocked
+      }
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen();
+        try {
+          await document.exitFullscreen();
+        } catch (err) {
+          console.error(`Error attempting to exit full-screen mode: ${err.message} (${err.name})`);
+        }
       }
     }
   };
+  
+  const handleLogoutClick = () => {
+    if (typeof document !== 'undefined' && document.fullscreenElement) {
+      document.exitFullscreen().catch(err => console.error("Error exiting fullscreen during logout:", err))
+      .finally(() => {
+        onLogout(); // Call original logout after attempting to exit fullscreen
+      });
+    } else {
+      onLogout(); // Call original logout if not in fullscreen
+    }
+  };
+
 
   return (
     <header className="py-1 border-b border-border" aria-label="Application Header">
@@ -122,7 +145,7 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
+                <DropdownMenuItem onClick={handleLogoutClick} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -139,3 +162,4 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
     </header>
   );
 }
+

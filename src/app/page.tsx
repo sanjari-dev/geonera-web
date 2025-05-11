@@ -95,6 +95,34 @@ export default function GeoneraPage() {
     }
   }, [currentUser, isAuthCheckComplete, router]);
 
+  useEffect(() => {
+    // Attempt to enter fullscreen automatically
+    // Note: This may be blocked by browser security policies if not triggered by a user gesture.
+    const requestFullScreen = async () => {
+      if (typeof document !== 'undefined' && document.documentElement.requestFullscreen) {
+        try {
+          await document.documentElement.requestFullscreen();
+        } catch (err) {
+          console.warn("Automatic fullscreen request was blocked or failed:", err);
+          // Optionally, notify the user that they can enter fullscreen manually via the button.
+          setLatestNotification({
+            title: "Fullscreen Mode",
+            description: "Automatic fullscreen was blocked. You can enter fullscreen using the button in the header.",
+            variant: 'default',
+            timestamp: new Date(),
+          });
+        }
+      }
+    };
+
+    if (isAuthCheckComplete && currentUser) {
+       // Only attempt fullscreen if user is logged in and auth check is complete.
+       // Delay slightly to allow the page to render and avoid immediate blocks.
+       const timerId = setTimeout(requestFullScreen, 500);
+       return () => clearTimeout(timerId);
+    }
+  }, [isAuthCheckComplete, currentUser]);
+
 
   const generateId = useCallback(() => {
     if (uuidAvailable) {
@@ -113,13 +141,16 @@ export default function GeoneraPage() {
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('geoneraUser');
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(err => console.error("Error exiting fullscreen on logout:", err));
+      }
     }
     setCurrentUser(null);
     setPredictionLogs([]); // Clear logs on logout
     setSelectedPredictionLog(null); // Clear selected prediction
     setSelectedCurrencyPairs([]); // Clear selected pairs
     setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default', timestamp: new Date() });
-    // No need to router.push('/login') here if the useEffect for redirection handles it
+    // Redirection to /login is handled by useEffect [currentUser, isAuthCheckComplete, router]
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -514,3 +545,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
