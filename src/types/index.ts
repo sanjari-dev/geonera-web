@@ -63,3 +63,9 @@ export interface SortConfig {
   key: SortableColumnKey;
   direction: 'asc' | 'desc';
 }
+
+export interface NotificationMessage {
+  title: string;
+  description: string;
+  variant?: 'destructive' | 'default' | 'success';
+}

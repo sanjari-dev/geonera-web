@@ -9,6 +9,7 @@ import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
 import { PredictionFilterControls } from '@/components/geonera/prediction-filter-controls';
+import { NotificationDisplay } from '@/components/geonera/notification-display';
 import type {
   PredictionLogItem,
   CurrencyPair,
@@ -17,10 +18,11 @@ import type {
   StatusFilterType,
   SignalFilterType,
   SortConfig,
-  SortableColumnKey
+  SortableColumnKey,
+  NotificationMessage
 } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
-import { useToast } from "@/hooks/use-toast";
+// import { useToast } from "@/hooks/use-toast"; // Removed useToast
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
 
@@ -42,6 +44,7 @@ export default function GeoneraPage() {
 
   const [uuidAvailable, setUuidAvailable] = useState(false);
   const [selectedPredictionLog, setSelectedPredictionLog] = useState<PredictionLogItem | null>(null);
+  const [latestNotification, setLatestNotification] = useState<NotificationMessage | null>(null);
 
   // Filtering and Sorting State
   const [filterStatus, setFilterStatus] = useState<StatusFilterType>("ALL");
@@ -49,7 +52,7 @@ export default function GeoneraPage() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'asc' });
 
   const router = useRouter();
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Removed useToast
 
   const latestSelectedCurrencyPairsRef = useRef(selectedCurrencyPairs);
   useEffect(() => {
@@ -115,7 +118,7 @@ export default function GeoneraPage() {
     setPredictionLogs([]); // Clear logs on logout
     setSelectedPredictionLog(null); // Clear selected prediction
     setSelectedCurrencyPairs([]); // Clear selected pairs
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
+    setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default' });
     // No need to router.push('/login') here if the useEffect for redirection handles it
   };
 
@@ -162,7 +165,7 @@ export default function GeoneraPage() {
       
       if (isPipsTargetInvalid) {
         if (currentSelectedPairs.length > 0) { 
-             toast({
+            setLatestNotification({
                 title: "Prediction Paused",
                 description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
                 variant: "default", 
@@ -265,10 +268,10 @@ export default function GeoneraPage() {
           toastDescription = `${errorCount} prediction(s) failed for ${relevantPairs}.`;
         }
         if (toastDescription && latestSelectedCurrencyPairsRef.current.length > 0) {
-          toast({
+          setLatestNotification({
             title: toastTitle,
             description: toastDescription,
-            variant: errorCount > 0 && successCount === 0 ? "destructive" : "default",
+            variant: errorCount > 0 && successCount === 0 ? "destructive" : (successCount > 0 ? "success" : "default"),
           });
         }
       }
@@ -284,7 +287,8 @@ export default function GeoneraPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId); 
     };
-  }, [currentUser, isAuthCheckComplete, toast, generateId, isLoading]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, isAuthCheckComplete, generateId, isLoading]); 
 
 
   // Prediction expiration and deselected pair cleanup useEffect
@@ -421,21 +425,11 @@ export default function GeoneraPage() {
     );
   }
 
-  if (!currentUser && isAuthCheckComplete) { // Updated condition to ensure auth check is complete
-    // This is where router.replace should ideally be in a useEffect to avoid render-time side effects.
-    // The existing useEffect for redirection should handle this.
-    // For safety, keep a loading/redirecting message.
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-lg text-muted-foreground">Redirecting to login...</p>
-        </div>
-    );
-  }
-  
+  // Redirection logic is now handled by useEffect [currentUser, isAuthCheckComplete, router]
+
   if (!currentUser) { 
-      // Fallback if the above condition didn't catch it or if auth check is still pending with no user
-      // This mainly serves as a guard before `logsForTable` tries to access `currentUser` properties
+      // This primarily serves as a guard before `logsForTable` tries to access `currentUser` properties
+      // or if the redirection hasn't happened yet (e.g. during the very brief moment before useEffect runs)
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -479,9 +473,9 @@ export default function GeoneraPage() {
   return (
     <div className="h-screen grid grid-rows-[auto_1fr_auto] bg-background text-foreground">
       <AppHeader user={currentUser} onLogout={handleLogout} />
-      <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-1 gap-1 overflow-hidden"> {/* Changed w-screen to w-full for better container behavior */}
+      <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-1 gap-1 overflow-hidden">
         <div className="w-full grid grid-cols-1 gap-1 h-full min-h-0 grid-rows-[auto_1fr]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
             <PipsParameterForm
               selectedCurrencyPairs={selectedCurrencyPairs}
               pipsTarget={pipsTarget}
@@ -495,8 +489,9 @@ export default function GeoneraPage() {
               filterSignal={filterSignal}
               onFilterSignalChange={setFilterSignal}
             />
+            <NotificationDisplay notification={latestNotification} />
           </div>
-          {/* Adjusted grid to take full width, PredictionDetailsPanel to take fixed width of 1/3 */}
+          
           <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-1 overflow-hidden">
             <div className="flex flex-col min-h-0 overflow-y-auto h-full">
               <PredictionsTable
@@ -508,7 +503,7 @@ export default function GeoneraPage() {
                 onSort={handleSort}
               />
             </div>
-            <div className="flex flex-col min-h-0"> {/* PredictionDetailsPanel container */}
+            <div className="flex flex-col min-h-0"> 
               <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
             </div>
           </div>

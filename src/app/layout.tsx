@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
+// import { Toaster } from "@/components/ui/toaster"; // Removed Toaster
 
 const inter = Inter({
   subsets: ['latin'],
@@ -88,7 +88,6 @@ export const metadata: Metadata = {
   icons: { // Define icons more explicitly
     icon: [
       { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      // { url: '/icon.svg', type: 'image/svg+xml' }, // Removed reference to non-existent icon.svg
     ],
     apple: '/apple-touch-icon.png', // Example Apple touch icon
     shortcut: '/favicon.ico', // Favicon
@@ -105,10 +104,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} antialiased bg-background text-foreground`} suppressHydrationWarning={true}>
+    <html lang="en" suppressHydrationWarning={true}>
+      <body className={`${inter.variable} antialiased bg-background text-foreground`}>
         {children}
-        <Toaster />
+        {/* <Toaster /> */} {/* Removed Toaster */}
       </body>
     </html>
   );

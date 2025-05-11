@@ -1,20 +1,20 @@
 // src/app/login/page.tsx
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoginForm } from '@/components/geonera/login-form';
 import type { User } from '@/types';
-import { AppHeader } from '@/components/geonera/header'; // Optional: for consistent header
-import { useToast } from "@/hooks/use-toast";
-
+import { AppHeader } from '@/components/geonera/header';
+// import { useToast } from "@/hooks/use-toast"; // Removed useToast
 
 export default function LoginPage() {
   const router = useRouter();
-  const { toast } = useToast();
-  const currentYear = new Date().getFullYear().toString();
+  // const { toast } = useToast(); // Removed useToast
+  const [currentYear, setCurrentYear] = useState('');
 
   useEffect(() => {
+    setCurrentYear(new Date().getFullYear().toString());
     // If user data already in localStorage, redirect to home
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('geoneraUser');
@@ -28,7 +28,7 @@ export default function LoginPage() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('geoneraUser', JSON.stringify(user));
     }
-    toast({ title: `Welcome, ${user.username}!`, description: "You are now logged in." });
+    // toast({ title: `Welcome, ${user.username}!`, description: "You are now logged in." }); // Removed toast
     router.push('/'); // Navigate to home page after login
   };
 

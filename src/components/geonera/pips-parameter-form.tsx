@@ -80,13 +80,13 @@ export function PipsParameterForm({
   };
   
   return (
-    <div className="space-y-3 p-4 bg-card shadow-lg rounded-lg border border-border">
-      <div className="flex items-center gap-2 text-lg font-semibold text-primary">
+    <div className="space-y-2 p-3 bg-card shadow-lg rounded-lg border border-border h-full">
+      <div className="flex items-center gap-2 text-base font-semibold text-primary">
         <Settings2 className="h-5 w-5" />
         <span>Prediction Parameters</span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="md:col-span-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="md:col-span-1 flex flex-col justify-end">
           <Label htmlFor="currency-pair-multiselect" className="text-sm font-medium mb-1 block">
             Currency Pair(s)
           </Label>
@@ -100,6 +100,7 @@ export function PipsParameterForm({
                   selectedCurrencyPairs.length === 0 && "text-muted-foreground"
                 )}
                 disabled={isLoading}
+                aria-label={`Select currency pairs, currently selected: ${getTriggerLabel()}`}
               >
                 <span className="truncate">{getTriggerLabel()}</span>
                 <ChevronDown className="h-4 w-4 opacity-50" />
@@ -119,9 +120,10 @@ export function PipsParameterForm({
                     onCheckedChange={() => handleCurrencyToggle(option.value)}
                     disabled={isDisabled || isLoading}
                     className="text-sm py-1.5"
+                    aria-label={option.label}
                   >
                     <div className="flex items-center">
-                      {IconComponent && <IconComponent className="h-4 w-4 mr-2 text-muted-foreground" />}
+                      {IconComponent && <IconComponent aria-hidden="true" className="h-4 w-4 mr-2 text-muted-foreground" />}
                       {option.label}
                     </div>
                   </DropdownMenuCheckboxItem>
@@ -130,7 +132,7 @@ export function PipsParameterForm({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div>
+        <div className="flex flex-col justify-end">
           <Label htmlFor="min-pips-target" className="text-sm font-medium mb-1 block">Min Target PIPS</Label>
           <Input
             id="min-pips-target"
@@ -141,9 +143,10 @@ export function PipsParameterForm({
             className="text-sm py-2 h-9"
             min="1"
             disabled={isLoading}
+            aria-label="Minimum PIPS target"
           />
         </div>
-        <div>
+        <div className="flex flex-col justify-end">
           <Label htmlFor="max-pips-target" className="text-sm font-medium mb-1 block">Max Target PIPS</Label>
           <Input
             id="max-pips-target"
@@ -154,6 +157,7 @@ export function PipsParameterForm({
             className="text-sm py-2 h-9"
             min="1"
             disabled={isLoading}
+            aria-label="Maximum PIPS target"
           />
         </div>
       </div>
