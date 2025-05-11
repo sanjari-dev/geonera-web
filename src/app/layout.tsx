@@ -88,7 +88,7 @@ export const metadata: Metadata = {
   icons: { // Define icons more explicitly
     icon: [
       { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon.svg', type: 'image/svg+xml' }, // Example SVG icon
+      // { url: '/icon.svg', type: 'image/svg+xml' }, // Removed reference to non-existent icon.svg
     ],
     apple: '/apple-touch-icon.png', // Example Apple touch icon
     shortcut: '/favicon.ico', // Favicon
@@ -106,11 +106,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
+      <body className={`${inter.variable} antialiased bg-background text-foreground`} suppressHydrationWarning={true}>
         {children}
         <Toaster />
       </body>
     </html>
   );
 }
-
