@@ -159,7 +159,7 @@ export function PredictionsTable({
       return (
         <TableRow>
           <TableCell colSpan={6} className="h-24 text-center text-muted-foreground text-xs">
-            No {listType} predictions found.
+            No {listType} predictions found for the selected date range.
           </TableCell>
         </TableRow>
       );
@@ -245,11 +245,11 @@ export function PredictionsTable({
   return (
     <TooltipProvider>
       <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby="prediction-log-title">
-        <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
+        <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-row items-center justify-between">
           <CardTitle id="prediction-log-title" className="text-lg font-semibold text-primary">Prediction Log</CardTitle>
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 items-end pt-1">
+           <div className="flex items-end gap-1.5">
             <div>
-              <Label htmlFor="date-filter-start" className="text-xs font-medium text-primary/80">From:</Label>
+              <Label htmlFor="date-filter-start" className="text-xs font-medium text-primary/80 block mb-0.5">From:</Label>
               <Input
                 type="datetime-local"
                 id="date-filter-start"
@@ -267,7 +267,7 @@ export function PredictionsTable({
               />
             </div>
             <div>
-              <Label htmlFor="date-filter-end" className="text-xs font-medium text-primary/80">To:</Label>
+              <Label htmlFor="date-filter-end" className="text-xs font-medium text-primary/80 block mb-0.5">To:</Label>
               <Input
                 type="datetime-local"
                 id="date-filter-end"
@@ -293,11 +293,11 @@ export function PredictionsTable({
         </CardContent>
         
         <CardFooter className="p-2 text-[10px] text-muted-foreground border-t">
-          Active: {activePredictions.length} | Expired: {expiredPredictions.length} | Total Tracked: {predictions.length} (Max {maxLogs})
-          {predictions.length === 0 && (
+          Active: {activePredictions.length} | Expired: {expiredPredictions.length} | Total Displayed: {activePredictions.length + expiredPredictions.length} (Max {maxLogs} overall)
+          {(activePredictions.length + expiredPredictions.length) === 0 && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
-                No predictions available. Set parameters, adjust filters or date range.
+                No predictions found for the selected date range. Set parameters or adjust filters.
             </span>
         )}
         </CardFooter>
@@ -308,3 +308,4 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
