@@ -113,6 +113,7 @@ export default function GeoneraPage() {
     setSelectedPredictionLog(null); 
     setSelectedCurrencyPairs([]); 
     setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default', timestamp: new Date() });
+    router.push('/login');
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -424,15 +425,8 @@ export default function GeoneraPage() {
     }
   };
 
-   useEffect(() => {
-     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-        // document.documentElement.requestFullscreen().catch(err => {
-        //  console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-        // });
-      }
-     }
-   }, []);
+   // Removed automatic fullscreen request to avoid permission issues
+   // Fullscreen can be toggled by user via header button
 
 
   if (!isAuthCheckComplete) {
@@ -446,9 +440,7 @@ export default function GeoneraPage() {
 
 
   if (!currentUser && isAuthCheckComplete) { 
-      // If auth check is complete and still no user, redirect.
-      // This path is taken if localStorage was empty or parsing failed.
-      // router.replace('/login') is handled by the earlier useEffect.
+      // If auth check is complete and still no user, redirect logic is handled by an earlier useEffect.
       // This return is a fallback while redirection is in progress or if it fails.
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background">
