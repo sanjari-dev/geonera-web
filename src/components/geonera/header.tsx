@@ -58,7 +58,7 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
   };
 
   return (
-    <header className="py-2 border-b border-border">
+    <header className="py-1 border-b border-border">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center">
           <Brain className="h-8 w-8 text-primary mr-2" />
