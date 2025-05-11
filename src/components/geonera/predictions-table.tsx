@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
 import { format as formatDateFns } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Ensure CardFooter is imported
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -76,43 +76,33 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
   const now = new Date();
 
+  const sortLogs = (logs: PredictionLogItem[]) => {
+    return [...logs].sort((a, b) => {
+      if (!sortConfig) return 0;
+      const valA = getSortableValue(a, sortConfig.key);
+      const valB = getSortableValue(b, sortConfig.key);
+      if (valA === undefined && valB === undefined) return 0;
+      if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
+      if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
+      let comparison = 0;
+      if (typeof valA === 'number' && typeof valB === 'number') comparison = valA - valB;
+      else if (valA instanceof Date && valB instanceof Date) comparison = valA.getTime() - valB.getTime();
+      else if (typeof valA === 'string' && typeof valB === 'string') comparison = valA.localeCompare(valB);
+      else comparison = String(valA).localeCompare(String(valB));
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  };
+
   const activePredictions = useMemo(() => {
-    return predictions
-      .filter(log => log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > now)))
-      .sort((a, b) => {
-        if (!sortConfig) return 0;
-        const valA = getSortableValue(a, sortConfig.key);
-        const valB = getSortableValue(b, sortConfig.key);
-        if (valA === undefined && valB === undefined) return 0;
-        if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
-        if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
-        let comparison = 0;
-        if (typeof valA === 'number' && typeof valB === 'number') comparison = valA - valB;
-        else if (valA instanceof Date && valB instanceof Date) comparison = valA.getTime() - valB.getTime();
-        else if (typeof valA === 'string' && typeof valB === 'string') comparison = valA.localeCompare(valB);
-        else comparison = String(valA).localeCompare(String(valB));
-        return sortConfig.direction === 'asc' ? comparison : -comparison;
-      });
+    const filtered = predictions.filter(log => log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > now)));
+    return sortLogs(filtered);
   }, [predictions, now, sortConfig]);
 
   const expiredPredictions = useMemo(() => {
-    return predictions
-      .filter(log => log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now)
-      .sort((a, b) => {
-        if (!sortConfig) return 0;
-        const valA = getSortableValue(a, sortConfig.key);
-        const valB = getSortableValue(b, sortConfig.key);
-        if (valA === undefined && valB === undefined) return 0;
-        if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
-        if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
-        let comparison = 0;
-        if (typeof valA === 'number' && typeof valB === 'number') comparison = valA - valB;
-        else if (valA instanceof Date && valB instanceof Date) comparison = valA.getTime() - valB.getTime();
-        else if (typeof valA === 'string' && typeof valB === 'string') comparison = valA.localeCompare(valB);
-        else comparison = String(valA).localeCompare(String(valB));
-        return sortConfig.direction === 'asc' ? comparison : -comparison;
-      });
+    const filtered = predictions.filter(log => log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now);
+    return sortLogs(filtered);
   }, [predictions, now, sortConfig]);
+
 
   const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
     switch (key) {
@@ -205,6 +195,16 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
   };
   
   const displayedPredictions = activeTab === 'active' ? activePredictions : expiredPredictions;
+  const tableHeaders = (
+    <TableRow>
+      {renderSortableHeader("Status", "status", "Indicates the current state of the prediction (Pending, Success, Error). Click to sort.")}
+      {renderSortableHeader("Timestamp", "timestamp", "The date and time when the prediction was generated. Click to sort.")}
+      {renderSortableHeader("Pair", "currencyPair", "The currency pair for which the prediction is made (e.g., XAU/USD). Click to sort.")}
+      {renderSortableHeader("PIPS Target", "pipsTargetMin", "The desired PIPS movement range (Min - Max) for the prediction. Sorted by Min PIPS. Click to sort.")}
+      {renderSortableHeader("Signal (MT5)", "tradingSignal", "The recommended trading action based on the prediction (e.g., BUY, SELL, HOLD). Click to sort.")}
+      {renderSortableHeader("Expires In", "expiresAt", "Time remaining until this prediction expires (DD HH:mm:ss). Click to sort.")}
+    </TableRow>
+  );
 
   return (
     <TooltipProvider>
@@ -218,30 +218,22 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
             <TabsTrigger value="expired" aria-controls="expired-predictions-content">Expired ({expiredPredictions.length})</TabsTrigger>
           </TabsList>
           <CardContent className="p-0 flex-grow min-h-0">
-            <ScrollArea className="h-full w-full rounded-md border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {renderSortableHeader("Status", "status", "Indicates the current state of the prediction (Pending, Success, Error). Click to sort.")}
-                    {renderSortableHeader("Timestamp", "timestamp", "The date and time when the prediction was generated. Click to sort.")}
-                    {renderSortableHeader("Pair", "currencyPair", "The currency pair for which the prediction is made (e.g., XAU/USD). Click to sort.")}
-                    {renderSortableHeader("PIPS Target", "pipsTargetMin", "The desired PIPS movement range (Min - Max) for the prediction. Sorted by Min PIPS. Click to sort.")}
-                    {renderSortableHeader("Signal (MT5)", "tradingSignal", "The recommended trading action based on the prediction (e.g., BUY, SELL, HOLD). Click to sort.")}
-                    {renderSortableHeader("Expires In", "expiresAt", "Time remaining until this prediction expires (DD HH:mm:ss). Click to sort.")}
-                  </TableRow>
-                </TableHeader>
-                <TabsContent value="active" id="active-predictions-content" className="m-0 p-0">
-                  <TableBody>
-                    {renderTableContent(activePredictions)}
-                  </TableBody>
-                </TabsContent>
-                <TabsContent value="expired" id="expired-predictions-content" className="m-0 p-0">
-                  <TableBody>
-                    {renderTableContent(expiredPredictions)}
-                  </TableBody>
-                </TabsContent>
-              </Table>
-            </ScrollArea>
+            <TabsContent value="active" id="active-predictions-content" className="m-0 p-0 h-full w-full">
+              <ScrollArea className="h-full w-full rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>{tableHeaders}</TableHeader>
+                  <TableBody>{renderTableContent(activePredictions)}</TableBody>
+                </Table>
+              </ScrollArea>
+            </TabsContent>
+            <TabsContent value="expired" id="expired-predictions-content" className="m-0 p-0 h-full w-full">
+               <ScrollArea className="h-full w-full rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>{tableHeaders}</TableHeader>
+                  <TableBody>{renderTableContent(expiredPredictions)}</TableBody>
+                </Table>
+              </ScrollArea>
+            </TabsContent>
           </CardContent>
         </Tabs>
         { (activePredictions.length > 0 || expiredPredictions.length > 0) && (
