@@ -76,6 +76,18 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
   const now = new Date();
 
+  const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
+    switch (key) {
+      case 'status': return log.status;
+      case 'timestamp': return log.timestamp;
+      case 'currencyPair': return log.currencyPair;
+      case 'pipsTargetMin': return log.pipsTarget.min;
+      case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
+      case 'expiresAt': return log.expiresAt;
+      default: return undefined;
+    }
+  };
+
   const sortLogs = (logs: PredictionLogItem[]) => {
     return [...logs].sort((a, b) => {
       if (!sortConfig) return 0;
@@ -96,25 +108,13 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
   const activePredictions = useMemo(() => {
     const filtered = predictions.filter(log => log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > now)));
     return sortLogs(filtered);
-  }, [predictions, now, sortConfig]);
+  }, [predictions, now, sortConfig]); // sortConfig is now a dependency for sorting active predictions
 
   const expiredPredictions = useMemo(() => {
     const filtered = predictions.filter(log => log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now);
     return sortLogs(filtered);
-  }, [predictions, now, sortConfig]);
+  }, [predictions, now, sortConfig]); // sortConfig is now a dependency for sorting expired predictions
 
-
-  const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
-    switch (key) {
-      case 'status': return log.status;
-      case 'timestamp': return log.timestamp;
-      case 'currencyPair': return log.currencyPair;
-      case 'pipsTargetMin': return log.pipsTarget.min;
-      case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
-      case 'expiresAt': return log.expiresAt;
-      default: return undefined;
-    }
-  };
 
   const renderSortableHeader = (label: string, columnKey: SortableColumnKey, tooltipContent: string) => (
     <TableHead
@@ -254,3 +254,4 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
