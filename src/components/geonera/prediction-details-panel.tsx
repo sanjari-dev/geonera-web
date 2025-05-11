@@ -85,7 +85,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
           </div>
         ) : (
           <ScrollArea className="h-full w-full">
-            <div className="space-y-3 pr-2">
+            <div className="space-y-1.5 pr-2"> {/* Reduced space-y from 3 to 2, then to 1.5 */}
               <div className="flex items-center space-x-2">
                 <Landmark className="h-5 w-5 text-primary flex-shrink-0" aria-hidden="true" />
                 <span className="font-medium whitespace-nowrap">Currency Pair:</span>
@@ -116,12 +116,12 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
               </div>
 
               {marketDataAvailable && marketOhlcData && (
-                <div className="space-y-2 pt-2 mt-2 border-t border-border">
+                <div className="space-y-1 pt-1 mt-1 border-t border-border"> {/* Reduced space-y, pt, mt */}
                   <div className="flex items-center space-x-2">
                      <Briefcase className="h-5 w-5 text-primary flex-shrink-0" aria-hidden="true" />
                      <span className="font-semibold text-primary whitespace-nowrap">Market Data:</span>
                   </div>
-                  <div className="pl-3 space-y-1">
+                  <div className="pl-3 space-y-0.5"> {/* Reduced space-y */}
                     {marketOhlcData.openPrice !== undefined && (
                       <div className="flex items-center space-x-2">
                         <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center" aria-hidden="true">
@@ -183,7 +183,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
 
               {selectedPrediction.expiresAt && (
-                <div className="flex items-center space-x-2 pt-2 mt-2 border-t border-border">
+                <div className="flex items-center space-x-2 pt-1 mt-1 border-t border-border"> {/* Reduced pt, mt */}
                   <Clock className="h-5 w-5 text-orange-500 flex-shrink-0" aria-hidden="true" />
                   <span className="font-medium whitespace-nowrap">Expires At:</span>
                   <span className="text-sm whitespace-nowrap">{formatDateFns(new Date(selectedPrediction.expiresAt), "yyyy-MM-dd HH:mm:ss XXX")}</span>
@@ -192,7 +192,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
               
               {selectedPrediction.status === "SUCCESS" && selectedPrediction.predictionOutcome && (
                 <>
-                  <div className="flex items-center space-x-2 pt-2 mt-2 border-t border-border">
+                  <div className="flex items-center space-x-2 pt-1 mt-1 border-t border-border">  {/* Reduced pt, mt */}
                       <div className="flex items-center justify-center h-5 w-5 flex-shrink-0" aria-hidden="true">
                       <SignalIcon signal={selectedPrediction.predictionOutcome.tradingSignal} />
                       </div>
@@ -201,26 +201,26 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
                       {selectedPrediction.predictionOutcome.tradingSignal}
                     </Badge>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5"> {/* Reduced space-y from 1 to 0.5 */}
                     <span className="font-medium text-primary block whitespace-nowrap">Signal Details:</span>
-                    <p className="text-sm bg-muted/50 p-2 rounded">{selectedPrediction.predictionOutcome.signalDetails}</p>
+                    <p className="text-sm bg-muted/50 p-1 rounded">{selectedPrediction.predictionOutcome.signalDetails}</p> {/* Reduced p from 1.5 to 1 */}
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5"> {/* Reduced space-y from 1 to 0.5 */}
                     <span className="font-medium text-primary block whitespace-nowrap">Reasoning:</span>
-                    <p className="text-sm bg-muted/50 p-2 rounded">{selectedPrediction.predictionOutcome.reasoning}</p>
+                    <p className="text-sm bg-muted/50 p-1 rounded">{selectedPrediction.predictionOutcome.reasoning}</p> {/* Reduced p from 1.5 to 1 */}
                   </div>
                 </>
               )}
 
               {selectedPrediction.status === "ERROR" && selectedPrediction.error && (
-                <div className="space-y-1 pt-2 mt-2 border-t border-border">
+                <div className="space-y-0.5 pt-1 mt-1 border-t border-border"> {/* Reduced space-y, pt, mt */}
                   <span className="font-medium text-destructive block whitespace-nowrap">Error:</span>
-                  <p className="text-sm bg-destructive/10 text-destructive p-2 rounded">{selectedPrediction.error}</p>
+                  <p className="text-sm bg-destructive/10 text-destructive p-1 rounded">{selectedPrediction.error}</p> {/* Reduced p from 1.5 to 1 */}
                 </div>
               )}
               
               {selectedPrediction.status === "PENDING" && (
-                  <div className="flex items-center space-x-2 text-muted-foreground pt-2 mt-2 border-t border-border" role="status" aria-live="polite">
+                  <div className="flex items-center space-x-2 text-muted-foreground pt-1 mt-1 border-t border-border" role="status" aria-live="polite"> {/* Reduced pt, mt */}
                     <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" aria-hidden="true" />
                     <span className="whitespace-nowrap">Awaiting analysis...</span>
                   </div>
@@ -234,4 +234,5 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 }
 
 // Define VariantProps type locally if not globally available or for clarity
+// This was the line causing the issue by having ``` at the end
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
