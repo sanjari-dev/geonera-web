@@ -70,3 +70,8 @@ export interface NotificationMessage {
   variant?: 'destructive' | 'default' | 'success';
   timestamp?: Date;
 }
+
+export interface DateRangeFilter {
+  start: Date | null;
+  end: Date | null;
+}

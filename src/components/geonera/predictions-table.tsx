@@ -11,9 +11,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, History, Zap } from "lucide-react";
-import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
-import { format as formatDateFns } from 'date-fns';
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, History, Zap, CalendarDays } from "lucide-react";
+import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, DateRangeFilter } from '@/types';
+import { format as formatDateFns, isValid } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/tooltip";
 import { CountdownTimer } from "./countdown-timer";
 import { ScrollArea } from "../ui/scroll-area";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 
 interface PredictionsTableProps {
@@ -33,18 +35,20 @@ interface PredictionsTableProps {
   maxLogs: number; 
   sortConfig: SortConfig | null;
   onSort: (key: SortableColumnKey) => void;
+  dateRangeFilter: DateRangeFilter;
+  onDateRangeChange: (newRange: DateRangeFilter) => void;
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
   switch (status) {
     case "PENDING":
-      return <Loader2 className="h-4 w-4 animate-spin text-blue-500" aria-label="Pending" />;
+      return <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" aria-label="Pending" />;
     case "SUCCESS":
-      return <CheckCircle2 className="h-4 w-4 text-green-500" aria-label="Success" />;
+      return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" aria-label="Success" />;
     case "ERROR":
-      return <AlertCircle className="h-4 w-4 text-red-500" aria-label="Error" />;
+      return <AlertCircle className="h-3.5 w-3.5 text-red-500" aria-label="Error" />;
     case "IDLE": 
-       return <Info className="h-4 w-4 text-gray-400" aria-label="Idle" />;
+       return <Info className="h-3.5 w-3.5 text-gray-400" aria-label="Idle" />;
     default:
       return null;
   }
@@ -81,12 +85,32 @@ const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): strin
   }
 };
 
+const formatDateToDateTimeLocal = (date: Date | null): string => {
+  if (!date || !isValid(date)) return '';
+  // Format: YYYY-MM-DDTHH:mm (seconds are not part of datetime-local input standard value)
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
-export function PredictionsTable({ predictions, onRowClick, selectedPredictionId, maxLogs, sortConfig, onSort }: PredictionsTableProps) {
+
+export function PredictionsTable({ 
+  predictions, 
+  onRowClick, 
+  selectedPredictionId, 
+  maxLogs, 
+  sortConfig, 
+  onSort,
+  dateRangeFilter,
+  onDateRangeChange 
+}: PredictionsTableProps) {
   const now = new Date();
 
   const sortLogs = (logs: PredictionLogItem[]) => {
-    if (!sortConfig) return [...logs]; // Return a copy if no sortConfig
+    if (!sortConfig) return [...logs]; 
     return [...logs].sort((a, b) => {
       const valA = getSortableValue(a, sortConfig.key);
       const valB = getSortableValue(b, sortConfig.key);
@@ -223,6 +247,44 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
       <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby="prediction-log-title">
         <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
           <CardTitle id="prediction-log-title" className="text-lg font-semibold text-primary">Prediction Log</CardTitle>
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 items-end pt-1">
+            <div>
+              <Label htmlFor="date-filter-start" className="text-xs font-medium text-primary/80">From:</Label>
+              <Input
+                type="datetime-local"
+                id="date-filter-start"
+                value={formatDateToDateTimeLocal(dateRangeFilter.start)}
+                onChange={(e) => {
+                  const newStart = e.target.value ? new Date(e.target.value) : null;
+                  if (newStart && isValid(newStart)) {
+                    onDateRangeChange({ ...dateRangeFilter, start: newStart });
+                  } else if (!e.target.value) {
+                     onDateRangeChange({ ...dateRangeFilter, start: null });
+                  }
+                }}
+                className="h-8 text-xs py-1"
+                aria-label="Filter start date and time"
+              />
+            </div>
+            <div>
+              <Label htmlFor="date-filter-end" className="text-xs font-medium text-primary/80">To:</Label>
+              <Input
+                type="datetime-local"
+                id="date-filter-end"
+                value={formatDateToDateTimeLocal(dateRangeFilter.end)}
+                onChange={(e) => {
+                  const newEnd = e.target.value ? new Date(e.target.value) : null;
+                   if (newEnd && isValid(newEnd)) {
+                    onDateRangeChange({ ...dateRangeFilter, end: newEnd });
+                  } else if (!e.target.value) {
+                    onDateRangeChange({ ...dateRangeFilter, end: null });
+                  }
+                }}
+                className="h-8 text-xs py-1"
+                aria-label="Filter end date and time"
+              />
+            </div>
+          </div>
         </CardHeader>
         
         <CardContent className="p-1 grid grid-cols-1 md:grid-cols-2 gap-1 min-h-0 h-full overflow-hidden">
@@ -235,7 +297,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
           {predictions.length === 0 && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
-                No predictions available. Set parameters or adjust filters.
+                No predictions available. Set parameters, adjust filters or date range.
             </span>
         )}
         </CardFooter>

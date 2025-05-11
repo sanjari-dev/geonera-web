@@ -19,11 +19,13 @@ import type {
   SignalFilterType,
   SortConfig,
   SortableColumnKey,
-  NotificationMessage
+  NotificationMessage,
+  DateRangeFilter,
 } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
+import { startOfDay, endOfDay } from 'date-fns';
 
 
 const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
@@ -49,6 +51,7 @@ export default function GeoneraPage() {
   const [filterStatus, setFilterStatus] = useState<StatusFilterType>("ALL");
   const [filterSignal, setFilterSignal] = useState<SignalFilterType>("ALL");
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'asc' });
+  const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({ start: startOfDay(new Date()), end: endOfDay(new Date()) });
 
   const router = useRouter();
 
@@ -132,6 +135,10 @@ export default function GeoneraPage() {
       setSelectedPredictionLog(produce(log, draft => draft)); 
     }
   }, [predictionLogs]); 
+
+  const handleDateRangeChange = useCallback((newRange: DateRangeFilter) => {
+    setDateRangeFilter(newRange);
+  }, []);
 
   // Prediction generation useEffect
   useEffect(() => {
@@ -341,17 +348,18 @@ export default function GeoneraPage() {
     let newSelectedLogCandidate: PredictionLogItem | null = null;
   
     if (currentSelectedPairs.length > 0 && predictionLogs.length > 0) {
-      const eligibleLogs = predictionLogs // Consider all logs initially for selection logic
-        .filter(log =>
-          currentSelectedPairs.includes(log.currencyPair) && // Must be for a selected pair
-          (filterStatus === "ALL" || log.status === filterStatus) &&
-          (filterSignal === "ALL" || (log.predictionOutcome && log.predictionOutcome.tradingSignal === filterSignal)) &&
-          // Additional check: if the "Active" tab is notionally selected, only pick from active logs.
-          // This is a simplification; tab state is in PredictionsTable. We pick from any valid log.
-          // The table will handle showing it in the right tab.
-          // We prioritize non-expired, then pending/error, then expired if nothing else.
-          true 
-        )
+      const eligibleLogs = predictionLogs 
+        .filter(log => {
+          if(!currentSelectedPairs.includes(log.currencyPair)) return false;
+          if(filterStatus !== "ALL" && log.status !== filterStatus) return false;
+          if(filterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== filterSignal)) return false;
+          
+          const logTimestamp = new Date(log.timestamp);
+          if (dateRangeFilter.start && logTimestamp < dateRangeFilter.start) return false;
+          if (dateRangeFilter.end && logTimestamp > dateRangeFilter.end) return false;
+
+          return true;
+        })
         .sort((a, b) => { 
             const valA = getSortableValue(a, sortConfig.key);
             const valB = getSortableValue(b, sortConfig.key);
@@ -377,24 +385,20 @@ export default function GeoneraPage() {
         const currentSelectionStillEligible = selectedPredictionLog && eligibleLogs.find(log => log.id === selectedPredictionLog.id);
   
         if (currentSelectionStillEligible) {
-          // If current selection is still valid and in the filtered/sorted list, keep it.
-          // Ensure we get the latest version from the eligibleLogs in case its data updated.
           newSelectedLogCandidate = produce(eligibleLogs.find(log => log.id === selectedPredictionLog!.id)!, draft => draft);
         } else {
-          // If current selection is no longer valid (e.g., filtered out, or pair deselected), pick the first from eligible.
           newSelectedLogCandidate = produce(eligibleLogs[0], draft => draft);
         }
       }
     } 
     
-    // Only update if the candidate is different or if the content of the log itself has changed
     if (selectedPredictionLog?.id !== newSelectedLogCandidate?.id || 
         (selectedPredictionLog && newSelectedLogCandidate && JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedLogCandidate)) ||
         (!selectedPredictionLog && newSelectedLogCandidate) || (selectedPredictionLog && !newSelectedLogCandidate)
        ) {
       setSelectedPredictionLog(newSelectedLogCandidate);
     }
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog, filterStatus, filterSignal, sortConfig]);
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog, filterStatus, filterSignal, sortConfig, dateRangeFilter]);
 
   const handleSort = (key: SortableColumnKey) => {
     setSortConfig(prevConfig => {
@@ -437,8 +441,6 @@ export default function GeoneraPage() {
 
 
   if (!currentUser && isAuthCheckComplete) { 
-      // If auth check is complete and still no user, redirect logic is handled by an earlier useEffect.
-      // This return is a fallback while redirection is in progress or if it fails.
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -446,17 +448,22 @@ export default function GeoneraPage() {
         </div>
       );
   }
-  if (!currentUser) { // Handles the case where currentUser is null before auth check completes (initial render)
-    return null; // Or a minimal loading state, as redirection will occur once auth check completes
+  if (!currentUser) { 
+    return null; 
   }
 
-
-  // Pass all logs to the table; table will handle filtering for tabs
   const logsForTable = predictionLogs
-    .filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) 
-    .filter(log => filterStatus === "ALL" || log.status === filterStatus) 
-    .filter(log => filterSignal === "ALL" || (log.predictionOutcome && log.predictionOutcome.tradingSignal === filterSignal));
-    // Sorting will be handled within the table component or by its internal tab logic if needed for active/expired separately
+    .filter(log => {
+      if (!latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) return false;
+      if (filterStatus !== "ALL" && log.status !== filterStatus) return false;
+      if (filterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== filterSignal)) return false;
+      
+      const logTimestamp = new Date(log.timestamp);
+      if (dateRangeFilter.start && logTimestamp < dateRangeFilter.start) return false;
+      if (dateRangeFilter.end && logTimestamp > dateRangeFilter.end) return false;
+      
+      return true;
+    });
   
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
 
@@ -485,12 +492,14 @@ export default function GeoneraPage() {
       <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-1 overflow-hidden">
         <div className="flex flex-col min-h-0 overflow-y-auto h-full">
           <PredictionsTable
-            predictions={logsForTable} // Pass all relevant logs
+            predictions={logsForTable} 
             onRowClick={handlePredictionSelect}
             selectedPredictionId={finalSelectedPredictionForChildren?.id}
             maxLogs={MAX_PREDICTION_LOGS}
             sortConfig={sortConfig}
             onSort={handleSort}
+            dateRangeFilter={dateRangeFilter}
+            onDateRangeChange={handleDateRangeChange}
           />
         </div>
         <div className="flex flex-col min-h-0"> 
@@ -498,7 +507,7 @@ export default function GeoneraPage() {
         </div>
       </main>
       <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">
-        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every 5 seconds if parameters are valid.
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions update automatically every 5 seconds if parameters are valid.
       </footer>
     </div>
   );
