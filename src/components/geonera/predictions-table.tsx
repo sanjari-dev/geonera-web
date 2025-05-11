@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
 import { format as formatDateFns } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -117,7 +117,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
   }, [predictions, now, sortConfig]); 
 
 
-  const renderSortableHeader = (label: string, columnKey: SortableColumnKey, tooltipContent: string) => (
+  const renderSortableHeader = (label: string | React.ReactNode, columnKey: SortableColumnKey, tooltipContent: string) => (
     <TableHead
       className="px-1 py-2 text-center whitespace-nowrap cursor-pointer hover:bg-accent/50 transition-colors sticky top-0 bg-card z-10"
       onClick={() => onSort(columnKey)}
@@ -198,7 +198,7 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
   const displayedPredictions = activeTab === 'active' ? activePredictions : expiredPredictions;
   const tableHeaders = (
     <TableRow>
-      {renderSortableHeader("Status", "status", "Prediction status (Pending, Success, Error). Click to sort.")}
+      {renderSortableHeader(<ListChecks className="h-4 w-4" aria-label="Status" />, "status", "Prediction status (Pending, Success, Error). Click to sort.")}
       {renderSortableHeader("Time", "timestamp", "Prediction generation time. Click to sort.")}
       {renderSortableHeader("Pair", "currencyPair", "Currency pair. Click to sort.")}
       {renderSortableHeader("PIPS", "pipsTargetMin", "PIPS target range (Min - Max). Sorted by Min PIPS. Click to sort.")}
@@ -255,3 +255,4 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
