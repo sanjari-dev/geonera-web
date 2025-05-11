@@ -70,23 +70,24 @@ const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: Sortab
   return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" aria-label="Sorted ascending" /> : <ArrowDown className="ml-1 h-3 w-3" aria-label="Sorted descending" />;
 };
 
+const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
+  switch (key) {
+    case 'status': return log.status;
+    case 'timestamp': return log.timestamp;
+    case 'currencyPair': return log.currencyPair;
+    case 'pipsTargetMin': return log.pipsTarget.min;
+    case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
+    case 'expiresAt': return log.expiresAt;
+    default: return undefined;
+  }
+};
+
 
 export function PredictionsTable({ predictions, onRowClick, selectedPredictionId, maxLogs, sortConfig, onSort }: PredictionsTableProps) {
   const [activeTab, setActiveTab] = useState("active");
 
   const now = new Date();
 
-  const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
-    switch (key) {
-      case 'status': return log.status;
-      case 'timestamp': return log.timestamp;
-      case 'currencyPair': return log.currencyPair;
-      case 'pipsTargetMin': return log.pipsTarget.min;
-      case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
-      case 'expiresAt': return log.expiresAt;
-      default: return undefined;
-    }
-  };
 
   const sortLogs = (logs: PredictionLogItem[]) => {
     return [...logs].sort((a, b) => {
@@ -108,12 +109,12 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
   const activePredictions = useMemo(() => {
     const filtered = predictions.filter(log => log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > now)));
     return sortLogs(filtered);
-  }, [predictions, now, sortConfig]); // sortConfig is now a dependency for sorting active predictions
+  }, [predictions, now, sortConfig]); 
 
   const expiredPredictions = useMemo(() => {
     const filtered = predictions.filter(log => log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now);
     return sortLogs(filtered);
-  }, [predictions, now, sortConfig]); // sortConfig is now a dependency for sorting expired predictions
+  }, [predictions, now, sortConfig]); 
 
 
   const renderSortableHeader = (label: string, columnKey: SortableColumnKey, tooltipContent: string) => (
@@ -197,12 +198,12 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
   const displayedPredictions = activeTab === 'active' ? activePredictions : expiredPredictions;
   const tableHeaders = (
     <TableRow>
-      {renderSortableHeader("Status", "status", "Indicates the current state of the prediction (Pending, Success, Error). Click to sort.")}
-      {renderSortableHeader("Timestamp", "timestamp", "The date and time when the prediction was generated. Click to sort.")}
-      {renderSortableHeader("Pair", "currencyPair", "The currency pair for which the prediction is made (e.g., XAU/USD). Click to sort.")}
-      {renderSortableHeader("PIPS Target", "pipsTargetMin", "The desired PIPS movement range (Min - Max) for the prediction. Sorted by Min PIPS. Click to sort.")}
-      {renderSortableHeader("Signal (MT5)", "tradingSignal", "The recommended trading action based on the prediction (e.g., BUY, SELL, HOLD). Click to sort.")}
-      {renderSortableHeader("Expires In", "expiresAt", "Time remaining until this prediction expires (DD HH:mm:ss). Click to sort.")}
+      {renderSortableHeader("Status", "status", "Prediction status (Pending, Success, Error). Click to sort.")}
+      {renderSortableHeader("Time", "timestamp", "Prediction generation time. Click to sort.")}
+      {renderSortableHeader("Pair", "currencyPair", "Currency pair. Click to sort.")}
+      {renderSortableHeader("PIPS", "pipsTargetMin", "PIPS target range (Min - Max). Sorted by Min PIPS. Click to sort.")}
+      {renderSortableHeader("Signal", "tradingSignal", "Trading action (BUY, SELL, HOLD). Click to sort.")}
+      {renderSortableHeader("Expires", "expiresAt", "Time until prediction expires. Click to sort.")}
     </TableRow>
   );
 
@@ -254,4 +255,3 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
