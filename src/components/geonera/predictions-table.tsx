@@ -1,6 +1,7 @@
 // src/components/geonera/predictions-table.tsx
 "use client";
 
+import React, { useState, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -9,11 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
 import { format as formatDateFns } from 'date-fns';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Ensure CardFooter is imported
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -70,15 +72,59 @@ const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: Sortab
 
 
 export function PredictionsTable({ predictions, onRowClick, selectedPredictionId, maxLogs, sortConfig, onSort }: PredictionsTableProps) {
-  if (predictions.length === 0) {
-    return (
-      <div className="p-2 bg-card shadow-lg rounded-lg border border-border min-h-[200px] flex flex-col items-center justify-center text-center h-full" role="status" aria-live="polite">
-        <Info className="h-10 w-10 text-muted-foreground mb-3" aria-hidden="true" />
-        <p className="text-lg text-muted-foreground">No active predictions.</p>
-        <p className="text-sm text-muted-foreground">Set parameters or adjust filters to see predictions. They will appear here and be removed upon expiration.</p>
-      </div>
-    );
-  }
+  const [activeTab, setActiveTab] = useState("active");
+
+  const now = new Date();
+
+  const activePredictions = useMemo(() => {
+    return predictions
+      .filter(log => log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > now)))
+      .sort((a, b) => {
+        if (!sortConfig) return 0;
+        const valA = getSortableValue(a, sortConfig.key);
+        const valB = getSortableValue(b, sortConfig.key);
+        if (valA === undefined && valB === undefined) return 0;
+        if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
+        let comparison = 0;
+        if (typeof valA === 'number' && typeof valB === 'number') comparison = valA - valB;
+        else if (valA instanceof Date && valB instanceof Date) comparison = valA.getTime() - valB.getTime();
+        else if (typeof valA === 'string' && typeof valB === 'string') comparison = valA.localeCompare(valB);
+        else comparison = String(valA).localeCompare(String(valB));
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      });
+  }, [predictions, now, sortConfig]);
+
+  const expiredPredictions = useMemo(() => {
+    return predictions
+      .filter(log => log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now)
+      .sort((a, b) => {
+        if (!sortConfig) return 0;
+        const valA = getSortableValue(a, sortConfig.key);
+        const valB = getSortableValue(b, sortConfig.key);
+        if (valA === undefined && valB === undefined) return 0;
+        if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
+        let comparison = 0;
+        if (typeof valA === 'number' && typeof valB === 'number') comparison = valA - valB;
+        else if (valA instanceof Date && valB instanceof Date) comparison = valA.getTime() - valB.getTime();
+        else if (typeof valA === 'string' && typeof valB === 'string') comparison = valA.localeCompare(valB);
+        else comparison = String(valA).localeCompare(String(valB));
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      });
+  }, [predictions, now, sortConfig]);
+
+  const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
+    switch (key) {
+      case 'status': return log.status;
+      case 'timestamp': return log.timestamp;
+      case 'currencyPair': return log.currencyPair;
+      case 'pipsTargetMin': return log.pipsTarget.min;
+      case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
+      case 'expiresAt': return log.expiresAt;
+      default: return undefined;
+    }
+  };
 
   const renderSortableHeader = (label: string, columnKey: SortableColumnKey, tooltipContent: string) => (
     <TableHead
@@ -97,84 +143,117 @@ export function PredictionsTable({ predictions, onRowClick, selectedPredictionId
     </TableHead>
   );
 
+  const renderTableContent = (data: PredictionLogItem[]) => {
+    if (data.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+            No {activeTab === "active" ? "active" : "expired"} predictions found.
+          </TableCell>
+        </TableRow>
+      );
+    }
+    return data.map((log) => (
+      <TableRow 
+        key={log.id} 
+        onClick={() => onRowClick(log)}
+        className={cn(
+          "cursor-pointer hover:bg-muted/50 transition-colors",
+          selectedPredictionId === log.id && "bg-secondary text-secondary-foreground hover:bg-muted"
+        )}
+        aria-selected={selectedPredictionId === log.id}
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onRowClick(log); }}
+      >
+        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap">
+          <div className="flex justify-center">
+            <StatusIndicator status={log.status} />
+          </div>
+        </TableCell>
+        <TableCell className="px-1 py-0.5 text-xs text-center whitespace-nowrap">
+          {formatDateFns(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss XXX")}
+        </TableCell>
+        <TableCell className="px-1 py-0.5 font-medium text-center whitespace-nowrap text-xs">{log.currencyPair}</TableCell>
+        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-xs">
+          <Badge variant={selectedPredictionId === log.id ? "default" : "secondary"} className="px-1.5 py-0.5 text-[10px]">
+            {log.pipsTarget.min} - {log.pipsTarget.max}
+          </Badge>
+        </TableCell>
+        <TableCell className="px-1 py-0.5 text-xs text-center whitespace-nowrap">
+          {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
+            <Badge 
+              variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
+              className={cn("whitespace-nowrap px-1.5 py-0.5 text-[10px]", selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : "")}
+            >
+              {log.predictionOutcome.tradingSignal}
+            </Badge>
+          ) : log.status === "PENDING" ? (
+            "..."
+          ) : (
+            "N/A"
+          )}
+        </TableCell>
+        <TableCell className="px-1 py-0.5 text-xs text-center whitespace-nowrap">
+          {log.expiresAt && log.status === "SUCCESS" ? (
+            <CountdownTimer expiresAt={log.expiresAt} className="text-[11px]" />
+          ) : (
+            "-- --:--:--"
+          )}
+        </TableCell>
+      </TableRow>
+    ));
+  };
+  
+  const displayedPredictions = activeTab === 'active' ? activePredictions : expiredPredictions;
+
   return (
     <TooltipProvider>
-      <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby="prediction-log-title">
+      <Card className="shadow-xl h-full grid grid-rows-[auto_auto_1fr_auto]" aria-labelledby="prediction-log-title">
         <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
           <CardTitle id="prediction-log-title" className="text-xl font-semibold text-primary">Prediction Log</CardTitle>
-          <CardDescription className="text-sm text-primary/80">Tracks active predictions. Click a row to see details. Expired predictions are automatically removed.</CardDescription>
         </CardHeader>
-        <CardContent className="p-0 flex-grow min-h-0">
-          <ScrollArea className="h-full w-full rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {renderSortableHeader("Status", "status", "Indicates the current state of the prediction (Pending, Success, Error). Click to sort.")}
-                  {renderSortableHeader("Timestamp", "timestamp", "The date and time when the prediction was generated. Click to sort.")}
-                  {renderSortableHeader("Pair", "currencyPair", "The currency pair for which the prediction is made (e.g., XAU/USD). Click to sort.")}
-                  {renderSortableHeader("PIPS Target", "pipsTargetMin", "The desired PIPS movement range (Min - Max) for the prediction. Sorted by Min PIPS. Click to sort.")}
-                  {renderSortableHeader("Signal (MT5)", "tradingSignal", "The recommended trading action based on the prediction (e.g., BUY, SELL, HOLD). Click to sort.")}
-                  {renderSortableHeader("Expires In", "expiresAt", "Time remaining until this prediction expires (DD HH:mm:ss). Click to sort.")}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {predictions.map((log) => ( 
-                  <TableRow 
-                    key={log.id} 
-                    onClick={() => onRowClick(log)}
-                    className={cn(
-                      "cursor-pointer hover:bg-muted/50 transition-colors",
-                      selectedPredictionId === log.id && "bg-secondary text-secondary-foreground hover:bg-muted"
-                    )}
-                    aria-selected={selectedPredictionId === log.id}
-                    tabIndex={0} // Make row focusable
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onRowClick(log); }}
-                  >
-                    <TableCell className="px-1 py-0.5 text-center whitespace-nowrap">
-                      <div className="flex justify-center">
-                        <StatusIndicator status={log.status} />
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-1 py-0.5 text-xs text-center whitespace-nowrap">
-                      {formatDateFns(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss XXX")}
-                    </TableCell>
-                    <TableCell className="px-1 py-0.5 font-medium text-center whitespace-nowrap text-xs">{log.currencyPair}</TableCell>
-                    <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-xs">
-                      <Badge variant={selectedPredictionId === log.id ? "default" : "secondary"} className="px-1.5 py-0.5 text-[10px]">
-                        {log.pipsTarget.min} - {log.pipsTarget.max}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-1 py-0.5 text-xs text-center whitespace-nowrap">
-                      {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
-                        <Badge 
-                          variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
-                          className={cn("whitespace-nowrap px-1.5 py-0.5 text-[10px]", selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : "")}
-                        >
-                          {log.predictionOutcome.tradingSignal}
-                        </Badge>
-                      ) : log.status === "PENDING" ? (
-                        "..."
-                      ) : (
-                        "N/A"
-                      )}
-                    </TableCell>
-                    <TableCell className="px-1 py-0.5 text-xs text-center whitespace-nowrap">
-                      {log.expiresAt && log.status === "SUCCESS" ? (
-                        <CountdownTimer expiresAt={log.expiresAt} className="text-[11px]" />
-                      ) : (
-                        "-- --:--:--"
-                      )}
-                    </TableCell>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col min-h-0 flex-grow">
+          <TabsList className="grid w-full grid-cols-2 mx-2 mt-1 mb-0.5 self-start max-w-[calc(100%-1rem)]">
+            <TabsTrigger value="active" aria-controls="active-predictions-content">Active ({activePredictions.length})</TabsTrigger>
+            <TabsTrigger value="expired" aria-controls="expired-predictions-content">Expired ({expiredPredictions.length})</TabsTrigger>
+          </TabsList>
+          <CardContent className="p-0 flex-grow min-h-0">
+            <ScrollArea className="h-full w-full rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {renderSortableHeader("Status", "status", "Indicates the current state of the prediction (Pending, Success, Error). Click to sort.")}
+                    {renderSortableHeader("Timestamp", "timestamp", "The date and time when the prediction was generated. Click to sort.")}
+                    {renderSortableHeader("Pair", "currencyPair", "The currency pair for which the prediction is made (e.g., XAU/USD). Click to sort.")}
+                    {renderSortableHeader("PIPS Target", "pipsTargetMin", "The desired PIPS movement range (Min - Max) for the prediction. Sorted by Min PIPS. Click to sort.")}
+                    {renderSortableHeader("Signal (MT5)", "tradingSignal", "The recommended trading action based on the prediction (e.g., BUY, SELL, HOLD). Click to sort.")}
+                    {renderSortableHeader("Expires In", "expiresAt", "Time remaining until this prediction expires (DD HH:mm:ss). Click to sort.")}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-        {predictions.length > 0 && (
+                </TableHeader>
+                <TabsContent value="active" id="active-predictions-content" className="m-0 p-0">
+                  <TableBody>
+                    {renderTableContent(activePredictions)}
+                  </TableBody>
+                </TabsContent>
+                <TabsContent value="expired" id="expired-predictions-content" className="m-0 p-0">
+                  <TableBody>
+                    {renderTableContent(expiredPredictions)}
+                  </TableBody>
+                </TabsContent>
+              </Table>
+            </ScrollArea>
+          </CardContent>
+        </Tabs>
+        { (activePredictions.length > 0 || expiredPredictions.length > 0) && (
           <CardFooter className="p-3 text-xs text-muted-foreground border-t">
-            Displaying {predictions.length} active prediction log(s). Max {maxLogs} logs.
+            Displaying {displayedPredictions.length} {activeTab} prediction log(s). Total logs tracked: {predictions.length} (Max {maxLogs}).
           </CardFooter>
+        )}
+         { predictions.length === 0 && (
+            <CardFooter className="p-3 text-xs text-muted-foreground border-t flex items-center justify-center">
+                 <Info className="h-4 w-4 mr-2 text-muted-foreground" aria-hidden="true" />
+                No predictions available. Set parameters or adjust filters.
+            </CardFooter>
         )}
       </Card>
     </TooltipProvider>

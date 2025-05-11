@@ -22,7 +22,6 @@ import type {
   NotificationMessage
 } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
-// import { useToast } from "@/hooks/use-toast"; // Removed useToast
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
 
@@ -52,7 +51,6 @@ export default function GeoneraPage() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'asc' });
 
   const router = useRouter();
-  // const { toast } = useToast(); // Removed useToast
 
   const latestSelectedCurrencyPairsRef = useRef(selectedCurrencyPairs);
   useEffect(() => {
@@ -99,11 +97,9 @@ export default function GeoneraPage() {
       try {
         return uuidv4();
       } catch (e) {
-         // Fallback for rare uuidv4 error or if it becomes unavailable after initial check
          return Date.now().toString() + Math.random().toString(36).substring(2,7);
       }
     }
-    // Fallback if uuidv4 was never available (e.g., during SSR for some reason, though 'use client' should prevent this specific fallback path for generateId)
     return Date.now().toString() + (typeof window !== 'undefined' ? Math.random().toString(36).substring(2,7) : "serverid" + Math.floor(Math.random() * 10000));
   }, [uuidAvailable]);
 
@@ -113,11 +109,10 @@ export default function GeoneraPage() {
       localStorage.removeItem('geoneraUser');
     }
     setCurrentUser(null);
-    setPredictionLogs([]); // Clear logs on logout
-    setSelectedPredictionLog(null); // Clear selected prediction
-    setSelectedCurrencyPairs([]); // Clear selected pairs
+    setPredictionLogs([]); 
+    setSelectedPredictionLog(null); 
+    setSelectedCurrencyPairs([]); 
     setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default', timestamp: new Date() });
-    // router.replace('/login') is handled by useEffect [currentUser, isAuthCheckComplete, router]
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -165,7 +160,7 @@ export default function GeoneraPage() {
         if (currentSelectedPairs.length > 0) { 
             setLatestNotification({
                 title: "Prediction Paused",
-                description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max).",
+                description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max). Predictions update automatically every 1 minute if parameters are valid.",
                 variant: "default",
                 timestamp: new Date(), 
              });
@@ -230,6 +225,9 @@ export default function GeoneraPage() {
           }
 
           if (!activePairsAfterAsync.includes(pendingLog.currencyPair)) {
+              if (selectedPredictionLog && selectedPredictionLog.id === pendingLog.id) {
+                setSelectedPredictionLog(null);
+              }
               draft.splice(logIndex, 1);
               return; 
           }
@@ -248,7 +246,12 @@ export default function GeoneraPage() {
           }
         });
         if (draft.length > MAX_PREDICTION_LOGS) {
-          draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
+          const removedCount = draft.length - MAX_PREDICTION_LOGS;
+          const removedItems = draft.splice(0, removedCount);
+          // Check if the selectedPredictionLog was among the removed items
+          if (selectedPredictionLog && removedItems.find(item => item.id === selectedPredictionLog.id)) {
+            setSelectedPredictionLog(null);
+          }
         }
       }));
 
@@ -288,15 +291,14 @@ export default function GeoneraPage() {
       if (timeoutId) clearTimeout(timeoutId); 
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, generateId, isLoading]); 
+  }, [currentUser, isAuthCheckComplete, generateId, isLoading, selectedPredictionLog]); // Added selectedPredictionLog
 
 
-  // Prediction expiration and deselected pair cleanup useEffect
+  // Prediction deselected pair cleanup useEffect (Expiration is now handled by MAX_PREDICTION_LOGS pruning or tabs)
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) return;
 
-    const expirationIntervalId = setInterval(() => {
-      const now = new Date();
+    const cleanupIntervalId = setInterval(() => {
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current; 
 
       setPredictionLogs(produce(draft => {
@@ -305,15 +307,16 @@ export default function GeoneraPage() {
           const log = draft[i];
           let removeLog = false;
 
+          // Remove if currency pair is no longer selected
           if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS" || log.status === "ERROR")) {
-            removeLog = true;
-          }
-
-          if (log.status === "SUCCESS" && log.expiresAt && now > new Date(log.expiresAt)) {
             removeLog = true;
           }
           
           if (removeLog) {
+            // If selectedPredictionLog is being removed, clear it.
+            if (selectedPredictionLog && selectedPredictionLog.id === log.id) {
+              setSelectedPredictionLog(null);
+            }
             draft.splice(i, 1);
             didChange = true;
           }
@@ -322,8 +325,8 @@ export default function GeoneraPage() {
       }));
     }, 1000); 
 
-    return () => clearInterval(expirationIntervalId); 
-  }, [currentUser, isAuthCheckComplete]); 
+    return () => clearInterval(cleanupIntervalId); 
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); // Added selectedPredictionLog
 
 
   // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
@@ -337,15 +340,18 @@ export default function GeoneraPage() {
     let newSelectedLogCandidate: PredictionLogItem | null = null;
   
     if (currentSelectedPairs.length > 0 && predictionLogs.length > 0) {
-      const eligibleLogs = predictionLogs
+      const eligibleLogs = predictionLogs // Consider all logs initially for selection logic
         .filter(log =>
-          currentSelectedPairs.includes(log.currencyPair) &&
-          !(log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) < new Date()) &&
+          currentSelectedPairs.includes(log.currencyPair) && // Must be for a selected pair
           (filterStatus === "ALL" || log.status === filterStatus) &&
-          (filterSignal === "ALL" || (log.predictionOutcome && log.predictionOutcome.tradingSignal === filterSignal))
+          (filterSignal === "ALL" || (log.predictionOutcome && log.predictionOutcome.tradingSignal === filterSignal)) &&
+          // Additional check: if the "Active" tab is notionally selected, only pick from active logs.
+          // This is a simplification; tab state is in PredictionsTable. We pick from any valid log.
+          // The table will handle showing it in the right tab.
+          // We prioritize non-expired, then pending/error, then expired if nothing else.
+          true 
         )
         .sort((a, b) => { 
-           if (!sortConfig) return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(); 
             const valA = getSortableValue(a, sortConfig.key);
             const valB = getSortableValue(b, sortConfig.key);
 
@@ -370,13 +376,17 @@ export default function GeoneraPage() {
         const currentSelectionStillEligible = selectedPredictionLog && eligibleLogs.find(log => log.id === selectedPredictionLog.id);
   
         if (currentSelectionStillEligible) {
-          newSelectedLogCandidate = produce(currentSelectionStillEligible, draft => draft);
+          // If current selection is still valid and in the filtered/sorted list, keep it.
+          // Ensure we get the latest version from the eligibleLogs in case its data updated.
+          newSelectedLogCandidate = produce(eligibleLogs.find(log => log.id === selectedPredictionLog!.id)!, draft => draft);
         } else {
+          // If current selection is no longer valid (e.g., filtered out, or pair deselected), pick the first from eligible.
           newSelectedLogCandidate = produce(eligibleLogs[0], draft => draft);
         }
       }
     } 
     
+    // Only update if the candidate is different or if the content of the log itself has changed
     if (selectedPredictionLog?.id !== newSelectedLogCandidate?.id || 
         (selectedPredictionLog && newSelectedLogCandidate && JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedLogCandidate)) ||
         (!selectedPredictionLog && newSelectedLogCandidate) || (selectedPredictionLog && !newSelectedLogCandidate)
@@ -417,9 +427,9 @@ export default function GeoneraPage() {
    useEffect(() => {
      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(err => {
-         // console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-        });
+        // document.documentElement.requestFullscreen().catch(err => {
+        //  console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        // });
       }
      }
    }, []);
@@ -435,9 +445,11 @@ export default function GeoneraPage() {
   }
 
 
-  if (!currentUser) { 
-      // This check is now primarily for the initial render before redirection or if redirection fails.
-      // The useEffect [currentUser, isAuthCheckComplete, router] handles the actual redirection logic.
+  if (!currentUser && isAuthCheckComplete) { 
+      // If auth check is complete and still no user, redirect.
+      // This path is taken if localStorage was empty or parsing failed.
+      // router.replace('/login') is handled by the earlier useEffect.
+      // This return is a fallback while redirection is in progress or if it fails.
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -445,35 +457,17 @@ export default function GeoneraPage() {
         </div>
       );
   }
+  if (!currentUser) { // Handles the case where currentUser is null before auth check completes (initial render)
+    return null; // Or a minimal loading state, as redirection will occur once auth check completes
+  }
 
 
-  const logsForTable = currentUser && latestSelectedCurrencyPairsRef.current.length > 0
-    ? predictionLogs
-        .filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) 
-        .filter(log => filterStatus === "ALL" || log.status === filterStatus) 
-        .filter(log => filterSignal === "ALL" || (log.predictionOutcome && log.predictionOutcome.tradingSignal === filterSignal)) 
-        .sort((a, b) => {
-            if (!sortConfig) return 0; 
-            const valA = getSortableValue(a, sortConfig.key);
-            const valB = getSortableValue(b, sortConfig.key);
-
-            if (valA === undefined && valB === undefined) return 0;
-            if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
-            if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
-            
-            let comparison = 0;
-            if (typeof valA === 'number' && typeof valB === 'number') {
-              comparison = valA - valB;
-            } else if (valA instanceof Date && valB instanceof Date) {
-              comparison = valA.getTime() - valB.getTime();
-            } else if (typeof valA === 'string' && typeof valB === 'string') {
-              comparison = valA.localeCompare(valB);
-            } else {
-              comparison = String(valA).localeCompare(String(valB)); 
-            }
-            return sortConfig.direction === 'asc' ? comparison : -comparison;
-        })
-    : [];
+  // Pass all logs to the table; table will handle filtering for tabs
+  const logsForTable = predictionLogs
+    .filter(log => latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) 
+    .filter(log => filterStatus === "ALL" || log.status === filterStatus) 
+    .filter(log => filterSignal === "ALL" || (log.predictionOutcome && log.predictionOutcome.tradingSignal === filterSignal));
+    // Sorting will be handled within the table component or by its internal tab logic if needed for active/expired separately
   
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
 
@@ -502,7 +496,7 @@ export default function GeoneraPage() {
       <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-1 overflow-hidden">
         <div className="flex flex-col min-h-0 overflow-y-auto h-full">
           <PredictionsTable
-            predictions={logsForTable}
+            predictions={logsForTable} // Pass all relevant logs
             onRowClick={handlePredictionSelect}
             selectedPredictionId={finalSelectedPredictionForChildren?.id}
             maxLogs={MAX_PREDICTION_LOGS}
@@ -515,9 +509,8 @@ export default function GeoneraPage() {
         </div>
       </main>
       <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">
-        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved.
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every 1 minute if parameters are valid.
       </footer>
     </div>
   );
 }
-
