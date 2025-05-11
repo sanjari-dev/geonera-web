@@ -13,7 +13,7 @@ import { NotificationDisplay } from '@/components/geonera/notification-display';
 import type {
   PredictionLogItem,
   CurrencyPair,
-  PipsTargetRange,
+  PipsSettings, // Changed from PipsTargetRange
   User,
   StatusFilterType,
   SignalFilterType,
@@ -28,10 +28,10 @@ import { Loader2 } from 'lucide-react';
 import { startOfDay, endOfDay } from 'date-fns';
 
 
-const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
+const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
 const MIN_EXPIRATION_SECONDS = 10;
-const MAX_EXPIRATION_SECONDS = 75; // Max expiration 75 seconds
-const MAX_PREDICTION_LOGS = 500; // Maximum number of prediction logs to keep
+const MAX_EXPIRATION_SECONDS = 75; 
+const MAX_PREDICTION_LOGS = 500; 
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -41,7 +41,11 @@ export default function GeoneraPage() {
   const [currentYear, setCurrentYear] = useState<string>('');
 
   const [selectedCurrencyPairs, setSelectedCurrencyPairs] = useState<CurrencyPair[]>([]);
-  const [pipsTarget, setPipsTarget] = useState<PipsTargetRange>({ min: 10, max: 20 });
+  // Updated to PipsSettings
+  const [pipsSettings, setPipsSettings] = useState<PipsSettings>({
+    profitPips: { min: 10, max: 20 },
+    lossPips: { min: 5, max: 10 },
+  });
 
   const [uuidAvailable, setUuidAvailable] = useState(false);
   const [selectedPredictionLog, setSelectedPredictionLog] = useState<PredictionLogItem | null>(null);
@@ -60,10 +64,10 @@ export default function GeoneraPage() {
     latestSelectedCurrencyPairsRef.current = selectedCurrencyPairs;
   }, [selectedCurrencyPairs]);
 
-  const latestPipsTargetRef = useRef(pipsTarget);
+  const latestPipsSettingsRef = useRef(pipsSettings); // Changed from latestPipsTargetRef
   useEffect(() => {
-    latestPipsTargetRef.current = pipsTarget;
-  }, [pipsTarget]);
+    latestPipsSettingsRef.current = pipsSettings;
+  }, [pipsSettings]);
 
 
   useEffect(() => {
@@ -81,7 +85,7 @@ export default function GeoneraPage() {
           setCurrentUser(userFromStorage);
         } catch (e) {
           console.error("Failed to parse user from localStorage", e);
-          localStorage.removeItem('geoneraUser'); // Clear corrupted data
+          localStorage.removeItem('geoneraUser'); 
         }
       }
     }
@@ -123,8 +127,8 @@ export default function GeoneraPage() {
     setSelectedCurrencyPairs(value);
   }, []);
 
-  const handlePipsChange = useCallback((value: PipsTargetRange) => {
-    setPipsTarget(value);
+  const handlePipsSettingsChange = useCallback((value: PipsSettings) => { // Changed from handlePipsChange
+    setPipsSettings(value);
   }, []);
 
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
@@ -154,8 +158,14 @@ export default function GeoneraPage() {
       }
 
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
-      const currentPipsTarget = latestPipsTargetRef.current;
-      const isPipsTargetInvalid = currentPipsTarget.min <= 0 || currentPipsTarget.max <= 0 || currentPipsTarget.min > currentPipsTarget.max;
+      const currentPipsSettings = latestPipsSettingsRef.current; // Changed from currentPipsTarget
+      
+      // Updated validation logic for PipsSettings
+      const { profitPips, lossPips } = currentPipsSettings;
+      const isPipsSettingsInvalid =
+        profitPips.min <= 0 || profitPips.max <= 0 || profitPips.min > profitPips.max ||
+        lossPips.min <= 0 || lossPips.max <= 0 || lossPips.min > lossPips.max;
+      
       const noCurrenciesSelected = currentSelectedPairs.length === 0;
 
       if (noCurrenciesSelected) {
@@ -164,11 +174,11 @@ export default function GeoneraPage() {
         return;
       }
       
-      if (isPipsTargetInvalid) {
+      if (isPipsSettingsInvalid) {
         if (currentSelectedPairs.length > 0) { 
             setLatestNotification({
                 title: "Prediction Paused",
-                description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max). Predictions update automatically if parameters are valid.",
+                description: "Ensure Min/Max PIPS for profit & loss are valid (Min > 0, Max > 0, Min <= Max). Predictions update automatically if parameters are valid.",
                 variant: "default",
                 timestamp: new Date(), 
              });
@@ -183,14 +193,14 @@ export default function GeoneraPage() {
 
       const newPendingLogs: PredictionLogItem[] = [];
       currentSelectedPairs.forEach(currencyPair => {
-        const numPredictionsForPair = Math.floor(Math.random() * 10) + 1; // 1 to 10 predictions
+        const numPredictionsForPair = Math.floor(Math.random() * 10) + 1; 
         for (let i = 0; i < numPredictionsForPair; i++) {
           const newLogId = generateId();
           newPendingLogs.push({
             id: newLogId,
             timestamp: new Date(),
             currencyPair: currencyPair,
-            pipsTarget: currentPipsTarget, 
+            pipsSettings: currentPipsSettings, // Changed from pipsTarget
             status: "PENDING",
           });
         }
@@ -213,7 +223,8 @@ export default function GeoneraPage() {
       }));
       
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
-        const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsTarget);
+        // Pass pipsSettings to the action
+        const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsSettings);
         return { result, pendingLog }; 
       });
 
@@ -256,7 +267,7 @@ export default function GeoneraPage() {
         if (draft.length > MAX_PREDICTION_LOGS) {
           const removedCount = draft.length - MAX_PREDICTION_LOGS;
           const removedItems = draft.splice(0, removedCount);
-          // Check if the selectedPredictionLog was among the removed items
+          
           if (selectedPredictionLog && removedItems.find(item => item.id === selectedPredictionLog.id)) {
             setSelectedPredictionLog(null);
           }
@@ -299,10 +310,10 @@ export default function GeoneraPage() {
       if (timeoutId) clearTimeout(timeoutId); 
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, generateId, isLoading, selectedPredictionLog]); // Added selectedPredictionLog
+  }, [currentUser, isAuthCheckComplete, generateId, isLoading, selectedPredictionLog]); 
 
 
-  // Prediction deselected pair cleanup useEffect (Expiration is now handled by MAX_PREDICTION_LOGS pruning or tabs)
+  
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) return;
 
@@ -315,13 +326,13 @@ export default function GeoneraPage() {
           const log = draft[i];
           let removeLog = false;
 
-          // Remove if currency pair is no longer selected
+          
           if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS" || log.status === "ERROR")) {
             removeLog = true;
           }
           
           if (removeLog) {
-            // If selectedPredictionLog is being removed, clear it.
+            
             if (selectedPredictionLog && selectedPredictionLog.id === log.id) {
               setSelectedPredictionLog(null);
             }
@@ -334,10 +345,10 @@ export default function GeoneraPage() {
     }, 1000); 
 
     return () => clearInterval(cleanupIntervalId); 
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); // Added selectedPredictionLog
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); 
 
 
-  // Effect to synchronize selectedPredictionLog with predictionLogs and selectedCurrencyPairs
+  
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) {
       if (selectedPredictionLog !== null) setSelectedPredictionLog(null);
@@ -418,8 +429,10 @@ export default function GeoneraPage() {
         return log.timestamp;
       case 'currencyPair':
         return log.currencyPair;
-      case 'pipsTargetMin': 
-        return log.pipsTarget.min;
+      case 'profitPipsMin': 
+        return log.pipsSettings.profitPips.min;
+      case 'lossPipsMin':
+        return log.pipsSettings.lossPips.min;
       case 'tradingSignal':
         return log.predictionOutcome?.tradingSignal;
       case 'expiresAt':
@@ -441,6 +454,8 @@ export default function GeoneraPage() {
 
 
   if (!currentUser && isAuthCheckComplete) { 
+      // This case should ideally not be reached due to the router.replace in useEffect
+      // But as a fallback, show a loading indicator or a message.
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -448,8 +463,8 @@ export default function GeoneraPage() {
         </div>
       );
   }
-  if (!currentUser) { 
-    return null; 
+  if (!currentUser) { // If still no current user (e.g. redirect hasn't happened yet or failed)
+    return null; // Render nothing, or a minimal loader
   }
 
   const logsForTable = predictionLogs
@@ -475,9 +490,9 @@ export default function GeoneraPage() {
       <div className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-3 gap-1">
         <PipsParameterForm
           selectedCurrencyPairs={selectedCurrencyPairs}
-          pipsTarget={pipsTarget}
+          pipsSettings={pipsSettings} // Changed from pipsTarget
           onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
-          onPipsChange={handlePipsChange}
+          onPipsSettingsChange={handlePipsSettingsChange} // Changed from onPipsChange
           isLoading={isLoading}
         />
         <PredictionFilterControls
