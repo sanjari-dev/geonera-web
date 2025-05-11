@@ -70,7 +70,7 @@ export function PredictionFilterControls({
         </div>
         <div className="flex flex-col justify-end">
           <Label htmlFor="filter-signal" className="text-xs font-medium mb-0.5 block">
-            Filter by Signal (MT5)
+            Filter by Signal
           </Label>
           <Select
             value={filterSignal}
