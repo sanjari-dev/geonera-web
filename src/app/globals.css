@@ -26,7 +26,7 @@ body {
     --secondary-foreground: 235 62% 29%; /* Primary color text on secondary background */
 
     --muted: 220 16% 85%; /* Muted gray */
-    --muted-foreground: 240 5% 55%; /* Lighter gray for muted text */
+    --muted-foreground: 240 5% 45%; /* Lighter gray for muted text - Darkened for AA contrast */
 
     --accent: 187 100% 42%; /* Teal #00BCD4 */
     --accent-foreground: 0 0% 100%; /* White text on accent */
@@ -72,7 +72,7 @@ body {
     --secondary-foreground: 0 0% 93.3%;
 
     --muted: 235 30% 22%;
-    --muted-foreground: 0 0% 60%;
+    --muted-foreground: 0 0% 70%; /* Lightened for better contrast on dark backgrounds, e.g. input placeholders */
 
     --accent: 235 62% 55%; /* Lighter shade of the original primary blue for accent */
     --accent-foreground: 0 0% 98%;
@@ -81,7 +81,7 @@ body {
     --destructive-foreground: 0 0% 98%;
 
     --border: 235 30% 28%;
-    --input: 235 30% 28%;
+    --input: 235 30% 20%; /* Darkened for better placeholder contrast */
     --ring: 187 100% 42%; /* Teal for rings */
 
     --chart-1: 0 70% 55%; /* Reddish for bearish in dark mode */
