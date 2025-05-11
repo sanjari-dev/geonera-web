@@ -26,7 +26,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
 
 
-const PREDICTION_INTERVAL_MS = 60000; // 1 minute
+const PREDICTION_INTERVAL_MS = 5000; // 5 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 604800; // 7 days in seconds (7 * 24 * 60 * 60)
 const MAX_PREDICTION_LOGS = 1500; // Maximum number of prediction logs to keep
@@ -161,7 +161,7 @@ export default function GeoneraPage() {
         if (currentSelectedPairs.length > 0) { 
             setLatestNotification({
                 title: "Prediction Paused",
-                description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max). Predictions update automatically every 1 minute if parameters are valid.",
+                description: "Ensure Min/Max PIPS targets are valid (Min > 0, Max > 0, Min <= Max). Predictions update automatically if parameters are valid.",
                 variant: "default",
                 timestamp: new Date(), 
              });
@@ -425,9 +425,6 @@ export default function GeoneraPage() {
     }
   };
 
-   // Removed automatic fullscreen request to avoid permission issues
-   // Fullscreen can be toggled by user via header button
-
 
   if (!isAuthCheckComplete) {
     return (
@@ -501,7 +498,7 @@ export default function GeoneraPage() {
         </div>
       </main>
       <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">
-        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every 1 minute if parameters are valid.
+        {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved. Predictions are for informational purposes only and not financial advice. Predictions update automatically every 5 seconds if parameters are valid.
       </footer>
     </div>
   );
