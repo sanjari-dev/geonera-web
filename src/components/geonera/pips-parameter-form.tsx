@@ -80,14 +80,14 @@ export function PipsParameterForm({
   };
   
   return (
-    <div className="space-y-2 p-3 bg-card shadow-lg rounded-lg border border-border h-full">
-      <div className="flex items-center gap-2 text-base font-semibold text-primary">
-        <Settings2 className="h-5 w-5" />
+    <div className="space-y-1.5 p-2 bg-card shadow-lg rounded-lg border border-border h-full flex flex-col">
+      <div className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+        <Settings2 className="h-4 w-4" />
         <span>Prediction Parameters</span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 mt-auto">
         <div className="md:col-span-1 flex flex-col justify-end">
-          <Label htmlFor="currency-pair-multiselect" className="text-sm font-medium mb-1 block">
+          <Label htmlFor="currency-pair-multiselect" className="text-xs font-medium mb-0.5 block">
             Currency Pair(s)
           </Label>
           <DropdownMenu>
@@ -96,18 +96,18 @@ export function PipsParameterForm({
                 id="currency-pair-multiselect"
                 variant="outline"
                 className={cn(
-                  "w-full justify-between text-sm py-2 h-9",
+                  "w-full justify-between text-xs py-1 h-8",
                   selectedCurrencyPairs.length === 0 && "text-muted-foreground"
                 )}
                 disabled={isLoading}
                 aria-label={`Select currency pairs, currently selected: ${getTriggerLabel()}`}
               >
                 <span className="truncate">{getTriggerLabel()}</span>
-                <ChevronDown className="h-4 w-4 opacity-50" />
+                <ChevronDown className="h-3.5 w-3.5 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-full min-w-[var(--radix-dropdown-menu-trigger-width)]">
-              <DropdownMenuLabel>Select up to {MAX_SELECTED_CURRENCIES} currencies</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs">Select up to {MAX_SELECTED_CURRENCIES} currencies</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {currencyOptions.map(option => {
                 const IconComponent = option.icon;
@@ -119,11 +119,11 @@ export function PipsParameterForm({
                     checked={isSelected}
                     onCheckedChange={() => handleCurrencyToggle(option.value)}
                     disabled={isDisabled || isLoading}
-                    className="text-sm py-1.5"
+                    className="text-xs py-1"
                     aria-label={option.label}
                   >
                     <div className="flex items-center">
-                      {IconComponent && <IconComponent aria-hidden="true" className="h-4 w-4 mr-2 text-muted-foreground" />}
+                      {IconComponent && <IconComponent aria-hidden="true" className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />}
                       {option.label}
                     </div>
                   </DropdownMenuCheckboxItem>
@@ -133,28 +133,28 @@ export function PipsParameterForm({
           </DropdownMenu>
         </div>
         <div className="flex flex-col justify-end">
-          <Label htmlFor="min-pips-target" className="text-sm font-medium mb-1 block">Min Target PIPS</Label>
+          <Label htmlFor="min-pips-target" className="text-xs font-medium mb-0.5 block">Min Target PIPS</Label>
           <Input
             id="min-pips-target"
             type="number"
             value={pipsTarget.min}
             onChange={handleMinPipsInputChange}
             placeholder="e.g., 5"
-            className="text-sm py-2 h-9"
+            className="text-xs py-1 h-8"
             min="1"
             disabled={isLoading}
             aria-label="Minimum PIPS target"
           />
         </div>
         <div className="flex flex-col justify-end">
-          <Label htmlFor="max-pips-target" className="text-sm font-medium mb-1 block">Max Target PIPS</Label>
+          <Label htmlFor="max-pips-target" className="text-xs font-medium mb-0.5 block">Max Target PIPS</Label>
           <Input
             id="max-pips-target"
             type="number"
             value={pipsTarget.max}
             onChange={handleMaxPipsInputChange}
             placeholder="e.g., 20"
-            className="text-sm py-2 h-9"
+            className="text-xs py-1 h-8"
             min="1"
             disabled={isLoading}
             aria-label="Maximum PIPS target"

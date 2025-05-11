@@ -473,42 +473,39 @@ export default function GeoneraPage() {
 
 
   return (
-    <div className="h-screen grid grid-rows-[auto_1fr_auto] bg-background text-foreground">
+    <div className="h-screen grid grid-rows-[auto_auto_1fr_auto] bg-background text-foreground">
       <AppHeader user={currentUser} onLogout={handleLogout} />
-      <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-1 gap-1 overflow-hidden">
-        <div className="w-full grid grid-cols-1 gap-1 h-full min-h-0 grid-rows-[auto_1fr]">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
-            <PipsParameterForm
-              selectedCurrencyPairs={selectedCurrencyPairs}
-              pipsTarget={pipsTarget}
-              onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
-              onPipsChange={handlePipsChange}
-              isLoading={isLoading}
-            />
-            <PredictionFilterControls
-              filterStatus={filterStatus}
-              onFilterStatusChange={setFilterStatus}
-              filterSignal={filterSignal}
-              onFilterSignalChange={setFilterSignal}
-            />
-            <NotificationDisplay notification={latestNotification} />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-1 overflow-hidden">
-            <div className="flex flex-col min-h-0 overflow-y-auto h-full">
-              <PredictionsTable
-                predictions={logsForTable}
-                onRowClick={handlePredictionSelect}
-                selectedPredictionId={finalSelectedPredictionForChildren?.id}
-                maxLogs={MAX_PREDICTION_LOGS}
-                sortConfig={sortConfig}
-                onSort={handleSort}
-              />
-            </div>
-            <div className="flex flex-col min-h-0"> 
-              <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
-            </div>
-          </div>
+      
+      <div className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-3 gap-1">
+        <PipsParameterForm
+          selectedCurrencyPairs={selectedCurrencyPairs}
+          pipsTarget={pipsTarget}
+          onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
+          onPipsChange={handlePipsChange}
+          isLoading={isLoading}
+        />
+        <PredictionFilterControls
+          filterStatus={filterStatus}
+          onFilterStatusChange={setFilterStatus}
+          filterSignal={filterSignal}
+          onFilterSignalChange={setFilterSignal}
+        />
+        <NotificationDisplay notification={latestNotification} />
+      </div>
+      
+      <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-1 overflow-hidden">
+        <div className="flex flex-col min-h-0 overflow-y-auto h-full">
+          <PredictionsTable
+            predictions={logsForTable}
+            onRowClick={handlePredictionSelect}
+            selectedPredictionId={finalSelectedPredictionForChildren?.id}
+            maxLogs={MAX_PREDICTION_LOGS}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        </div>
+        <div className="flex flex-col min-h-0"> 
+          <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} />
         </div>
       </main>
       <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">
