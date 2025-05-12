@@ -1,5 +1,5 @@
 import { Brain, LogOut, LogIn as LogInIcon, Maximize, Minimize, Clock } from 'lucide-react';
-import type { User } from '@/types';
+import type { User, CurrencyPair } from '@/types'; // Added CurrencyPair
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,25 +13,33 @@ import {
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { format as formatDateFns } from 'date-fns'; // Renamed to avoid conflict with any potential 'format' variable
+import { format as formatDateFns } from 'date-fns';
+import { PairSelectorCard } from '@/components/geonera/pair-selector-card'; // Added import
 
 interface AppHeaderProps {
   user: User | null;
   onLogout: () => void;
+  selectedCurrencyPairs: CurrencyPair[];
+  onSelectedCurrencyPairsChange: (value: CurrencyPair[]) => void;
+  isLoading: boolean;
 }
 
-export function AppHeader({ user, onLogout }: AppHeaderProps) {
+export function AppHeader({
+  user,
+  onLogout,
+  selectedCurrencyPairs,
+  onSelectedCurrencyPairsChange,
+  isLoading,
+}: AppHeaderProps) {
   const router = useRouter();
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
 
   const formatCurrentTime = useCallback(() => {
-    // Ensure Date is only created on client-side
     return formatDateFns(new Date(), "yyyy-MM-dd HH:mm:ss XXX");
   }, []);
 
   useEffect(() => {
-    // Initialize time on client-side
     if (typeof window !== 'undefined') {
       setCurrentTime(formatCurrentTime());
       const timerId = setInterval(() => {
@@ -55,7 +63,6 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.addEventListener('fullscreenchange', handleFullscreenChange);
-      // Initial check
       setIsFullScreen(!!document.fullscreenElement);
       return () => {
         document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -71,7 +78,6 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
         await document.documentElement.requestFullscreen();
       } catch (err) {
          console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-         // Optionally, provide feedback to the user that fullscreen was blocked
       }
     } else {
       if (document.exitFullscreen) {
@@ -88,10 +94,10 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
     if (typeof document !== 'undefined' && document.fullscreenElement) {
       document.exitFullscreen().catch(err => console.error("Error exiting fullscreen during logout:", err))
       .finally(() => {
-        onLogout(); // Call original logout after attempting to exit fullscreen
+        onLogout();
       });
     } else {
-      onLogout(); // Call original logout if not in fullscreen
+      onLogout();
     }
   };
 
@@ -104,6 +110,15 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
           <h1 className="text-3xl font-bold text-primary">
             Geonera
           </h1>
+          {user && ( // Only show PairSelectorCard if user is logged in
+            <PairSelectorCard
+              variant="button"
+              selectedCurrencyPairs={selectedCurrencyPairs}
+              onSelectedCurrencyPairsChange={onSelectedCurrencyPairsChange}
+              isLoading={isLoading}
+              className="ml-4" // Added margin for spacing
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -162,4 +177,3 @@ export function AppHeader({ user, onLogout }: AppHeaderProps) {
     </header>
   );
 }
-
