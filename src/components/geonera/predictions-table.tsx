@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, PackageOpen, PackageCheck, Coins, SettingsIcon as Settings } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
 import { format as formatDateFns } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
@@ -32,7 +32,7 @@ interface PredictionsTableProps {
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
-  maxLogs: number; 
+  maxLogs: number;
   sortConfig: SortConfig | null;
   onSort: (key: SortableColumnKey) => void;
 }
@@ -55,7 +55,7 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
       iconElement = <AlertCircle className={cn(commonClass, "text-red-500")} aria-label="Error" />;
       tooltipContent = "Error";
       break;
-    case "IDLE": 
+    case "IDLE":
        iconElement = <Info className={cn(commonClass, "text-gray-400")} aria-label="Idle" />;
        tooltipContent = "Idle";
        break;
@@ -74,10 +74,10 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
 const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
   if (!signal) return "secondary";
   switch (signal) {
-    case "BUY": return "default"; 
-    case "SELL": return "destructive"; 
-    case "HOLD": return "secondary"; 
-    case "WAIT": return "outline"; 
+    case "BUY": return "default";
+    case "SELL": return "destructive";
+    case "HOLD": return "secondary";
+    case "WAIT": return "outline";
     case "N/A": return "secondary";
     default: return "secondary";
   }
@@ -90,28 +90,27 @@ const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: Sortab
   return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" aria-label="Sorted ascending" /> : <ArrowDown className="ml-1 h-3 w-3" aria-label="Sorted descending" />;
 };
 
-
 const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
     switch (key) {
       case 'status': return log.status;
       case 'timestamp': return log.timestamp;
       case 'currencyPair': return log.currencyPair;
-      case 'profitPipsMin': return log.pipsSettings.profitPips.min;
-      case 'lossPipsMin': return log.pipsSettings.lossPips.min;
+      case 'profitPipsMin': return log.pipsSettings.profitPips.min; // Sorting by min, can be max or avg too
+      case 'lossPipsMin': return log.pipsSettings.lossPips.min; // Sorting by min
       case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
       case 'expiresAt': return log.expiresAt;
       default: return undefined;
     }
-  };
+};
 
 
-export function PredictionsTable({ 
+export function PredictionsTable({
   title,
-  predictions, 
-  onRowClick, 
-  selectedPredictionId, 
-  maxLogs, 
-  sortConfig, 
+  predictions,
+  onRowClick,
+  selectedPredictionId,
+  maxLogs,
+  sortConfig,
   onSort,
 }: PredictionsTableProps) {
 
@@ -143,7 +142,7 @@ export function PredictionsTable({
       );
     }
     return data.map((log) => (
-      <TableRow 
+      <TableRow
         key={log.id}
         onClick={() => onRowClick(log)}
         className={cn(
@@ -173,7 +172,7 @@ export function PredictionsTable({
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[11px] text-center whitespace-nowrap">
           {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
-            <Badge 
+            <Badge
               variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
               className={cn("whitespace-nowrap px-1.5 py-0.5 text-[9px]", selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : "")}
             >
@@ -195,15 +194,15 @@ export function PredictionsTable({
       </TableRow>
     ));
   };
-  
+
   const tableHeaders = (
     <TableRow className="h-auto">
-      {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status (Pending, Success, Error)", undefined, "w-10")}
+      {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status", undefined, "w-10")}
       {renderSortableHeader(<CalendarDays className="h-3.5 w-3.5 mx-auto" aria-label="Time" />, "timestamp", "Prediction Timestamp")}
       {renderSortableHeader(<Coins className="h-3.5 w-3.5 mx-auto" aria-label="Pair" />, "currencyPair", "Currency Pair")}
       {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Profit PIPS" />, "profitPipsMin", "Profit PIPS Range (Min-Max)")}
       {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Loss PIPS" />, "lossPipsMin", "Loss PIPS Range (Min-Max)")}
-      {renderSortableHeader("Signal", "tradingSignal", "Trading Signal (Buy, Sell, Hold, Wait)")}
+      {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
       {renderSortableHeader(<Zap className="h-3.5 w-3.5 mx-auto" aria-label="Expires" />, "expiresAt", "Expires In (DD HH:MM:SS)")}
     </TableRow>
   );
@@ -216,20 +215,20 @@ export function PredictionsTable({
             {title === "Active Predictions" ? <PackageCheck className="h-4 w-4 mr-1.5" /> : <PackageOpen className="h-4 w-4 mr-1.5" />}
             {title}
           </CardTitle>
-          {title === "Active Predictions" && (
+          {(title === "Active Predictions" || title === "Expired Predictions") && (
              <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 p-1" aria-label="Active Predictions Settings">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 p-1" aria-label={`${title} Settings`}>
                         <Settings className="h-4 w-4 text-primary/80" />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                    <p>Settings for Active Predictions (Filter/Sort)</p>
+                    <p>Settings for {title} (e.g., Filter/Sort - not implemented yet)</p>
                 </TooltipContent>
             </Tooltip>
           )}
         </CardHeader>
-        
+
         <CardContent className="p-0 flex-grow overflow-hidden">
             <ScrollArea className="h-full rounded-md border-0">
                 <Table className="min-w-full table-fixed">
@@ -238,7 +237,7 @@ export function PredictionsTable({
                 </Table>
             </ScrollArea>
         </CardContent>
-        
+
         <CardFooter className="p-1.5 text-[10px] text-muted-foreground border-t">
           Displayed: {predictions.length}. (Overall Max: {maxLogs}).
           {predictions.length === 0 && (
