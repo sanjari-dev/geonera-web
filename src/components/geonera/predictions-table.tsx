@@ -38,24 +38,42 @@ interface PredictionsTableProps {
   onSort: (key: SortableColumnKey) => void;
   dateRangeFilter: DateRangeFilter;
   onDateRangeChange: (newRange: DateRangeFilter) => void;
-  showExpired: boolean; // Added prop
+  showExpired: boolean; 
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
   const commonClass = "h-3.5 w-3.5";
+  let iconElement;
+  let tooltipContent;
+
   switch (status) {
     case "PENDING":
-      return <Tooltip><TooltipTrigger asChild><Loader2 className={cn(commonClass, "animate-spin text-blue-500")} /></TooltipTrigger><TooltipContent><p>Pending</p></TooltipContent></Tooltip>;
+      iconElement = <Loader2 className={cn(commonClass, "animate-spin text-blue-500")} aria-label="Pending" />;
+      tooltipContent = "Pending";
+      break;
     case "SUCCESS":
-      return <Tooltip><TooltipTrigger asChild><CheckCircle2 className={cn(commonClass, "text-green-500")} /></TooltipTrigger><TooltipContent><p>Success</p></TooltipContent></Tooltip>;
+      iconElement = <CheckCircle2 className={cn(commonClass, "text-green-500")} aria-label="Success" />;
+      tooltipContent = "Success";
+      break;
     case "ERROR":
-      return <Tooltip><TooltipTrigger asChild><AlertCircle className={cn(commonClass, "text-red-500")} /></TooltipTrigger><TooltipContent><p>Error</p></TooltipContent></Tooltip>;
+      iconElement = <AlertCircle className={cn(commonClass, "text-red-500")} aria-label="Error" />;
+      tooltipContent = "Error";
+      break;
     case "IDLE": 
-       return <Tooltip><TooltipTrigger asChild><Info className={cn(commonClass, "text-gray-400")} /></TooltipTrigger><TooltipContent><p>Idle</p></TooltipContent></Tooltip>;
+       iconElement = <Info className={cn(commonClass, "text-gray-400")} aria-label="Idle" />;
+       tooltipContent = "Idle";
+       break;
     default:
       return null;
   }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild><div className="flex justify-center items-center h-full w-full">{iconElement}</div></TooltipTrigger>
+      <TooltipContent><p>{tooltipContent}</p></TooltipContent>
+    </Tooltip>
+  );
 };
+
 
 const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
   if (!signal) return "secondary";
@@ -91,7 +109,6 @@ const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): strin
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
   if (!date || !isValid(date)) return '';
-  // Format: "yyyy-MM-ddTHH:mm:ss" (without timezone offset for datetime-local input)
   return formatDateFns(date, "yyyy-MM-dd'T'HH:mm:ss");
 };
 
@@ -107,7 +124,7 @@ export function PredictionsTable({
   onDateRangeChange,
   showExpired,
 }: PredictionsTableProps) {
-  const now = new Date();
+  const now = useMemo(() => new Date(), []); // Memoize `now` to prevent re-renders if not necessary
 
   const sortLogs = (logs: PredictionLogItem[]) => {
     if (!sortConfig) return [...logs]; 
@@ -129,7 +146,7 @@ export function PredictionsTable({
   const activePredictions = useMemo(() => {
     const filtered = predictions.filter(log => {
         if (!showExpired && log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now) {
-            return false; // Skip if it's expired and we are not showing expired
+            return false; 
         }
         return log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > now));
     });
@@ -137,16 +154,15 @@ export function PredictionsTable({
   }, [predictions, now, sortConfig, showExpired]); 
 
   const expiredPredictions = useMemo(() => {
-    // Only include in this list if showExpired is true
     if (!showExpired) return [];
     const filtered = predictions.filter(log => log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now);
     return sortLogs(filtered);
   }, [predictions, now, sortConfig, showExpired]);
 
 
-  const renderSortableHeader = (label: string | React.ReactNode, columnKey: SortableColumnKey, tooltipContent: string, icon?: React.ReactNode) => (
+  const renderSortableHeader = (label: string | React.ReactNode, columnKey: SortableColumnKey, tooltipContent: string, icon?: React.ReactNode, headerClassName?: string) => (
     <TableHead
-      className="px-1 py-1 text-center whitespace-nowrap cursor-pointer hover:bg-accent/50 transition-colors sticky top-0 bg-card z-10 text-xs h-auto"
+      className={cn("px-1 py-1 text-center whitespace-nowrap cursor-pointer hover:bg-accent/50 transition-colors sticky top-0 bg-card z-10 text-xs h-auto", headerClassName)}
       onClick={() => onSort(columnKey)}
       aria-sort={sortConfig?.key === columnKey ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
@@ -183,10 +199,8 @@ export function PredictionsTable({
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onRowClick(log); }}
       >
-        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap">
-          <div className="flex justify-center">
-            <StatusIndicator status={log.status} />
-          </div>
+        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap w-10">
+          <StatusIndicator status={log.status} />
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[10px] text-center whitespace-nowrap">
           {formatDateFns(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss XXX")}
@@ -194,12 +208,12 @@ export function PredictionsTable({
         <TableCell className="px-1 py-0.5 font-medium text-center whitespace-nowrap text-[11px]">{log.currencyPair}</TableCell>
         <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[11px]">
           <div className="flex flex-col items-center">
-            <Badge variant={selectedPredictionId === log.id ? "default" : "secondary"} className="px-1.5 py-0.5 text-[9px] mb-0.5 flex items-center gap-1">
-              <TrendingUpIcon className="h-2.5 w-2.5 text-green-300" /> {log.pipsSettings.profitPips.min} - {log.pipsSettings.profitPips.max}
-            </Badge>
-            <Badge variant={selectedPredictionId === log.id ? "destructive" : "outline"} className="px-1.5 py-0.5 text-[9px] flex items-center gap-1">
-             <TrendingDownIcon className="h-2.5 w-2.5 text-red-300" /> {log.pipsSettings.lossPips.min} - {log.pipsSettings.lossPips.max}
-            </Badge>
+            <span className="text-green-500 flex items-center text-[10px]">
+              <TrendingUpIcon className="h-2.5 w-2.5 mr-0.5" aria-hidden="true" />P: {log.pipsSettings.profitPips.min}-{log.pipsSettings.profitPips.max}
+            </span>
+            <span className="text-red-500 flex items-center text-[10px]">
+              <TrendingDownIcon className="h-2.5 w-2.5 mr-0.5" aria-hidden="true" />L: {log.pipsSettings.lossPips.min}-{log.pipsSettings.lossPips.max}
+            </span>
           </div>
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[11px] text-center whitespace-nowrap">
@@ -229,12 +243,12 @@ export function PredictionsTable({
   
   const tableHeaders = (
     <TableRow className="h-auto">
-      {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" />, "status", "Status")}
+      {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Status", undefined, "w-10")}
       {renderSortableHeader("Time", "timestamp", "Timestamp")}
       {renderSortableHeader("Pair", "currencyPair", "Currency Pair")}
       {renderSortableHeader(
         "PIPS (P/L)", 
-        "profitPipsMin", 
+        "profitPipsMin",
         "Profit / Loss PIPS Range"
       )}
       {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
@@ -243,15 +257,13 @@ export function PredictionsTable({
   );
 
   const renderTableSection = (data: PredictionLogItem[], listType: 'active' | 'expired', tabValue: string) => (
-      <TabsContent value={tabValue} className="m-0 p-0 h-full">
-          <div className="flex flex-col min-h-0 h-full">
-              <ScrollArea className="flex-grow rounded-md border-0 overflow-hidden">
-                  <Table className="min-w-full table-fixed">
-                      <TableHeader className="sticky top-0 bg-card z-10">{tableHeaders}</TableHeader>
-                      <TableBody>{renderTableRows(data, listType)}</TableBody>
-                  </Table>
-              </ScrollArea>
-          </div>
+      <TabsContent value={tabValue} className="m-0 p-0 h-full flex flex-col min-h-0">
+          <ScrollArea className="flex-grow rounded-md border-0 overflow-hidden">
+              <Table className="min-w-full table-fixed">
+                  <TableHeader className="sticky top-0 bg-card z-10">{tableHeaders}</TableHeader>
+                  <TableBody>{renderTableRows(data, listType)}</TableBody>
+              </Table>
+          </ScrollArea>
       </TabsContent>
   );
 
@@ -301,13 +313,13 @@ export function PredictionsTable({
           </div>
         </CardHeader>
         
-        <Tabs defaultValue="active" className="p-1 flex flex-col min-h-0 h-full">
+        <Tabs defaultValue="active" className="p-1 flex flex-col min-h-0 flex-grow">
             <TabsList className="grid w-full grid-cols-2 mb-1 h-auto p-0.5">
-                <TabsTrigger value="active" className="text-xs py-1 h-auto data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                    <Zap className="h-3.5 w-3.5 mr-1.5" /> Active ({activePredictions.length})
+                <TabsTrigger value="active" className="text-xs py-1 h-auto data-[state=active]:bg-primary/10 data-[state=active]:text-primary" aria-controls="active-predictions-content">
+                    <Zap className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" /> Active ({activePredictions.length})
                 </TabsTrigger>
-                <TabsTrigger value="expired" className="text-xs py-1 h-auto data-[state=active]:bg-muted data-[state=active]:text-foreground" disabled={!showExpired}>
-                    <History className="h-3.5 w-3.5 mr-1.5" /> Expired ({expiredPredictions.length})
+                <TabsTrigger value="expired" className="text-xs py-1 h-auto data-[state=active]:bg-muted data-[state=active]:text-foreground" disabled={!showExpired} aria-controls="expired-predictions-content">
+                    <History className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" /> Expired ({showExpired ? expiredPredictions.length : 0})
                 </TabsTrigger>
             </TabsList>
             {renderTableSection(activePredictions, 'active', "active")}
@@ -330,4 +342,3 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
