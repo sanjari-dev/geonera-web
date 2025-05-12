@@ -11,8 +11,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen, Filter, Save, Sigma } from "lucide-react";
+// Badge is no longer used for signal, but might be used elsewhere or can be removed if truly unused.
+// import { Badge } from "@/components/ui/badge"; 
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, StatusFilterType, SignalFilterType } from '@/types';
 import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT } from '@/types'; // Import filter options
 import { format as formatDateFns } from 'date-fns';
@@ -82,17 +83,47 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
 };
 
 
-const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
-  if (!signal) return "secondary";
-  switch (signal) {
-    case "BUY": return "default";
-    case "SELL": return "destructive";
-    case "HOLD": return "secondary";
-    case "WAIT": return "outline";
-    case "N/A": return "secondary";
-    default: return "secondary";
+const SignalIcon: React.FC<{ signal?: PipsPredictionOutcome["tradingSignal"], className?: string }> = ({ signal, className }) => {
+  const iconCommonClass = "h-3.5 w-3.5 mx-auto";
+  let iconElement: React.ReactNode;
+  let tooltipText: string = "N/A";
+
+  if (!signal) {
+     iconElement = <HelpCircle className={cn(iconCommonClass, "text-gray-400", className)} aria-label="Not Available" />;
+     tooltipText = "N/A";
+  } else {
+    switch (signal) {
+      case "BUY": 
+        iconElement = <TrendingUp className={cn(iconCommonClass, "text-green-500", className)} aria-label="Buy Signal" />;
+        tooltipText = "BUY";
+        break;
+      case "SELL": 
+        iconElement = <TrendingDown className={cn(iconCommonClass, "text-red-500", className)} aria-label="Sell Signal" />;
+        tooltipText = "SELL";
+        break;
+      case "HOLD": 
+        iconElement = <PauseCircle className={cn(iconCommonClass, "text-yellow-500", className)} aria-label="Hold Signal" />;
+        tooltipText = "HOLD";
+        break;
+      case "WAIT": 
+        iconElement = <Clock className={cn(iconCommonClass, "text-blue-500", className)} aria-label="Wait Signal" />;
+        tooltipText = "WAIT";
+        break;
+      case "N/A":
+      default:
+        iconElement = <HelpCircle className={cn(iconCommonClass, "text-gray-500", className)} aria-label="Signal Not Available" />;
+        tooltipText = "N/A";
+        break;
+    }
   }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild><div className="flex justify-center items-center h-full w-full">{iconElement}</div></TooltipTrigger>
+      <TooltipContent><p>{tooltipText}</p></TooltipContent>
+    </Tooltip>
+  );
 };
+
 
 const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: SortableColumnKey }> = ({ sortConfig, columnKey }) => {
   if (!sortConfig || sortConfig.key !== columnKey) {
@@ -144,8 +175,8 @@ export function PredictionsTable({
     const defaultLimit = title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT;
     if (Number.isNaN(newLimit) || newLimit <= 0) {
       newLimit = defaultLimit; 
-    } else if (newLimit > maxLogs) { 
-      newLimit = maxLogs;
+    } else if (newLimit > MAX_PREDICTION_LOGS_CONFIG) { 
+      newLimit = MAX_PREDICTION_LOGS_CONFIG;
     }
     onDisplayLimitChange(newLimit);
     setViewMode('table');
@@ -190,7 +221,7 @@ export function PredictionsTable({
       {renderSortableHeader("Pair", "currencyPair", "Currency Pair", <Coins className="h-3.5 w-3.5 mx-auto" />)}
       {renderSortableHeader("P.Max", "profitPipsMax", "Max Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-2))]" />)}
       {renderSortableHeader("L.Max", "lossPipsMax", "Max Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-1))]" />)}
-      {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
+      {renderSortableHeader(<Sigma className="h-3.5 w-3.5 mx-auto" aria-label="Signal" />, "tradingSignal", "Trading Signal")}
       {renderSortableHeader("Expires", "expiresAt", "Expires In (DD HH:MM:SS)", <Zap className="h-3.5 w-3.5 mx-auto" />)}
     </TableRow>
   );
@@ -232,16 +263,11 @@ export function PredictionsTable({
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[11px] text-center whitespace-nowrap">
           {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
-            <Badge
-              variant={getSignalBadgeVariant(log.predictionOutcome.tradingSignal)}
-              className={cn("whitespace-nowrap px-1.5 py-0.5 text-[9px]", selectedPredictionId === log.id ? "bg-primary-foreground text-primary" : "")}
-            >
-              {log.predictionOutcome.tradingSignal}
-            </Badge>
+            <SignalIcon signal={log.predictionOutcome.tradingSignal} />
           ) : log.status === "PENDING" ? (
             <span className="text-muted-foreground">...</span>
           ) : (
-            <span className="text-muted-foreground">N/A</span>
+             <SignalIcon signal={undefined} />
           )}
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[10px] text-center whitespace-nowrap">
@@ -372,3 +398,4 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
