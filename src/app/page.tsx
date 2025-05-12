@@ -77,6 +77,7 @@ export default function GeoneraPage() {
   const [sortConfigExpired, setSortConfigExpired] = useState<SortConfig>({ key: 'timestamp', direction: 'desc' });
   
   const [currentTimeForFiltering, setCurrentTimeForFiltering] = useState(new Date());
+  const [displayedExpiredLogsCount, setDisplayedExpiredLogsCount] = useState<number>(MAX_PREDICTION_LOGS);
 
 
   const router = useRouter();
@@ -452,7 +453,8 @@ export default function GeoneraPage() {
     });
   }, [potentialActiveLogs, activeTableFilterStatus, activeTableFilterSignal]);
   
-  const expiredLogs = useMemo(() => {
+  // For expired logs, we first filter then sort then slice
+  const fullyFilteredExpiredLogs = useMemo(() => {
     if (!showExpired) return [];
     return potentialExpiredLogs.filter(log => {
       if (expiredTableFilterStatus !== "ALL" && log.status !== expiredTableFilterStatus) return false;
@@ -486,7 +488,11 @@ export default function GeoneraPage() {
   }, [getSortableValue]);
 
   const sortedActiveLogs = useMemo(() => sortLogs(activeLogs, sortConfigActive), [activeLogs, sortConfigActive, sortLogs]);
-  const sortedExpiredLogs = useMemo(() => sortLogs(expiredLogs, sortConfigExpired), [expiredLogs, sortConfigExpired, sortLogs]);
+  
+  const sortedAndLimitedExpiredLogs = useMemo(() => {
+    const sorted = sortLogs(fullyFilteredExpiredLogs, sortConfigExpired);
+    return sorted.slice(0, displayedExpiredLogsCount);
+  }, [fullyFilteredExpiredLogs, sortConfigExpired, displayedExpiredLogsCount, sortLogs]);
 
 
   // Effect to auto-select a prediction if none is selected and logs are available
@@ -498,7 +504,7 @@ export default function GeoneraPage() {
   
     let newSelectedLogCandidate: PredictionLogItem | null = null;
   
-    const combinedSortedLogsForSelection = [...sortedActiveLogs, ...(showExpired ? sortedExpiredLogs : [])];
+    const combinedSortedLogsForSelection = [...sortedActiveLogs, ...(showExpired ? sortedAndLimitedExpiredLogs : [])];
   
     if (combinedSortedLogsForSelection.length > 0) {
       const currentSelectionStillEligible = selectedPredictionLog && combinedSortedLogsForSelection.find(log => log.id === selectedPredictionLog.id);
@@ -517,7 +523,7 @@ export default function GeoneraPage() {
       setSelectedPredictionLog(newSelectedLogCandidate);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, sortedActiveLogs, sortedExpiredLogs, showExpired]); // `selectedPredictionLog` removed from deps to avoid loop, but it's used for comparison.
+  }, [currentUser, isAuthCheckComplete, sortedActiveLogs, sortedAndLimitedExpiredLogs, showExpired]); // `selectedPredictionLog` removed from deps to avoid loop, but it's used for comparison.
 
   const handleSort = (key: SortableColumnKey, tableType: 'active' | 'expired') => {
     const setSortConfig = tableType === 'active' ? setSortConfigActive : setSortConfigExpired;
@@ -633,7 +639,7 @@ export default function GeoneraPage() {
                     predictions={sortedActiveLogs}
                     onRowClick={handlePredictionSelect}
                     selectedPredictionId={finalSelectedPredictionForChildren?.id}
-                    maxLogs={MAX_PREDICTION_LOGS}
+                    maxLogs={MAX_PREDICTION_LOGS} // Global storage limit
                     sortConfig={sortConfigActive}
                     onSort={(key) => handleSort(key, 'active')}
                     filterStatus={activeTableFilterStatus}
@@ -645,16 +651,19 @@ export default function GeoneraPage() {
                 <div className="flex flex-col min-h-0 overflow-y-auto h-full">
                   <PredictionsTable
                     title="Expired Predictions"
-                    predictions={sortedExpiredLogs}
+                    predictions={sortedAndLimitedExpiredLogs}
                     onRowClick={handlePredictionSelect}
                     selectedPredictionId={finalSelectedPredictionForChildren?.id}
-                    maxLogs={MAX_PREDICTION_LOGS}
+                    maxLogs={MAX_PREDICTION_LOGS} // Global storage limit
                     sortConfig={sortConfigExpired}
                     onSort={(key) => handleSort(key, 'expired')}
                     filterStatus={expiredTableFilterStatus}
                     onFilterStatusChange={setExpiredTableFilterStatus}
                     filterSignal={expiredTableFilterSignal}
                     onFilterSignalChange={setExpiredTableFilterSignal}
+                    displayLimit={displayedExpiredLogsCount}
+                    onDisplayLimitChange={setDisplayedExpiredLogsCount}
+                    totalAvailableForDisplay={fullyFilteredExpiredLogs.length}
                   />
                 </div>
               </CardContent>

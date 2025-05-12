@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen, Filter, Save } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen, Filter, Save, Sigma } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, StatusFilterType, SignalFilterType } from '@/types';
 import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS } from '@/types'; // Import filter options
 import { format as formatDateFns } from 'date-fns';
@@ -28,6 +28,7 @@ import { CountdownTimer } from "./countdown-timer";
 import { ScrollArea } from "../ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 
 interface PredictionsTableProps {
@@ -35,13 +36,16 @@ interface PredictionsTableProps {
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
-  maxLogs: number;
+  maxLogs: number; // Global storage max
   sortConfig: SortConfig | null;
   onSort: (key: SortableColumnKey) => void;
   filterStatus: StatusFilterType;
   onFilterStatusChange: (value: StatusFilterType) => void;
   filterSignal: SignalFilterType;
   onFilterSignalChange: (value: SignalFilterType) => void;
+  displayLimit?: number; // Max items to display in this table instance
+  onDisplayLimitChange?: (value: number) => void; // Handler to change displayLimit
+  totalAvailableForDisplay?: number; // Total items available before displayLimit slicing
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -103,17 +107,21 @@ export function PredictionsTable({
   predictions,
   onRowClick,
   selectedPredictionId,
-  maxLogs,
+  maxLogs, // Global storage max
   sortConfig,
   onSort,
   filterStatus,
   onFilterStatusChange,
   filterSignal,
   onFilterSignalChange,
+  displayLimit,
+  onDisplayLimitChange,
+  totalAvailableForDisplay,
 }: PredictionsTableProps) {
   const [viewMode, setViewMode] = useState<'table' | 'filter'>('table');
   const [tempFilterStatus, setTempFilterStatus] = useState<StatusFilterType>(filterStatus);
   const [tempFilterSignal, setTempFilterSignal] = useState<SignalFilterType>(filterSignal);
+  const [tempDisplayLimit, setTempDisplayLimit] = useState<number>(displayLimit ?? maxLogs);
 
   useEffect(() => {
     setTempFilterStatus(filterStatus);
@@ -123,21 +131,36 @@ export function PredictionsTable({
     setTempFilterSignal(filterSignal);
   }, [filterSignal]);
 
+  useEffect(() => {
+    setTempDisplayLimit(displayLimit ?? maxLogs);
+  }, [displayLimit, maxLogs]);
+
+
   const handleApplyFilters = () => {
     onFilterStatusChange(tempFilterStatus);
     onFilterSignalChange(tempFilterSignal);
+    if (title === "Expired Predictions" && onDisplayLimitChange) {
+      const newLimit = Number.isNaN(parseInt(String(tempDisplayLimit),10)) || parseInt(String(tempDisplayLimit),10) <=0 ? maxLogs : parseInt(String(tempDisplayLimit),10)
+      onDisplayLimitChange(newLimit > 0 ? newLimit : maxLogs); // Ensure positive limit
+    }
     setViewMode('table');
   };
 
   const handleCancelFilters = () => {
     setTempFilterStatus(filterStatus); // Reset to original prop values
     setTempFilterSignal(filterSignal);
+    if (title === "Expired Predictions") {
+      setTempDisplayLimit(displayLimit ?? maxLogs);
+    }
     setViewMode('table');
   };
 
   const handleGearClick = () => {
     setTempFilterStatus(filterStatus); // Initialize with current filters when opening
     setTempFilterSignal(filterSignal);
+    if (title === "Expired Predictions") {
+      setTempDisplayLimit(displayLimit ?? maxLogs);
+    }
     setViewMode('filter');
   };
 
@@ -164,10 +187,10 @@ export function PredictionsTable({
       {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status", undefined, "w-10")}
       {renderSortableHeader(<CalendarDays className="h-3.5 w-3.5 mx-auto" aria-label="Time" />, "timestamp", "Prediction Timestamp")}
       {renderSortableHeader(<Coins className="h-3.5 w-3.5 mx-auto" aria-label="Pair" />, "currencyPair", "Currency Pair")}
-      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Profit PIPS" />, "profitPipsMin", "Profit PIPS (Min)")}
-      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Profit PIPS Max" />, "profitPipsMax", "Profit PIPS (Max)")}
-      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Loss PIPS" />, "lossPipsMin", "Loss PIPS (Min)")}
-      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Loss PIPS Max" />, "lossPipsMax", "Loss PIPS (Max)")}
+      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Min Profit PIPS" />, "profitPipsMin", "Min Profit PIPS")}
+      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Max Profit PIPS" />, "profitPipsMax", "Max Profit PIPS")}
+      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Min Loss PIPS" />, "lossPipsMin", "Min Loss PIPS")}
+      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Max Loss PIPS" />, "lossPipsMax", "Max Loss PIPS")}
       {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
       {renderSortableHeader(<Zap className="h-3.5 w-3.5 mx-auto" aria-label="Expires" />, "expiresAt", "Expires In (DD HH:MM:SS)")}
     </TableRow>
@@ -307,6 +330,23 @@ export function PredictionsTable({
                   </SelectContent>
                 </Select>
               </div>
+              {title === "Expired Predictions" && (
+                <div className="space-y-1">
+                  <Label htmlFor={`${title}-display-limit`} className="text-xs flex items-center">
+                    <Sigma className="h-3 w-3 mr-1" /> Max Logs to Display
+                  </Label>
+                  <Input
+                    id={`${title}-display-limit`}
+                    type="number"
+                    value={String(tempDisplayLimit)}
+                    onChange={(e) => setTempDisplayLimit(parseInt(e.target.value, 10))}
+                    min="1"
+                    max={maxLogs} // Cannot exceed global storage max
+                    className="w-full text-xs py-1 h-8"
+                    placeholder={`e.g., 50 (max ${maxLogs})`}
+                  />
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={handleCancelFilters} className="text-xs">Cancel</Button>
                 <Button size="sm" onClick={handleApplyFilters} className="text-xs">
@@ -318,7 +358,11 @@ export function PredictionsTable({
         </CardContent>
 
         <CardFooter className="p-1.5 text-[10px] text-muted-foreground border-t">
-          Displayed: {predictions.length}. (Max Logs: {maxLogs}).
+          Displayed: {predictions.length}
+          {title === "Expired Predictions" && displayLimit !== undefined && totalAvailableForDisplay !== undefined && predictions.length < totalAvailableForDisplay 
+            ? ` of ${totalAvailableForDisplay} (Display limit: ${displayLimit})` 
+            : ''}.
+          (Storage Max: {maxLogs}).
           {predictions.length === 0 && viewMode === 'table' && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
