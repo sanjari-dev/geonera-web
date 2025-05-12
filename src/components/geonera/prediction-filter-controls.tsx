@@ -8,15 +8,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { StatusFilterType, SignalFilterType } from "@/types";
 import { Filter } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface PredictionFilterControlsProps {
   filterStatus: StatusFilterType;
   onFilterStatusChange: (value: StatusFilterType) => void;
   filterSignal: SignalFilterType;
   onFilterSignalChange: (value: SignalFilterType) => void;
+  showExpired: boolean;
+  onShowExpiredChange: (checked: boolean) => void;
+  className?: string;
 }
 
 const statusOptions: { value: StatusFilterType; label: string }[] = [
@@ -40,17 +45,20 @@ export function PredictionFilterControls({
   onFilterStatusChange,
   filterSignal,
   onFilterSignalChange,
+  showExpired,
+  onShowExpiredChange,
+  className,
 }: PredictionFilterControlsProps) {
   return (
-    <div className="space-y-1.5 p-2 bg-card shadow-lg rounded-lg border border-border h-full flex flex-col">
+    <div className={cn("space-y-1.5 p-2 bg-card shadow-lg rounded-lg border border-border h-full flex flex-col", className)}>
       <div className="flex items-center gap-1.5 text-sm font-semibold text-primary">
         <Filter className="h-4 w-4" aria-hidden="true" />
         <span>Filter Predictions</span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 mt-auto">
+      <div className="grid grid-cols-1 gap-1.5 mt-auto">
         <div className="flex flex-col justify-end">
           <Label htmlFor="filter-status" className="text-xs font-medium mb-0.5 block">
-            Filter by Status
+            By Status
           </Label>
           <Select
             value={filterStatus}
@@ -70,7 +78,7 @@ export function PredictionFilterControls({
         </div>
         <div className="flex flex-col justify-end">
           <Label htmlFor="filter-signal" className="text-xs font-medium mb-0.5 block">
-            Filter by Signal
+            By Signal
           </Label>
           <Select
             value={filterSignal}
@@ -87,6 +95,15 @@ export function PredictionFilterControls({
               ))}
             </SelectContent>
           </Select>
+        </div>
+         <div className="flex items-center space-x-2 pt-1">
+          <Switch
+            id="show-expired"
+            checked={showExpired}
+            onCheckedChange={onShowExpiredChange}
+            aria-label="Toggle visibility of expired predictions"
+          />
+          <Label htmlFor="show-expired" className="text-xs font-medium cursor-pointer">Show Expired</Label>
         </div>
       </div>
     </div>

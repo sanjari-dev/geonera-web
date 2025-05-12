@@ -38,6 +38,7 @@ interface PredictionsTableProps {
   onSort: (key: SortableColumnKey) => void;
   dateRangeFilter: DateRangeFilter;
   onDateRangeChange: (newRange: DateRangeFilter) => void;
+  showExpired: boolean; // Added prop
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -80,8 +81,8 @@ const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): strin
     case 'status': return log.status;
     case 'timestamp': return log.timestamp;
     case 'currencyPair': return log.currencyPair;
-    case 'profitPipsMin': return log.pipsSettings.profitPips.min; // Updated
-    case 'lossPipsMin': return log.pipsSettings.lossPips.min; // Added
+    case 'profitPipsMin': return log.pipsSettings.profitPips.min;
+    case 'lossPipsMin': return log.pipsSettings.lossPips.min;
     case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
     case 'expiresAt': return log.expiresAt;
     default: return undefined;
@@ -90,13 +91,8 @@ const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): strin
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
   if (!date || !isValid(date)) return '';
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  const seconds = date.getSeconds().toString().padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  // Format: "yyyy-MM-ddTHH:mm:ss" (without timezone offset for datetime-local input)
+  return formatDateFns(date, "yyyy-MM-dd'T'HH:mm:ss");
 };
 
 
@@ -108,7 +104,8 @@ export function PredictionsTable({
   sortConfig, 
   onSort,
   dateRangeFilter,
-  onDateRangeChange 
+  onDateRangeChange,
+  showExpired,
 }: PredictionsTableProps) {
   const now = new Date();
 
@@ -130,14 +127,21 @@ export function PredictionsTable({
   };
 
   const activePredictions = useMemo(() => {
-    const filtered = predictions.filter(log => log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > now)));
+    const filtered = predictions.filter(log => {
+        if (!showExpired && log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now) {
+            return false; // Skip if it's expired and we are not showing expired
+        }
+        return log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > now));
+    });
     return sortLogs(filtered);
-  }, [predictions, now, sortConfig]); 
+  }, [predictions, now, sortConfig, showExpired]); 
 
   const expiredPredictions = useMemo(() => {
+    // Only include in this list if showExpired is true
+    if (!showExpired) return [];
     const filtered = predictions.filter(log => log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now);
     return sortLogs(filtered);
-  }, [predictions, now, sortConfig]); 
+  }, [predictions, now, sortConfig, showExpired]);
 
 
   const renderSortableHeader = (label: string | React.ReactNode, columnKey: SortableColumnKey, tooltipContent: string, icon?: React.ReactNode) => (
@@ -162,7 +166,7 @@ export function PredictionsTable({
       return (
         <TableRow>
           <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-xs">
-            No {listType} predictions found for the selected date range.
+            No {listType} predictions found for the selected date range and filters.
           </TableCell>
         </TableRow>
       );
@@ -225,20 +229,20 @@ export function PredictionsTable({
   
   const tableHeaders = (
     <TableRow className="h-auto">
-      {renderSortableHeader("Stat", "status", "Prediction status (Pending, Success, Error). Click to sort.", <ListChecks className="h-3.5 w-3.5" />)}
-      {renderSortableHeader("Time", "timestamp", "Prediction generation time. Click to sort.")}
-      {renderSortableHeader("Pair", "currencyPair", "Currency pair. Click to sort.")}
+      {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" />, "status", "Status")}
+      {renderSortableHeader("Time", "timestamp", "Timestamp")}
+      {renderSortableHeader("Pair", "currencyPair", "Currency Pair")}
       {renderSortableHeader(
         "PIPS (P/L)", 
-        "profitPipsMin", // Default sort by profit pips min
-        "Profit PIPS Range (Min-Max) / Loss PIPS Range (Min-Max). Sorted by Min Profit PIPS. Click to sort."
+        "profitPipsMin", 
+        "Profit / Loss PIPS Range"
       )}
-      {renderSortableHeader("Signal", "tradingSignal", "Trading action (BUY, SELL, HOLD). Click to sort.")}
-      {renderSortableHeader("Expires", "expiresAt", "Time until prediction expires. Click to sort.")}
+      {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
+      {renderSortableHeader("Expires", "expiresAt", "Expires In")}
     </TableRow>
   );
 
-  const renderTableSection = (title: string, data: PredictionLogItem[], icon: React.ReactNode, listType: 'active' | 'expired', tabValue: string) => (
+  const renderTableSection = (data: PredictionLogItem[], listType: 'active' | 'expired', tabValue: string) => (
       <TabsContent value={tabValue} className="m-0 p-0 h-full">
           <div className="flex flex-col min-h-0 h-full">
               <ScrollArea className="flex-grow rounded-md border-0 overflow-hidden">
@@ -302,20 +306,20 @@ export function PredictionsTable({
                 <TabsTrigger value="active" className="text-xs py-1 h-auto data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                     <Zap className="h-3.5 w-3.5 mr-1.5" /> Active ({activePredictions.length})
                 </TabsTrigger>
-                <TabsTrigger value="expired" className="text-xs py-1 h-auto data-[state=active]:bg-muted data-[state=active]:text-foreground">
+                <TabsTrigger value="expired" className="text-xs py-1 h-auto data-[state=active]:bg-muted data-[state=active]:text-foreground" disabled={!showExpired}>
                     <History className="h-3.5 w-3.5 mr-1.5" /> Expired ({expiredPredictions.length})
                 </TabsTrigger>
             </TabsList>
-            {renderTableSection("Active Predictions", activePredictions, <Zap className="h-4 w-4" />, "active", "active")}
-            {renderTableSection("Expired Predictions", expiredPredictions, <History className="h-4 w-4" />, "expired", "expired")}
+            {renderTableSection(activePredictions, 'active', "active")}
+            {showExpired && renderTableSection(expiredPredictions, 'expired', "expired")}
         </Tabs>
         
         <CardFooter className="p-2 text-[10px] text-muted-foreground border-t">
-          Total Displayed: {activePredictions.length + expiredPredictions.length} (Max {maxLogs} overall)
-          {(activePredictions.length + expiredPredictions.length) === 0 && (
+          Total Displayed: {activePredictions.length + (showExpired ? expiredPredictions.length : 0)} (Max {maxLogs} overall)
+          {(activePredictions.length + (showExpired ? expiredPredictions.length : 0)) === 0 && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
-                No predictions found for the selected date range. Set parameters or adjust filters.
+                No predictions found. Set parameters or adjust filters.
             </span>
         )}
         </CardFooter>
@@ -326,3 +330,4 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+

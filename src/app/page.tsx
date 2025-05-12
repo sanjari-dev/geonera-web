@@ -5,7 +5,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { produce } from 'immer';
 import { AppHeader } from '@/components/geonera/header';
-import { PipsParameterForm } from '@/components/geonera/pips-parameter-form';
+import { PairSelectorCard } from '@/components/geonera/pair-selector-card';
+import { PipsInputCard } from '@/components/geonera/pips-input-card';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
 import { PredictionFilterControls } from '@/components/geonera/prediction-filter-controls';
@@ -13,7 +14,7 @@ import { NotificationDisplay } from '@/components/geonera/notification-display';
 import type {
   PredictionLogItem,
   CurrencyPair,
-  PipsSettings, // Changed from PipsTargetRange
+  PipsSettings,
   User,
   StatusFilterType,
   SignalFilterType,
@@ -41,7 +42,6 @@ export default function GeoneraPage() {
   const [currentYear, setCurrentYear] = useState<string>('');
 
   const [selectedCurrencyPairs, setSelectedCurrencyPairs] = useState<CurrencyPair[]>([]);
-  // Updated to PipsSettings
   const [pipsSettings, setPipsSettings] = useState<PipsSettings>({
     profitPips: { min: 10, max: 20 },
     lossPips: { min: 5, max: 10 },
@@ -56,6 +56,8 @@ export default function GeoneraPage() {
   const [filterSignal, setFilterSignal] = useState<SignalFilterType>("ALL");
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'asc' });
   const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({ start: startOfDay(new Date()), end: endOfDay(new Date()) });
+  const [showExpired, setShowExpired] = useState(false);
+
 
   const router = useRouter();
 
@@ -64,7 +66,7 @@ export default function GeoneraPage() {
     latestSelectedCurrencyPairsRef.current = selectedCurrencyPairs;
   }, [selectedCurrencyPairs]);
 
-  const latestPipsSettingsRef = useRef(pipsSettings); // Changed from latestPipsTargetRef
+  const latestPipsSettingsRef = useRef(pipsSettings);
   useEffect(() => {
     latestPipsSettingsRef.current = pipsSettings;
   }, [pipsSettings]);
@@ -127,7 +129,7 @@ export default function GeoneraPage() {
     setSelectedCurrencyPairs(value);
   }, []);
 
-  const handlePipsSettingsChange = useCallback((value: PipsSettings) => { // Changed from handlePipsChange
+  const handlePipsSettingsChange = useCallback((value: PipsSettings) => {
     setPipsSettings(value);
   }, []);
 
@@ -158,9 +160,8 @@ export default function GeoneraPage() {
       }
 
       const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
-      const currentPipsSettings = latestPipsSettingsRef.current; // Changed from currentPipsTarget
+      const currentPipsSettings = latestPipsSettingsRef.current;
       
-      // Updated validation logic for PipsSettings
       const { profitPips, lossPips } = currentPipsSettings;
       const isPipsSettingsInvalid =
         profitPips.min <= 0 || profitPips.max <= 0 || profitPips.min > profitPips.max ||
@@ -200,7 +201,7 @@ export default function GeoneraPage() {
             id: newLogId,
             timestamp: new Date(),
             currencyPair: currencyPair,
-            pipsSettings: currentPipsSettings, // Changed from pipsTarget
+            pipsSettings: currentPipsSettings,
             status: "PENDING",
           });
         }
@@ -223,7 +224,6 @@ export default function GeoneraPage() {
       }));
       
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
-        // Pass pipsSettings to the action
         const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsSettings);
         return { result, pendingLog }; 
       });
@@ -325,14 +325,12 @@ export default function GeoneraPage() {
         for (let i = draft.length - 1; i >= 0; i--) {
           const log = draft[i];
           let removeLog = false;
-
           
           if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS" || log.status === "ERROR")) {
             removeLog = true;
           }
           
           if (removeLog) {
-            
             if (selectedPredictionLog && selectedPredictionLog.id === log.id) {
               setSelectedPredictionLog(null);
             }
@@ -357,6 +355,7 @@ export default function GeoneraPage() {
   
     const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
     let newSelectedLogCandidate: PredictionLogItem | null = null;
+    const now = new Date();
   
     if (currentSelectedPairs.length > 0 && predictionLogs.length > 0) {
       const eligibleLogs = predictionLogs 
@@ -368,6 +367,11 @@ export default function GeoneraPage() {
           const logTimestamp = new Date(log.timestamp);
           if (dateRangeFilter.start && logTimestamp < dateRangeFilter.start) return false;
           if (dateRangeFilter.end && logTimestamp > dateRangeFilter.end) return false;
+
+          // Handle showExpired filter
+          if (!showExpired && log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now) {
+            return false; // Hide expired if showExpired is false
+          }
 
           return true;
         })
@@ -409,7 +413,7 @@ export default function GeoneraPage() {
        ) {
       setSelectedPredictionLog(newSelectedLogCandidate);
     }
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog, filterStatus, filterSignal, sortConfig, dateRangeFilter]);
+  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog, filterStatus, filterSignal, sortConfig, dateRangeFilter, showExpired]);
 
   const handleSort = (key: SortableColumnKey) => {
     setSortConfig(prevConfig => {
@@ -454,8 +458,6 @@ export default function GeoneraPage() {
 
 
   if (!currentUser && isAuthCheckComplete) { 
-      // This case should ideally not be reached due to the router.replace in useEffect
-      // But as a fallback, show a loading indicator or a message.
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -463,10 +465,11 @@ export default function GeoneraPage() {
         </div>
       );
   }
-  if (!currentUser) { // If still no current user (e.g. redirect hasn't happened yet or failed)
-    return null; // Render nothing, or a minimal loader
+  if (!currentUser) { 
+    return null; 
   }
-
+  
+  const nowForFilter = new Date();
   const logsForTable = predictionLogs
     .filter(log => {
       if (!latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) return false;
@@ -476,6 +479,10 @@ export default function GeoneraPage() {
       const logTimestamp = new Date(log.timestamp);
       if (dateRangeFilter.start && logTimestamp < dateRangeFilter.start) return false;
       if (dateRangeFilter.end && logTimestamp > dateRangeFilter.end) return false;
+
+      if (!showExpired && log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= nowForFilter) {
+        return false; 
+      }
       
       return true;
     });
@@ -487,21 +494,29 @@ export default function GeoneraPage() {
     <div className="h-screen grid grid-rows-[auto_auto_1fr_auto] bg-background text-foreground">
       <AppHeader user={currentUser} onLogout={handleLogout} />
       
-      <div className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-3 gap-1">
-        <PipsParameterForm
+      <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-1">
+        <PairSelectorCard
           selectedCurrencyPairs={selectedCurrencyPairs}
-          pipsSettings={pipsSettings} // Changed from pipsTarget
           onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
-          onPipsSettingsChange={handlePipsSettingsChange} // Changed from onPipsChange
           isLoading={isLoading}
+          className="sm:col-span-1"
+        />
+        <PipsInputCard
+          pipsSettings={pipsSettings}
+          onPipsSettingsChange={handlePipsSettingsChange}
+          isLoading={isLoading}
+          className="sm:col-span-1"
         />
         <PredictionFilterControls
           filterStatus={filterStatus}
           onFilterStatusChange={setFilterStatus}
           filterSignal={filterSignal}
           onFilterSignalChange={setFilterSignal}
+          showExpired={showExpired}
+          onShowExpiredChange={setShowExpired}
+          className="sm:col-span-2 md:col-span-1"
         />
-        <NotificationDisplay notification={latestNotification} />
+        <NotificationDisplay notification={latestNotification} className="sm:col-span-2 md:col-span-1" />
       </div>
       
       <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-1 overflow-hidden">
@@ -515,6 +530,7 @@ export default function GeoneraPage() {
             onSort={handleSort}
             dateRangeFilter={dateRangeFilter}
             onDateRangeChange={handleDateRangeChange}
+            showExpired={showExpired}
           />
         </div>
         <div className="flex flex-col min-h-0"> 
