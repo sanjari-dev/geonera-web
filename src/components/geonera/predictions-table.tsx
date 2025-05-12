@@ -36,7 +36,7 @@ interface PredictionsTableProps {
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
-  maxLogs: number; // Global storage max
+  maxLogs: number; // Global storage max, still used for capping input
   sortConfig: SortConfig | null;
   onSort: (key: SortableColumnKey) => void;
   filterStatus: StatusFilterType;
@@ -107,7 +107,7 @@ export function PredictionsTable({
   predictions,
   onRowClick,
   selectedPredictionId,
-  maxLogs, // Global storage max
+  maxLogs, // Global storage max, still used for capping input
   sortConfig,
   onSort,
   filterStatus,
@@ -364,7 +364,6 @@ export function PredictionsTable({
           Displayed: {predictions.length}
           {totalAvailableForDisplay !== undefined ? ` of ${totalAvailableForDisplay}` : ''}.
           {displayLimit !== undefined ? ` (Display limit: ${displayLimit}).` : ''}
-          &nbsp;(Overall Storage Max: {maxLogs}).
           {predictions.length === 0 && viewMode === 'table' && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
@@ -384,4 +383,3 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
