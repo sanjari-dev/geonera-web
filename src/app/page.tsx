@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { produce } from 'immer';
 import { AppHeader } from '@/components/geonera/header';
-// import { PairSelectorCard } from '@/components/geonera/pair-selector-card'; // Removed: Moved to AppHeader
+// import { PairSelectorCard } from '@/components/geonera/pair-selector-card'; // Moved to AppHeader
 import { PipsInputCard } from '@/components/geonera/pips-input-card';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
@@ -112,8 +112,7 @@ export default function GeoneraPage() {
 
   useEffect(() => {
     if (isAuthCheckComplete && !currentUser) {
-      // No redirection here, page will render in logged-out state
-      // If redirection is desired, it would be: router.replace('/login');
+      router.replace('/login');
     }
   }, [currentUser, isAuthCheckComplete, router]);
 
@@ -501,7 +500,8 @@ export default function GeoneraPage() {
   }
 
   if (!currentUser && isAuthCheckComplete) {
-    // Render simplified page for logged-out users
+    // Handled by useEffect redirecting to /login
+    return null; 
   }
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
 
@@ -535,8 +535,8 @@ export default function GeoneraPage() {
       )}
 
       {currentUser && ( 
-        <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-10 gap-1 overflow-hidden">
-          <div className="md:col-span-7 flex flex-col min-h-0"> 
+        <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-4 gap-1 overflow-hidden">
+          <div className="md:col-span-3 flex flex-col min-h-0"> 
             <Card className="shadow-xl h-full flex flex-col">
               <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold text-primary">
@@ -622,7 +622,7 @@ export default function GeoneraPage() {
             </Card>
           </div>
           
-          <div className="md:col-span-3 flex flex-col min-h-0"> 
+          <div className="md:col-span-1 flex flex-col min-h-0"> 
             <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG} />
           </div>
         </main>
@@ -634,3 +634,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
