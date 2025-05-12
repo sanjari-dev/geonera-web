@@ -99,6 +99,6 @@ export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[]
 ];
 
 export const MAX_PREDICTION_LOGS_CONFIG = 500;
-export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG;
-export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG;
+export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; // Default to show all up to storage max
+export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50; // Default expired logs to display
 
