@@ -188,8 +188,8 @@ export function PredictionsTable({
       {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status", undefined, "w-10")}
       {renderSortableHeader("Time", "timestamp", "Prediction Timestamp", <CalendarDays className="h-3.5 w-3.5 mx-auto" />)}
       {renderSortableHeader("Pair", "currencyPair", "Currency Pair", <Coins className="h-3.5 w-3.5 mx-auto" />)}
-      {renderSortableHeader("P.Max", "profitPipsMax", "Max Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" />)}
-      {renderSortableHeader("L.Max", "lossPipsMax", "Max Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" />)}
+      {renderSortableHeader("P.Max", "profitPipsMax", "Max Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-2))]" />)}
+      {renderSortableHeader("L.Max", "lossPipsMax", "Max Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-1))]" />)}
       {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
       {renderSortableHeader("Expires", "expiresAt", "Expires In (DD HH:MM:SS)", <Zap className="h-3.5 w-3.5 mx-auto" />)}
     </TableRow>
@@ -224,10 +224,10 @@ export function PredictionsTable({
           {formatDateFns(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss XXX")}
         </TableCell>
         <TableCell className="px-1 py-0.5 font-medium text-center whitespace-nowrap text-[11px]">{log.currencyPair}</TableCell>
-         <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
+         <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px] text-[hsl(var(--chart-2))]">
              {log.pipsSettings.profitPips.max}
         </TableCell>
-        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
+        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px] text-[hsl(var(--chart-1))]">
             {log.pipsSettings.lossPips.max}
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[11px] text-center whitespace-nowrap">
@@ -372,4 +372,3 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
