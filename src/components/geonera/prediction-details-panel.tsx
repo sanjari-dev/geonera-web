@@ -4,9 +4,18 @@
 import type { PredictionLogItem, PipsPredictionOutcome } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon } from "lucide-react";
 import { format as formatDateFns } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from '@/lib/utils';
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
@@ -16,10 +25,10 @@ interface PredictionDetailsPanelProps {
 const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
   if (!signal) return "secondary";
   switch (signal) {
-    case "BUY": return "default";
+    case "BUY": return "default"; // 'default' usually maps to primary color, good for BUY
     case "SELL": return "destructive";
-    case "HOLD": return "secondary";
-    case "WAIT": return "outline";
+    case "HOLD": return "secondary"; // 'secondary' is often gray or a neutral tone
+    case "WAIT": return "outline"; // 'outline' can be a subtle indicator
     case "N/A": return "secondary";
     default: return "secondary";
   }
@@ -42,7 +51,7 @@ const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status 
     case "PENDING": return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
     case "SUCCESS": return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     case "ERROR": return <AlertCircle className="h-4 w-4 text-red-500" />;
-    default: return <Info className="h-4 w-4 text-gray-400" />;
+    default: return <Info className="h-4 w-4 text-gray-400" />; // Should not happen with current statuses
   }
 };
 
@@ -65,6 +74,16 @@ const formatVolume = (volume?: number) => {
 
 
 export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }: PredictionDetailsPanelProps) {
+  const [forceShowAbout, setForceShowAbout] = useState(false);
+
+  useEffect(() => {
+    // If no prediction is selected, reset forceShowAbout to ensure default behavior
+    // which is to show "About Geonera".
+    if (!selectedPrediction) {
+      setForceShowAbout(false);
+    }
+  }, [selectedPrediction]);
+
   const marketOhlcData = selectedPrediction?.predictionOutcome;
   const marketDataAvailable = selectedPrediction && marketOhlcData && (
     marketOhlcData.openPrice !== undefined ||
@@ -74,19 +93,48 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
     marketOhlcData.volume !== undefined
   );
 
+  const shouldShowAbout = forceShowAbout || !selectedPrediction;
+  
+  const cardTitle = shouldShowAbout ? "About Geonera" : "Prediction Details";
+  const cardDescription = shouldShowAbout 
+    ? "Mock Forex Prediction Insights" 
+    : (selectedPrediction ? `Details for ${selectedPrediction.currencyPair}` : "Select a prediction to see details");
+
+
   return (
     <Card className="shadow-xl h-full grid grid-rows-[auto_1fr]" aria-labelledby="prediction-details-title">
       <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
-        <CardTitle id="prediction-details-title" className="text-lg font-semibold text-primary dark:text-foreground whitespace-nowrap">
-           {selectedPrediction ? "Prediction Details" : "About Geonera"}
-        </CardTitle>
+        <div className="flex justify-between items-center">
+            <CardTitle id="prediction-details-title" className="text-lg font-semibold text-primary dark:text-foreground whitespace-nowrap">
+                {cardTitle}
+            </CardTitle>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 p-1" aria-label="View options">
+                        <MenuIcon className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => setForceShowAbout(true)} className="text-xs">
+                        About Geonera
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                        onSelect={() => setForceShowAbout(false)} 
+                        disabled={!selectedPrediction} // Disable if no prediction to show details for
+                        className="text-xs"
+                    >
+                        Prediction Details
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
         <CardDescription className="text-xs text-muted-foreground">
-          {selectedPrediction ? <span className="whitespace-nowrap">{`Details for ${selectedPrediction.currencyPair}`}</span> : "Mock Forex Prediction Insights"}
+          {cardDescription}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-2 flex-grow flex flex-col min-h-0">
-        {!selectedPrediction ? (
-          <ScrollArea className="h-full w-full">
+        <ScrollArea className="h-full w-full">
+            {shouldShowAbout ? (
             <div className="space-y-1.5 p-1.5 pr-2 text-foreground text-xs">
               <div className="flex items-center space-x-1.5 text-sm font-semibold text-primary mb-1">
                 <Brain className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
@@ -103,7 +151,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
                   Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Logs</strong> to your left, updating every 30 seconds.
                 </li>
                 <li>
-                  Each prediction has a unique expiration time and will be categorized accordingly. Max log size is {maxPredictionLogs}.
+                  Each prediction has a unique expiration time (randomly between {10} and {75} seconds) and will be categorized into Active or Expired tables. Max log size for each table can be configured via its filter settings, with a system cap of {maxPredictionLogs} total.
                 </li>
                 <li>
                   Click on any row in the Prediction Logs to view its detailed analysis in this panel.
@@ -111,17 +159,20 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
                 <li>
                   Utilize the <strong>Filter <Info className="inline h-3 w-3" /></strong> controls within each log table and the <strong>Date Range</strong> filter in the Prediction Logs header to narrow down results. You can also sort columns by clicking their headers.
                 </li>
+                 <li>
+                  Use the <MenuIcon className="inline h-3 w-3" /> icon at the top-right of this panel to switch between this guide and the selected prediction's details.
+                </li>
               </ul>
               <p className="text-[0.7rem] italic pt-1 text-muted-foreground">
                 Please note: All data and predictions provided by Geonera are for informational and demonstration purposes only. They should not be considered as financial advice.
               </p>
-              <p className="text-xs text-center pt-1 text-accent">
-                When predictions are available in the logs, select one to see its details here.
-              </p>
+              {!selectedPrediction && !forceShowAbout && (
+                <p className="text-xs text-center pt-1 text-accent">
+                  When predictions are available in the logs, select one to see its details here.
+                </p>
+              )}
             </div>
-          </ScrollArea>
-        ) : (
-          <ScrollArea className="h-full w-full">
+          ) : selectedPrediction ? ( // This implies !shouldShowAbout, so selectedPrediction must be non-null
             <div className="space-y-1 pr-1.5">
               <div className="flex items-center space-x-1.5">
                 <Landmark className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />
@@ -160,7 +211,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
                   variant={
                   selectedPrediction.status === "SUCCESS" ? "default" :
                   selectedPrediction.status === "ERROR" ? "destructive" :
-                  "secondary"
+                  "secondary" // for PENDING
                 }>
                   {selectedPrediction.status}
                 </Badge>
@@ -280,12 +331,14 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
                   </div>
               )}
             </div>
-          </ScrollArea>
-        )}
+          ) : null /* Case where !shouldShowAbout and !selectedPrediction (should be handled by shouldShowAbout) */}
+        </ScrollArea>
       </CardContent>
     </Card>
   );
 }
 
 // Define VariantProps type locally if not globally available or for clarity
+// This is a helper type and might already be available if you're using a library like CVA
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
