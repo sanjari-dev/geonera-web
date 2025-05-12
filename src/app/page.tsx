@@ -547,7 +547,7 @@ export default function GeoneraPage() {
       <AppHeader user={currentUser} onLogout={handleLogout} />
 
       {currentUser && ( // Only show parameter controls if logged in
-        <div className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-[_1fr_1.5fr_1.5fr] gap-1">
+        <div className="w-full px-2 py-1 grid grid-cols-[1.5fr_3fr_3fr_3fr] gap-1">
           <PairSelectorCard
             selectedCurrencyPairs={selectedCurrencyPairs}
             onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
@@ -560,18 +560,16 @@ export default function GeoneraPage() {
             isLoading={isLoading}
             className="col-span-1"
           />
-          <div className="col-span-1 grid grid-cols-2 gap-1">
-            <PredictionFilterControls
-              filterStatus={filterStatus}
-              onFilterStatusChange={setFilterStatus}
-              filterSignal={filterSignal}
-              onFilterSignalChange={setFilterSignal}
-              showExpired={showExpired}
-              onShowExpiredChange={setShowExpired}
-              className="col-span-1"
-            />
-            <NotificationDisplay notification={latestNotification} className="col-span-1" />
-          </div>
+          <PredictionFilterControls
+            filterStatus={filterStatus}
+            onFilterStatusChange={setFilterStatus}
+            filterSignal={filterSignal}
+            onFilterSignalChange={setFilterSignal}
+            showExpired={showExpired}
+            onShowExpiredChange={setShowExpired}
+            className="col-span-1"
+          />
+          <NotificationDisplay notification={latestNotification} className="col-span-1" />
         </div>
       )}
       {!currentUser && isAuthCheckComplete && (

@@ -56,7 +56,7 @@ export function PredictionFilterControls({
         <Filter className="h-4 w-4" aria-hidden="true" />
         <span>Filter & Sort</span>
       </div>
-      <div className="grid grid-cols-2 gap-1 flex-grow content-end"> {/* Use content-end to push items to bottom */}
+      <div className="grid grid-cols-3 gap-1">
         <div className="flex flex-col justify-end">
           <Label htmlFor="filter-status" className="text-xs font-medium mb-0.5 block">
             By Status
@@ -97,14 +97,16 @@ export function PredictionFilterControls({
             </SelectContent>
           </Select>
         </div>
-         <div className="flex items-center space-x-1.5 col-span-2 justify-self-start mt-1"> {/* Aligned to start (left) and added margin top */}
-          <Switch
-            id="show-expired"
-            checked={showExpired}
-            onCheckedChange={onShowExpiredChange}
-            aria-label={showExpired ? "Hide expired predictions" : "Show expired predictions"}
-          />
-          <Label htmlFor="show-expired" className="text-xs font-medium">Show Expired</Label>
+        <div className="flex flex-col justify-end">
+          <div className="flex items-center space-x-1 col-span-2 justify-self-start mt-2">
+            <Switch
+              id="show-expired"
+              checked={showExpired}
+              onCheckedChange={onShowExpiredChange}
+              aria-label={showExpired ? "Hide expired predictions" : "Show expired predictions"}
+            />
+            <Label htmlFor="show-expired" className="text-xs font-medium">Show Expired</Label>
+          </div>
         </div>
       </div>
     </div>
