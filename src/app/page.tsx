@@ -23,7 +23,7 @@ import type {
   NotificationMessage,
   DateRangeFilter,
 } from '@/types';
-import { DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT } from '@/types'; // Import new constant
+import { DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2, CalendarDays } from 'lucide-react';
@@ -36,7 +36,7 @@ import { Label } from '@/components/ui/label';
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 75;
-const MAX_PREDICTION_LOGS = 500;
+// MAX_PREDICTION_LOGS is now imported from @/types as MAX_PREDICTION_LOGS_CONFIG
 
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
@@ -263,8 +263,8 @@ export default function GeoneraPage() {
           draft.push(log); // Add to the end
         });
         // Enforce MAX_PREDICTION_LOGS by removing oldest if exceeded
-        if (draft.length > MAX_PREDICTION_LOGS) {
-          draft.splice(0, draft.length - MAX_PREDICTION_LOGS);
+        if (draft.length > MAX_PREDICTION_LOGS_CONFIG) {
+          draft.splice(0, draft.length - MAX_PREDICTION_LOGS_CONFIG);
         }
       }));
 
@@ -316,8 +316,8 @@ export default function GeoneraPage() {
           }
         });
         // Re-apply max logs enforcement after updates, in case some were removed and new ones pushed the total over
-        if (draft.length > MAX_PREDICTION_LOGS) {
-          const removedCount = draft.length - MAX_PREDICTION_LOGS;
+        if (draft.length > MAX_PREDICTION_LOGS_CONFIG) {
+          const removedCount = draft.length - MAX_PREDICTION_LOGS_CONFIG;
           const removedItems = draft.splice(0, removedCount); // Remove oldest logs
 
           // Check if the selected log was among the removed items
@@ -457,7 +457,7 @@ export default function GeoneraPage() {
   }, [potentialActiveLogs, activeTableFilterStatus, activeTableFilterSignal]);
   
   // For expired logs, we first filter then sort then slice
-  const fullyFilteredExpiredLogs = useMemo(() => {
+  const fullyFilteredExpiredExpiredLogs = useMemo(() => {
     if (!showExpired) return [];
     return potentialExpiredLogs.filter(log => {
       if (expiredTableFilterStatus !== "ALL" && log.status !== expiredTableFilterStatus) return false;
@@ -494,9 +494,9 @@ export default function GeoneraPage() {
   const displayedSortedActiveLogs = useMemo(() => sortedActiveLogsData.slice(0, displayedActiveLogsCount), [sortedActiveLogsData, displayedActiveLogsCount]);
   
   const sortedAndLimitedExpiredLogs = useMemo(() => {
-    const sorted = sortLogs(fullyFilteredExpiredLogs, sortConfigExpired);
+    const sorted = sortLogs(fullyFilteredExpiredExpiredLogs, sortConfigExpired);
     return sorted.slice(0, displayedExpiredLogsCount);
-  }, [fullyFilteredExpiredLogs, sortConfigExpired, displayedExpiredLogsCount, sortLogs]);
+  }, [fullyFilteredExpiredExpiredLogs, sortConfigExpired, displayedExpiredLogsCount, sortLogs]);
 
 
   // Effect to auto-select a prediction if none is selected and logs are available
@@ -643,7 +643,7 @@ export default function GeoneraPage() {
                     predictions={displayedSortedActiveLogs}
                     onRowClick={handlePredictionSelect}
                     selectedPredictionId={finalSelectedPredictionForChildren?.id}
-                    maxLogs={MAX_PREDICTION_LOGS} // Global storage limit
+                    maxLogs={MAX_PREDICTION_LOGS_CONFIG} // Global storage limit
                     sortConfig={sortConfigActive}
                     onSort={(key) => handleSort(key, 'active')}
                     filterStatus={activeTableFilterStatus}
@@ -661,7 +661,7 @@ export default function GeoneraPage() {
                     predictions={sortedAndLimitedExpiredLogs}
                     onRowClick={handlePredictionSelect}
                     selectedPredictionId={finalSelectedPredictionForChildren?.id}
-                    maxLogs={MAX_PREDICTION_LOGS} // Global storage limit
+                    maxLogs={MAX_PREDICTION_LOGS_CONFIG} // Global storage limit
                     sortConfig={sortConfigExpired}
                     onSort={(key) => handleSort(key, 'expired')}
                     filterStatus={expiredTableFilterStatus}
@@ -670,7 +670,7 @@ export default function GeoneraPage() {
                     onFilterSignalChange={setExpiredTableFilterSignal}
                     displayLimit={displayedExpiredLogsCount}
                     onDisplayLimitChange={setDisplayedExpiredLogsCount}
-                    totalAvailableForDisplay={fullyFilteredExpiredLogs.length}
+                    totalAvailableForDisplay={fullyFilteredExpiredExpiredLogs.length}
                   />
                 </div>
               </CardContent>
@@ -678,7 +678,7 @@ export default function GeoneraPage() {
           </div>
           
           <div className="md:col-span-1 flex flex-col min-h-0"> 
-            <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} maxPredictionLogs={MAX_PREDICTION_LOGS} />
+            <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG} />
           </div>
         </main>
       )}

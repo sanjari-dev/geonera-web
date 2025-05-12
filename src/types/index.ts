@@ -98,5 +98,7 @@ export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[]
   { value: "N/A", label: "N/A" },
 ];
 
-export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
-export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = 50; // Added for active logs display limit
+export const MAX_PREDICTION_LOGS_CONFIG = 500;
+export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG;
+export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG;
+
