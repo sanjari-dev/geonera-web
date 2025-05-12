@@ -1,7 +1,7 @@
 // src/app/page.tsx
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { produce } from 'immer';
 import { AppHeader } from '@/components/geonera/header';
@@ -26,7 +26,7 @@ import type {
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, isValid } from 'date-fns';
 
 
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
@@ -54,9 +54,12 @@ export default function GeoneraPage() {
   // Filtering and Sorting State
   const [filterStatus, setFilterStatus] = useState<StatusFilterType>("ALL");
   const [filterSignal, setFilterSignal] = useState<SignalFilterType>("ALL");
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'asc' });
-  const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({ start: startOfDay(new Date()), end: endOfDay(new Date()) });
-  const [showExpired, setShowExpired] = useState(true); // Default to true
+  const [sortConfigActive, setSortConfigActive] = useState<SortConfig>({ key: 'timestamp', direction: 'asc' });
+  const [sortConfigExpired, setSortConfigExpired] = useState<SortConfig>({ key: 'timestamp', direction: 'desc' });
+  const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({ 
+    start: typeof window !== 'undefined' ? startOfDay(new Date()) : null, 
+    end: typeof window !== 'undefined' ? endOfDay(new Date()) : null 
+  });
 
 
   const router = useRouter();
@@ -77,19 +80,17 @@ export default function GeoneraPage() {
     if (typeof window !== 'undefined' && typeof uuidv4 === 'function') {
         setUuidAvailable(true);
     }
-
-    let userFromStorage: User | null = null;
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('geoneraUser');
-      if (storedUser) {
-        try {
-          userFromStorage = JSON.parse(storedUser);
-          setCurrentUser(userFromStorage);
-        } catch (e) {
-          console.error("Failed to parse user from localStorage", e);
-          localStorage.removeItem('geoneraUser');
+     if (typeof window !== 'undefined') {
+        setDateRangeFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) });
+        const storedUser = localStorage.getItem('geoneraUser');
+        if (storedUser) {
+            try {
+            setCurrentUser(JSON.parse(storedUser));
+            } catch (e) {
+            console.error("Failed to parse user from localStorage", e);
+            localStorage.removeItem('geoneraUser');
+            }
         }
-      }
     }
     setIsAuthCheckComplete(true);
   }, []);
@@ -122,7 +123,7 @@ export default function GeoneraPage() {
     setSelectedPredictionLog(null);
     setSelectedCurrencyPairs([]);
     setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default', timestamp: new Date() });
-    // router.push('/login'); // Commented out to prevent redirect if user is already on login page or if we want to stay on page
+    router.push('/login'); 
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -326,7 +327,6 @@ export default function GeoneraPage() {
           const log = draft[i];
           let removeLog = false;
 
-          // Remove if pair is no longer selected (this check is broad, might need refinement based on desired behavior for already "SUCCESS" logs)
           if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS" || log.status === "ERROR")) {
             removeLog = true;
           }
@@ -339,13 +339,77 @@ export default function GeoneraPage() {
             didChange = true;
           }
         }
-        if (!didChange) return undefined; // Important for Immer to not create a new state if no changes
+        if (!didChange) return undefined; 
       }));
-    }, 1000); // Check every second for cleanup
+    }, 1000); 
 
     return () => clearInterval(cleanupIntervalId);
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); // Removed currentSelectedPairs from deps as ref is used
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); 
 
+
+
+  const getSortableValue = useCallback((log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
+    switch (key) {
+      case 'status': return log.status;
+      case 'timestamp': return log.timestamp;
+      case 'currencyPair': return log.currencyPair;
+      case 'profitPipsMin': return log.pipsSettings.profitPips.min;
+      case 'lossPipsMin': return log.pipsSettings.lossPips.min;
+      case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
+      case 'expiresAt': return log.expiresAt;
+      default: return undefined;
+    }
+  }, []);
+
+  const filteredLogs = useMemo(() => {
+    return predictionLogs.filter(log => {
+      if (!latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) return false;
+      if (filterStatus !== "ALL" && log.status !== filterStatus) return false;
+      if (filterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== filterSignal)) return false;
+
+      const logTimestamp = new Date(log.timestamp);
+      if (dateRangeFilter.start && isValid(dateRangeFilter.start) && logTimestamp < dateRangeFilter.start) return false;
+      if (dateRangeFilter.end && isValid(dateRangeFilter.end) && logTimestamp > dateRangeFilter.end) return false;
+      
+      return true;
+    });
+  }, [predictionLogs, filterStatus, filterSignal, dateRangeFilter]);
+
+  const now = useMemo(() => new Date(), []); // Stable 'now' for consistent filtering within a render pass
+
+  const activeLogs = useMemo(() => {
+    return filteredLogs.filter(log => !log.expiresAt || new Date(log.expiresAt) > now);
+  }, [filteredLogs, now]);
+
+  const expiredLogs = useMemo(() => {
+    return filteredLogs.filter(log => log.expiresAt && new Date(log.expiresAt) <= now);
+  }, [filteredLogs, now]);
+
+  const sortLogs = useCallback((logs: PredictionLogItem[], config: SortConfig) => {
+    return [...logs].sort((a, b) => {
+      const valA = getSortableValue(a, config.key);
+      const valB = getSortableValue(b, config.key);
+
+      if (valA === undefined && valB === undefined) return 0;
+      if (valA === undefined) return config.direction === 'asc' ? 1 : -1;
+      if (valB === undefined) return config.direction === 'asc' ? -1 : 1;
+
+      let comparison = 0;
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        comparison = valA - valB;
+      } else if (valA instanceof Date && valB instanceof Date) {
+        comparison = valA.getTime() - valB.getTime();
+      } else if (typeof valA === 'string' && typeof valB === 'string') {
+        comparison = valA.localeCompare(valB);
+      } else {
+        comparison = String(valA).localeCompare(String(valB));
+      }
+      return config.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [getSortableValue]);
+
+  const sortedActiveLogs = useMemo(() => sortLogs(activeLogs, sortConfigActive), [activeLogs, sortConfigActive, sortLogs]);
+  const sortedExpiredLogs = useMemo(() => sortLogs(expiredLogs, sortConfigExpired), [expiredLogs, sortConfigExpired, sortLogs]);
 
 
   useEffect(() => {
@@ -353,107 +417,43 @@ export default function GeoneraPage() {
       if (selectedPredictionLog !== null) setSelectedPredictionLog(null);
       return;
     }
-
-    const currentSelectedPairs = latestSelectedCurrencyPairsRef.current;
+  
     let newSelectedLogCandidate: PredictionLogItem | null = null;
-    const now = new Date();
-
-    if (currentSelectedPairs.length > 0 && predictionLogs.length > 0) {
-      const eligibleLogs = predictionLogs
-        .filter(log => {
-          if(!currentSelectedPairs.includes(log.currencyPair)) return false;
-          if(filterStatus !== "ALL" && log.status !== filterStatus) return false;
-          if(filterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== filterSignal)) return false;
-
-          const logTimestamp = new Date(log.timestamp);
-          if (dateRangeFilter.start && logTimestamp < dateRangeFilter.start) return false;
-          if (dateRangeFilter.end && logTimestamp > dateRangeFilter.end) return false;
-
-          // Handle showExpired filter
-          if (!showExpired && log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now) {
-            return false; // Hide expired if showExpired is false
-          }
-
-          return true;
-        })
-        .sort((a, b) => { // Apply sorting here for consistent selection logic
-            const valA = getSortableValue(a, sortConfig.key);
-            const valB = getSortableValue(b, sortConfig.key);
-
-            if (valA === undefined && valB === undefined) return 0;
-            if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1; // Undefined values go to the end for asc
-            if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1; // Undefined values go to the end for asc
-
-            let comparison = 0;
-            if (typeof valA === 'number' && typeof valB === 'number') {
-              comparison = valA - valB;
-            } else if (valA instanceof Date && valB instanceof Date) {
-              comparison = valA.getTime() - valB.getTime();
-            } else if (typeof valA === 'string' && typeof valB === 'string') {
-              comparison = valA.localeCompare(valB);
-            } else {
-              // Fallback for other types, convert to string for comparison
-              comparison = String(valA).localeCompare(String(valB));
-            }
-            return sortConfig.direction === 'asc' ? comparison : -comparison;
-        });
-
-      if (eligibleLogs.length > 0) {
-        const currentSelectionStillEligible = selectedPredictionLog && eligibleLogs.find(log => log.id === selectedPredictionLog.id);
-
-        if (currentSelectionStillEligible) {
-          // Ensure the instance is fresh from the sorted/filtered list
-          newSelectedLogCandidate = produce(eligibleLogs.find(log => log.id === selectedPredictionLog!.id)!, draft => draft);
-        } else {
-          // Default to the first item in the sorted eligible list
-          newSelectedLogCandidate = produce(eligibleLogs[0], draft => draft);
-        }
+  
+    // Prefer selection from active logs, then expired logs
+    const combinedSortedLogsForSelection = [...sortedActiveLogs, ...sortedExpiredLogs];
+  
+    if (combinedSortedLogsForSelection.length > 0) {
+      const currentSelectionStillEligible = selectedPredictionLog && combinedSortedLogsForSelection.find(log => log.id === selectedPredictionLog.id);
+  
+      if (currentSelectionStillEligible) {
+        newSelectedLogCandidate = produce(combinedSortedLogsForSelection.find(log => log.id === selectedPredictionLog!.id)!, draft => draft);
+      } else {
+        newSelectedLogCandidate = produce(combinedSortedLogsForSelection[0], draft => draft);
       }
     }
-
-    // Only update if the candidate is different or if selection was null and now there's a candidate
-    // Or if selection existed and now it's null
-    // Or if the content of the selected log has changed (e.g. status update)
+  
     if (selectedPredictionLog?.id !== newSelectedLogCandidate?.id ||
         (selectedPredictionLog && newSelectedLogCandidate && JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedLogCandidate)) ||
         (!selectedPredictionLog && newSelectedLogCandidate) || (selectedPredictionLog && !newSelectedLogCandidate)
        ) {
       setSelectedPredictionLog(newSelectedLogCandidate);
     }
-  }, [currentUser, isAuthCheckComplete, predictionLogs, selectedPredictionLog, filterStatus, filterSignal, sortConfig, dateRangeFilter, showExpired]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, isAuthCheckComplete, sortedActiveLogs, sortedExpiredLogs, selectedPredictionLog]);
 
-  const handleSort = (key: SortableColumnKey) => {
+
+  const handleSort = (key: SortableColumnKey, tableType: 'active' | 'expired') => {
+    const currentConfig = tableType === 'active' ? sortConfigActive : sortConfigExpired;
+    const setSortConfig = tableType === 'active' ? setSortConfigActive : setSortConfigExpired;
+
     setSortConfig(prevConfig => {
       if (prevConfig && prevConfig.key === key) {
-        // Toggle direction if same key
         return { key, direction: prevConfig.direction === 'asc' ? 'desc' : 'asc' };
       }
-      // Default direction for new sort key
-      // Typically, timestamp and expiresAt might default to 'desc', others to 'asc'
       const defaultDirection = (key === 'timestamp' || key === 'expiresAt') ? 'desc' : 'asc';
       return { key, direction: defaultDirection };
     });
-  };
-
-  const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
-    switch (key) {
-      case 'status':
-        return log.status;
-      case 'timestamp':
-        return log.timestamp;
-      case 'currencyPair':
-        return log.currencyPair;
-      case 'profitPipsMin':
-        return log.pipsSettings.profitPips.min;
-      case 'lossPipsMin':
-        return log.pipsSettings.lossPips.min;
-      case 'tradingSignal':
-        return log.predictionOutcome?.tradingSignal;
-      case 'expiresAt':
-        return log.expiresAt; // Assuming expiresAt is a Date object or can be converted
-      default:
-        return undefined;
-    }
   };
 
 
@@ -468,8 +468,7 @@ export default function GeoneraPage() {
 
 
   if (!currentUser && isAuthCheckComplete) {
-    // This useEffect will handle the redirect if router is available
-    // No immediate render change here, rely on useEffect for redirection
+     // Rely on useEffect for redirection
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -477,28 +476,9 @@ export default function GeoneraPage() {
       </div>
     );
   }
-  if (!currentUser) { // Should be unreachable if redirect works, but acts as a fallback
-    // router.replace('/login'); // This can cause "Error: Cannot update a component (`Router`) while rendering a different component (`GeoneraPage`)"
-    return null; // Render nothing, useEffect will handle redirect.
+  if (!currentUser) { 
+    return null; 
   }
-
-  const nowForFilter = new Date();
-  const logsForTable = predictionLogs
-    .filter(log => {
-      if (!latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) return false;
-      if (filterStatus !== "ALL" && log.status !== filterStatus) return false;
-      if (filterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== filterSignal)) return false;
-
-      const logTimestamp = new Date(log.timestamp);
-      if (dateRangeFilter.start && logTimestamp < dateRangeFilter.start) return false;
-      if (dateRangeFilter.end && logTimestamp > dateRangeFilter.end) return false;
-
-      if (!showExpired && log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= nowForFilter) {
-        return false; // Hide expired if showExpired is false
-      }
-
-      return true;
-    });
 
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
 
@@ -507,7 +487,7 @@ export default function GeoneraPage() {
     <div className="h-screen grid grid-rows-[auto_auto_1fr_auto] bg-background text-foreground">
       <AppHeader user={currentUser} onLogout={handleLogout} />
 
-      <div className="w-full px-2 py-1 grid grid-cols-[3fr_5fr_4fr] gap-1">
+      <div className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-[_1fr_1.5fr_1.5fr] gap-1">
         <PairSelectorCard
           selectedCurrencyPairs={selectedCurrencyPairs}
           onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
@@ -526,26 +506,35 @@ export default function GeoneraPage() {
             onFilterStatusChange={setFilterStatus}
             filterSignal={filterSignal}
             onFilterSignalChange={setFilterSignal}
-            showExpired={showExpired}
-            onShowExpiredChange={setShowExpired}
+            dateRangeFilter={dateRangeFilter}
+            onDateRangeChange={handleDateRangeChange}
             className="col-span-1"
           />
           <NotificationDisplay notification={latestNotification} className="col-span-1" />
         </div>
       </div>
 
-      <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-1 overflow-hidden">
+      <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-3 gap-1 overflow-hidden">
         <div className="flex flex-col min-h-0 overflow-y-auto h-full">
           <PredictionsTable
-            predictions={logsForTable}
+            title="Active Predictions"
+            predictions={sortedActiveLogs}
             onRowClick={handlePredictionSelect}
             selectedPredictionId={finalSelectedPredictionForChildren?.id}
             maxLogs={MAX_PREDICTION_LOGS}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-            dateRangeFilter={dateRangeFilter}
-            onDateRangeChange={handleDateRangeChange}
-            showExpired={showExpired} // Pass showExpired to table for footer text logic
+            sortConfig={sortConfigActive}
+            onSort={(key) => handleSort(key, 'active')}
+          />
+        </div>
+        <div className="flex flex-col min-h-0 overflow-y-auto h-full">
+           <PredictionsTable
+            title="Expired Predictions"
+            predictions={sortedExpiredLogs}
+            onRowClick={handlePredictionSelect}
+            selectedPredictionId={finalSelectedPredictionForChildren?.id}
+            maxLogs={MAX_PREDICTION_LOGS}
+            sortConfig={sortConfigExpired}
+            onSort={(key) => handleSort(key, 'expired')}
           />
         </div>
         <div className="flex flex-col min-h-0">
