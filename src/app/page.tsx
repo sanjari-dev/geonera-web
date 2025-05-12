@@ -29,7 +29,7 @@ import { startOfDay, endOfDay, isValid, format as formatDateFns } from 'date-fns
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PairSelectorCard } from '@/components/geonera/pair-selector-card';
+// import { PairSelectorCard } from '@/components/geonera/pair-selector-card'; // Removed as it's in header
 
 
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
@@ -509,19 +509,14 @@ export default function GeoneraPage() {
       <AppHeader 
         user={currentUser} 
         onLogout={handleLogout}
-        selectedCurrencyPairs={selectedCurrencyPairs} // Pass this down
-        onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange} // Pass this down
-        isLoading={isLoading} // Pass this down
+        selectedCurrencyPairs={selectedCurrencyPairs} 
+        onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange} 
+        isLoading={isLoading} 
       />
 
       {currentUser && ( 
-        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-3 gap-1"> 
-          <PairSelectorCard
-            selectedCurrencyPairs={selectedCurrencyPairs}
-            onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
-            isLoading={isLoading}
-            className="col-span-1"
-          />
+        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-2 gap-1"> 
+          {/* PairSelectorCard is removed from here as it's in the header */}
           <PipsInputCard
             pipsSettings={pipsSettings}
             onPipsSettingsChange={handlePipsSettingsChange}
@@ -637,3 +632,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
