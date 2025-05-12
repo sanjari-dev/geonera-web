@@ -55,7 +55,7 @@ export function PredictionFilterControls({
         <Filter className="h-4 w-4" aria-hidden="true" />
         <span>Filter Predictions</span>
       </div>
-      <div className="grid grid-cols-1 gap-1.5 mt-auto">
+      <div className="grid grid-cols-3 gap-1 mt-auto">
         <div className="flex flex-col justify-end">
           <Label htmlFor="filter-status" className="text-xs font-medium mb-0.5 block">
             By Status

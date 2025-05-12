@@ -122,7 +122,7 @@ export default function GeoneraPage() {
     setSelectedPredictionLog(null); 
     setSelectedCurrencyPairs([]); 
     setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default', timestamp: new Date() });
-    router.push('/login');
+    // router.push('/login'); // Commented out to prevent redirect if user is already on login page or if we want to stay on page
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -458,15 +458,18 @@ export default function GeoneraPage() {
 
 
   if (!currentUser && isAuthCheckComplete) { 
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-lg text-muted-foreground">Redirecting to login...</p>
-        </div>
-      );
+    // This useEffect will handle the redirect if router is available
+    // No immediate render change here, rely on useEffect for redirection
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-lg text-muted-foreground">Redirecting to login...</p>
+      </div>
+    );
   }
   if (!currentUser) { 
-    return null; 
+    // Should ideally be handled by the redirect, but as a fallback
+    return null; // Or a minimal "Please login" message if redirect fails
   }
   
   const nowForFilter = new Date();
@@ -494,18 +497,18 @@ export default function GeoneraPage() {
     <div className="h-screen grid grid-rows-[auto_auto_1fr_auto] bg-background text-foreground">
       <AppHeader user={currentUser} onLogout={handleLogout} />
       
-      <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-1">
+      <div className="w-full px-2 py-1 grid grid-cols-[3fr_5fr_4fr] gap-1">
         <PairSelectorCard
           selectedCurrencyPairs={selectedCurrencyPairs}
           onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
           isLoading={isLoading}
-          className="sm:col-span-1"
+          className="col-span-1"
         />
         <PipsInputCard
           pipsSettings={pipsSettings}
           onPipsSettingsChange={handlePipsSettingsChange}
           isLoading={isLoading}
-          className="sm:col-span-1"
+          className="col-span-1"
         />
         <PredictionFilterControls
           filterStatus={filterStatus}
@@ -514,9 +517,8 @@ export default function GeoneraPage() {
           onFilterSignalChange={setFilterSignal}
           showExpired={showExpired}
           onShowExpiredChange={setShowExpired}
-          className="sm:col-span-2 md:col-span-1"
+          className="col-span-1"
         />
-        <NotificationDisplay notification={latestNotification} className="sm:col-span-2 md:col-span-1" />
       </div>
       
       <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-1 overflow-hidden">
@@ -533,8 +535,9 @@ export default function GeoneraPage() {
             showExpired={showExpired}
           />
         </div>
-        <div className="flex flex-col min-h-0"> 
+        <div className="flex flex-col min-h-0 grid grid-rows-[4fr_1fr] gap-1"> 
           <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} maxPredictionLogs={MAX_PREDICTION_LOGS} />
+          <NotificationDisplay notification={latestNotification} className="col-span-1" />
         </div>
       </main>
       <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">

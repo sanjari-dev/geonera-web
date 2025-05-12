@@ -4,10 +4,9 @@
 import type { PredictionLogItem, PipsPredictionOutcome } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingFlat, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
 import { format as formatDateFns } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { VariantProps } from 'class-variance-authority';
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;

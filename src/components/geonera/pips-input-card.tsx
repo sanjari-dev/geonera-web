@@ -48,7 +48,7 @@ export function PipsInputCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="p-2 pt-0 flex-grow flex flex-col justify-center">
-        <div className="grid grid-cols-2 gap-1.5 mt-auto">
+        <div className="grid grid-cols-4 gap-1 mt-auto">
             <div>
               <Label htmlFor="min-profit-pips" className="text-xs font-medium mb-0.5 block">Min Profit</Label>
               <Input
