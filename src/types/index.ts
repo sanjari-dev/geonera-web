@@ -23,9 +23,9 @@ export type PredictionStatus = "IDLE" | "PENDING" | "SUCCESS" | "ERROR";
 
 // This will be the output structure from the AI flow or mock generator
 export interface PipsPredictionOutcome {
-  tradingSignal: "BUY" | "SELL" | "HOLD" | "WAIT" | "N/A"; // For "Buy/Sell/etc" column
-  signalDetails: string; // Descriptive outcome, e.g., "Price expected to increase by ~15 pips."
-  reasoning: string; // AI's reasoning or mock data reasoning
+  tradingSignal: "BUY" | "SELL" | "HOLD" | "WAIT" | "N/A"; 
+  signalDetails: string; 
+  reasoning: string; 
   openPrice?: number;
   closePrice?: number;
   highPrice?: number;
@@ -37,7 +37,7 @@ export interface PipsPredictionOutcome {
 export interface PredictionLogItem {
   id: string;
   timestamp: Date;
-  currencyPair: CurrencyPair; // A single currency pair for this specific log item
+  currencyPair: CurrencyPair; 
   pipsSettings: PipsSettings; 
   status: PredictionStatus;
   predictionOutcome?: PipsPredictionOutcome;
@@ -70,6 +70,7 @@ export interface SortConfig {
 }
 
 export interface NotificationMessage {
+  id: string; // Added for unique key prop in lists
   title: string;
   description: string;
   variant?: 'destructive' | 'default' | 'success';
@@ -99,5 +100,6 @@ export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[]
 ];
 
 export const MAX_PREDICTION_LOGS_CONFIG = 500;
-export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; // Default to max for active logs
+export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG;
 export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
+

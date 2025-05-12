@@ -34,6 +34,7 @@ import { Label } from '@/components/ui/label';
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 75;
+const MAX_NOTIFICATIONS = 100;
 
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
@@ -56,7 +57,7 @@ export default function GeoneraPage() {
 
   const [uuidAvailable, setUuidAvailable] = useState(false);
   const [selectedPredictionLog, setSelectedPredictionLog] = useState<PredictionLogItem | null>(null);
-  const [latestNotification, setLatestNotification] = useState<NotificationMessage | null>(null);
+  const [notificationsList, setNotificationsList] = useState<NotificationMessage[]>([]);
   
   const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({ 
     start: typeof window !== 'undefined' ? startOfDay(new Date()) : null, 
@@ -134,6 +135,17 @@ export default function GeoneraPage() {
     return Date.now().toString() + (typeof window !== 'undefined' ? Math.random().toString(36).substring(2,7) : "serverid" + Math.floor(Math.random() * 10000));
   }, [uuidAvailable]);
 
+  const addNotification = useCallback((notification: Omit<NotificationMessage, 'timestamp'>) => {
+    setNotificationsList(prevNotifications => {
+      const newNotificationWithMessageId = { ...notification, timestamp: new Date(), id: generateId() };
+      const updatedNotifications = [newNotificationWithMessageId, ...prevNotifications];
+      if (updatedNotifications.length > MAX_NOTIFICATIONS) {
+        return updatedNotifications.slice(0, MAX_NOTIFICATIONS);
+      }
+      return updatedNotifications;
+    });
+  }, [generateId]);
+
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
@@ -143,7 +155,7 @@ export default function GeoneraPage() {
     setPredictionLogs([]); 
     setSelectedPredictionLog(null); 
     setSelectedCurrencyPairs([]); 
-    setLatestNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default', timestamp: new Date() });
+    addNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default' });
   };
 
   const handleSelectedCurrencyPairsChange = useCallback((value: CurrencyPair[]) => {
@@ -197,11 +209,10 @@ export default function GeoneraPage() {
 
       if (isPipsSettingsInvalid) {
         if (currentSelectedPairs.length > 0) {
-            setLatestNotification({
+            addNotification({
                 title: "Prediction Paused",
                 description: "Ensure Min/Max PIPS for profit & loss are valid (Min > 0, Max > 0, Min <= Max). Predictions update automatically if parameters are valid.",
                 variant: "default", 
-                timestamp: new Date(),
              });
         }
         if (timeoutId) clearTimeout(timeoutId);
@@ -309,11 +320,10 @@ export default function GeoneraPage() {
           toastDescription = `${errorCount} prediction(s) failed for ${relevantPairs}.`;
         }
         if (toastDescription && latestSelectedCurrencyPairsRef.current.length > 0) {
-          setLatestNotification({
+          addNotification({
             title: toastTitle,
             description: toastDescription,
             variant: errorCount > 0 && successCount === 0 ? "destructive" : (successCount > 0 ? "success" : "default"),
-            timestamp: new Date(),
           });
         }
       }
@@ -330,7 +340,7 @@ export default function GeoneraPage() {
       if (timeoutId) clearTimeout(timeoutId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, generateId, isLoading, selectedPredictionLog]); 
+  }, [currentUser, isAuthCheckComplete, generateId, isLoading, selectedPredictionLog, addNotification]); 
 
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) return;
@@ -501,6 +511,7 @@ export default function GeoneraPage() {
     return null; 
   }
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
+  const latestNotificationForDisplay = notificationsList.length > 0 ? notificationsList[0] : null;
 
 
   return (
@@ -521,7 +532,7 @@ export default function GeoneraPage() {
             isLoading={isLoading}
             className="col-span-1" 
           />
-          <NotificationDisplay notification={latestNotification} className="col-span-1" />
+          <NotificationDisplay notification={latestNotificationForDisplay} className="col-span-1" />
         </div>
       )}
       {!currentUser && isAuthCheckComplete && (
@@ -619,7 +630,11 @@ export default function GeoneraPage() {
           </div>
           
           <div className="md:col-span-1 flex flex-col min-h-0"> 
-            <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG} />
+            <PredictionDetailsPanel 
+              selectedPrediction={finalSelectedPredictionForChildren} 
+              maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG}
+              notifications={notificationsList}
+            />
           </div>
         </main>
       )}
@@ -630,5 +645,6 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
 
 
