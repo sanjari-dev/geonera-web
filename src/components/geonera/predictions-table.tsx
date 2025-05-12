@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, PackageOpen, PackageCheck } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, PackageOpen, PackageCheck, Coins } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
 import { format as formatDateFns } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
@@ -121,7 +121,7 @@ export function PredictionsTable({
     if (data.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={6} className="h-24 text-center text-muted-foreground text-xs">
+          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-xs">
             {title === "Active Predictions" ? "No active predictions found." : "No expired predictions found."}
           </TableCell>
         </TableRow>
@@ -146,15 +146,15 @@ export function PredictionsTable({
           {formatDateFns(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss XXX")}
         </TableCell>
         <TableCell className="px-1 py-0.5 font-medium text-center whitespace-nowrap text-[11px]">{log.currencyPair}</TableCell>
-        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[11px]">
-          <div className="flex flex-col items-center">
-            <span className="text-green-500 flex items-center text-[10px]">
-              <TrendingUpIcon className="h-2.5 w-2.5 mr-0.5" aria-hidden="true" />P: {log.pipsSettings.profitPips.min}-{log.pipsSettings.profitPips.max}
+        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
+            <span className="text-green-500 flex items-center justify-center">
+              <TrendingUpIcon className="h-2.5 w-2.5 mr-0.5" aria-hidden="true" /> {log.pipsSettings.profitPips.min}-{log.pipsSettings.profitPips.max}
             </span>
-            <span className="text-red-500 flex items-center text-[10px]">
-              <TrendingDownIcon className="h-2.5 w-2.5 mr-0.5" aria-hidden="true" />L: {log.pipsSettings.lossPips.min}-{log.pipsSettings.lossPips.max}
+        </TableCell>
+        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
+            <span className="text-red-500 flex items-center justify-center">
+              <TrendingDownIcon className="h-2.5 w-2.5 mr-0.5" aria-hidden="true" /> {log.pipsSettings.lossPips.min}-{log.pipsSettings.lossPips.max}
             </span>
-          </div>
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[11px] text-center whitespace-nowrap">
           {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
@@ -185,12 +185,9 @@ export function PredictionsTable({
     <TableRow className="h-auto">
       {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Status", undefined, "w-10")}
       {renderSortableHeader(<CalendarDays className="h-3.5 w-3.5 mx-auto" aria-label="Time" />, "timestamp", "Timestamp")}
-      {renderSortableHeader("Pair", "currencyPair", "Currency Pair")}
-      {renderSortableHeader(
-        "PIPS (P/L)", 
-        "profitPipsMin", 
-        "Profit / Loss PIPS Range"
-      )}
+      {renderSortableHeader(<Coins className="h-3.5 w-3.5 mx-auto" aria-label="Pair" />, "currencyPair", "Currency Pair")}
+      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Profit PIPS" />, "profitPipsMin", "Profit PIPS Range")}
+      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Loss PIPS" />, "lossPipsMin", "Loss PIPS Range")}
       {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
       {renderSortableHeader(<Zap className="h-3.5 w-3.5 mx-auto" aria-label="Expires" />, "expiresAt", "Expires In")}
     </TableRow>
@@ -231,3 +228,4 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+

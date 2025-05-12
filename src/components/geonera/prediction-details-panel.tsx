@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
-  maxPredictionLogs: number; // Added prop
+  maxPredictionLogs: number; 
 }
 
 const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
@@ -100,23 +100,23 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
                   Use the <strong>Prediction Parameters</strong> section above to select currency pair(s) and define your desired Profit and Loss PIPS target ranges.
                 </li>
                 <li>
-                  Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Log</strong> to your left, updating every 30 seconds.
+                  Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Logs</strong> to your left, updating every 30 seconds.
                 </li>
                 <li>
                   Each prediction has a unique expiration time and will be categorized accordingly. Max log size is {maxPredictionLogs}.
                 </li>
                 <li>
-                  Click on any row in the Prediction Log to view its detailed analysis in this panel.
+                  Click on any row in the Prediction Logs to view its detailed analysis in this panel.
                 </li>
                 <li>
-                  Utilize the <strong>Filter Predictions</strong> controls to narrow down the log based on status, trading signal, or date range. You can also sort columns by clicking their headers.
+                  Utilize the <strong>Filter Predictions</strong> controls to narrow down the logs based on status, trading signal, or date range. You can also sort columns by clicking their headers.
                 </li>
               </ul>
               <p className="text-[0.7rem] italic pt-1 text-muted-foreground">
                 Please note: All data and predictions provided by Geonera are for informational and demonstration purposes only. They should not be considered as financial advice.
               </p>
               <p className="text-xs text-center pt-1 text-accent">
-                When predictions are available in the log, select one to see its details here.
+                When predictions are available in the logs, select one to see its details here.
               </p>
             </div>
           </ScrollArea>
