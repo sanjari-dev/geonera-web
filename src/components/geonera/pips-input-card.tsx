@@ -41,13 +41,13 @@ export function PipsInputCard({
   
   return (
     <Card className={cn("shadow-lg h-full flex flex-col", className)}>
-      <CardHeader className="p-2">
+      <CardHeader className="px-2 pt-2 pb-1"> {/* Reduced bottom padding */}
         <CardTitle className="text-sm font-semibold text-primary flex items-center">
           <Target className="h-4 w-4 mr-1.5" aria-hidden="true" />
           <span>Set PIPS Targets</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-2 pt-0 flex-grow flex flex-col justify-center">
+      <CardContent className="p-2 pt-0 flex-grow flex flex-col justify-center"> {/* pt-0 was already there, ensuring content is close to header */}
         <div className="grid grid-cols-4 gap-1 mt-auto">
             <div>
               <Label htmlFor="min-profit-pips" className="text-xs font-medium mb-0.5 block">Min Profit</Label>

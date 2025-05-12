@@ -16,13 +16,13 @@ interface NotificationDisplayProps {
 export function NotificationDisplay({ notification, className }: NotificationDisplayProps) {
   return (
     <Card className={cn("shadow-lg h-full flex flex-col", className)} aria-labelledby="notification-title">
-      <CardHeader className="p-2">
+      <CardHeader className="px-2 pt-2 pb-1"> {/* Reduced bottom padding */}
         <CardTitle id="notification-title" className="text-sm font-semibold text-primary flex items-center">
           <Bell className="h-4 w-4 mr-1.5" aria-hidden="true" />
           <span>Latest Notification</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-2 flex-grow overflow-hidden text-xs">
+      <CardContent className="p-2 pt-1 flex-grow overflow-hidden text-xs"> {/* Reduced top padding */}
         <ScrollArea className="h-full pr-1.5">
           {notification ? (
             <div className="space-y-0.5" role="alert" aria-live="polite">
