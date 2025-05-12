@@ -97,3 +97,5 @@ export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[]
   { value: "WAIT", label: "Wait" },
   { value: "N/A", label: "N/A" },
 ];
+
+export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;

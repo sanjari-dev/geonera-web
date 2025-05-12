@@ -36,6 +36,7 @@ const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 75;
 const MAX_PREDICTION_LOGS = 500;
+const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
   if (!date || !isValid(date)) return '';
@@ -77,7 +78,7 @@ export default function GeoneraPage() {
   const [sortConfigExpired, setSortConfigExpired] = useState<SortConfig>({ key: 'timestamp', direction: 'desc' });
   
   const [currentTimeForFiltering, setCurrentTimeForFiltering] = useState(new Date());
-  const [displayedExpiredLogsCount, setDisplayedExpiredLogsCount] = useState<number>(MAX_PREDICTION_LOGS);
+  const [displayedExpiredLogsCount, setDisplayedExpiredLogsCount] = useState<number>(DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT);
 
 
   const router = useRouter();
