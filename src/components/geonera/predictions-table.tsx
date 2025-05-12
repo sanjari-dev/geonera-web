@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 // import { Badge } from "@/components/ui/badge"; 
 import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, StatusFilterType, SignalFilterType } from '@/types';
-import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT } from '@/types'; // Import filter options
+import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG } from '@/types'; // Import filter options
 import { format as formatDateFns } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ interface PredictionsTableProps {
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
-  maxLogs: number; 
+  maxLogsConfig: number; 
   sortConfig: SortConfig | null;
   onSort: (key: SortableColumnKey) => void;
   filterStatus: StatusFilterType;
@@ -138,7 +138,7 @@ export function PredictionsTable({
   predictions,
   onRowClick,
   selectedPredictionId,
-  maxLogs, 
+  maxLogsConfig, 
   sortConfig,
   onSort,
   filterStatus,
@@ -173,6 +173,8 @@ export function PredictionsTable({
     
     let newLimit = parseInt(String(tempDisplayLimit), 10);
     const defaultLimit = title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT;
+    
+    // Ensure newLimit is a positive number and not exceeding MAX_PREDICTION_LOGS_CONFIG
     if (Number.isNaN(newLimit) || newLimit <= 0) {
       newLimit = defaultLimit; 
     } else if (newLimit > MAX_PREDICTION_LOGS_CONFIG) { 
@@ -359,9 +361,9 @@ export function PredictionsTable({
                   value={String(tempDisplayLimit)}
                   onChange={(e) => setTempDisplayLimit(parseInt(e.target.value, 10))}
                   min="1"
-                  max={maxLogs} 
+                  max={maxLogsConfig} 
                   className="w-full text-xs py-1 h-8"
-                  placeholder={`e.g., ${title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT} (max ${maxLogs})`}
+                  placeholder={`e.g., ${title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT} (max ${maxLogsConfig})`}
                   aria-label={`Maximum logs to display for ${title}`}
                 />
               </div>
@@ -398,4 +400,3 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-

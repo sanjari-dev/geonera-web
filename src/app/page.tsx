@@ -29,6 +29,7 @@ import { startOfDay, endOfDay, isValid, format as formatDateFns } from 'date-fns
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PairSelectorCard } from '@/components/geonera/pair-selector-card';
 
 
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
@@ -37,7 +38,21 @@ const MAX_NOTIFICATIONS = 100;
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
   if (!date || !isValid(date)) return '';
-  return formatDateFns(date, "yyyy-MM-dd'T'HH:mm:ss");
+  // Ensure date is treated as local timezone before formatting for datetime-local input
+  // This avoids issues where formatting might use UTC and shift the date/time.
+  // For datetime-local, it expects YYYY-MM-DDTHH:mm:ss without timezone offset.
+  // The browser then interprets this in the user's local timezone.
+  // If `date` is already conceptually local, direct formatting is fine.
+  // If `date` might be UTC, conversion to local representation first might be needed
+  // depending on how `date` objects are created and managed.
+  // Assuming `date` is intended as a local time object.
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
 
 export default function GeoneraPage() {
@@ -58,13 +73,11 @@ export default function GeoneraPage() {
   const [notificationsList, setNotificationsList] = useState<NotificationMessage[]>([]);
   
   const initialDateRange = useMemo(() => {
-    // This logic runs only once for initial state or when dependencies change (none here)
-    // It ensures that new Date() is only called on the client side for initial state.
     if (typeof window !== 'undefined') {
       const today = new Date();
       return { start: startOfDay(today), end: endOfDay(today) };
     }
-    return { start: null, end: null }; // Fallback for server or if window is not defined yet
+    return { start: null, end: null }; 
   }, []);
 
   const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>(initialDateRange);
@@ -98,12 +111,11 @@ export default function GeoneraPage() {
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear().toString());
-    setCurrentTimeForFiltering(new Date()); // Set initial current time for filtering
+    setCurrentTimeForFiltering(new Date()); 
     if (typeof window !== 'undefined' && typeof uuidv4 === 'function') {
         setUuidAvailable(true);
     }
      if (typeof window !== 'undefined') {
-        // Date range filter is now initialized with useMemo to avoid hydration issues
         const storedUser = localStorage.getItem('geoneraUser');
         if (storedUser) {
             try {
@@ -187,9 +199,9 @@ export default function GeoneraPage() {
   const handleActiveDetailsViewChange = useCallback((view: ActiveDetailsView) => {
     setActiveDetailsView(view);
     if (view === 'about' || view === 'notifications') {
-      setSelectedPredictionLog(null); // Deselect prediction if navigating away from details view
+      setSelectedPredictionLog(null); 
     }
-  }, []);
+  }, [setActiveDetailsView, setSelectedPredictionLog]);
 
 
   const handleDateRangeChange = useCallback((newRange: DateRangeFilter) => {
@@ -242,7 +254,7 @@ export default function GeoneraPage() {
 
       const newPendingLogs: PredictionLogItem[] = [];
       currentSelectedPairs.forEach(currencyPair => {
-        const numPredictionsForPair = Math.floor(Math.random() * 10) + 1; 
+        const numPredictionsForPair = Math.floor(Math.random() * 3) + 1; // Reduced max to 3 from 10 for less clutter
         for (let i = 0; i < numPredictionsForPair; i++) {
           const newLogId = generateId();
           newPendingLogs.push({
@@ -266,8 +278,6 @@ export default function GeoneraPage() {
         newPendingLogs.forEach(log => {
           draft.push(log); 
         });
-        // MAX_PREDICTION_LOGS_CONFIG is handled by filtering/slicing displayed logs, not by splicing here directly
-        // This ensures underlying data isn't prematurely removed before filtering logic
       }));
 
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
@@ -312,7 +322,6 @@ export default function GeoneraPage() {
             Object.assign(logToUpdate, { status: "SUCCESS", predictionOutcome: result.data, expiresAt: new Date(Date.now() + randomExpirationMs) });
           }
         });
-        // Max log capping is now handled by the display logic for active/expired tables
       }));
 
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
@@ -364,14 +373,10 @@ export default function GeoneraPage() {
           const log = draft[i];
           let removeLog = false;
 
-          // Remove if currency pair is no longer selected (applies to PENDING, SUCCESS, ERROR)
           if (!currentSelectedPairs.includes(log.currencyPair) && ["PENDING", "SUCCESS", "ERROR"].includes(log.status)) {
             removeLog = true;
           }
           
-          // Additional explicit check for total logs if needed, though display limits manage visible logs.
-          // This focuses on removing logs for deselected pairs.
-
           if (removeLog) {
             if (selectedPredictionLog && selectedPredictionLog.id === log.id) {
               setSelectedPredictionLog(null);
@@ -381,9 +386,9 @@ export default function GeoneraPage() {
             didChange = true;
           }
         }
-        if (!didChange) return undefined; // Immer optimization
+        if (!didChange) return undefined; 
       }));
-    }, 1000); // Runs every second for responsiveness to deselection
+    }, 1000); 
 
     return () => clearInterval(cleanupIntervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -404,7 +409,7 @@ export default function GeoneraPage() {
   }, []);
 
   const baseFilteredLogs = useMemo(() => {
-    if (!currentTimeForFiltering) return []; // Ensure currentTimeForFiltering is initialized
+    if (!currentTimeForFiltering) return []; 
     return predictionLogs.filter(log => {
       if (!latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) return false;
       const logTimestamp = new Date(log.timestamp); 
@@ -433,7 +438,7 @@ export default function GeoneraPage() {
     });
   }, [potentialActiveLogs, activeTableFilterStatus, activeTableFilterSignal]);
   
-  const fullyFilteredExpiredExpiredLogs = useMemo(() => { // Renamed for clarity
+  const fullyFilteredExpiredLogs = useMemo(() => { 
     return potentialExpiredLogs.filter(log => {
       if (expiredTableFilterStatus !== "ALL" && log.status !== expiredTableFilterStatus) return false;
       if (expiredTableFilterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== expiredTableFilterSignal)) return false;
@@ -459,7 +464,6 @@ export default function GeoneraPage() {
       } else if (typeof valA === 'string' && typeof valB === 'string') {
         comparison = valA.localeCompare(valB);
       } else {
-        // Fallback for mixed types or other unhandled cases
         comparison = String(valA).localeCompare(String(valB));
       }
       return config.direction === 'asc' ? comparison : -comparison;
@@ -470,63 +474,51 @@ export default function GeoneraPage() {
   const displayedSortedActiveLogs = useMemo(() => sortedActiveLogsData.slice(0, displayedActiveLogsCount), [sortedActiveLogsData, displayedActiveLogsCount]);
   
   const sortedAndLimitedExpiredLogs = useMemo(() => {
-    const sorted = sortLogs(fullyFilteredExpiredExpiredLogs, sortConfigExpired);
+    const sorted = sortLogs(fullyFilteredExpiredLogs, sortConfigExpired);
     return sorted.slice(0, displayedExpiredLogsCount);
-  }, [fullyFilteredExpiredExpiredLogs, sortConfigExpired, displayedExpiredLogsCount, sortLogs]);
+  }, [fullyFilteredExpiredLogs, sortConfigExpired, displayedExpiredLogsCount, sortLogs]);
 
 
   useEffect(() => {
-    if (!currentUser || !isAuthCheckComplete) {
-      return;
-    }
+    if (!currentUser || !isAuthCheckComplete) return;
 
-    let newSelectedLogCandidate: PredictionLogItem | null = null;
-    let switchToDetails = false;
+    let newSelectedLog: PredictionLogItem | null = selectedPredictionLog;
+    let newActiveView: ActiveDetailsView = activeDetailsView;
 
-    // Determine the current valid selection (if any) from the latest log states
-    const currentValidSelection = selectedPredictionLog
-      ? [...displayedSortedActiveLogs, ...sortedAndLimitedExpiredLogs].find(log => log.id === selectedPredictionLog.id)
-      : null;
+    const currentSelectionIsValid = selectedPredictionLog && 
+      [...displayedSortedActiveLogs, ...sortedAndLimitedExpiredLogs].some(log => log.id === selectedPredictionLog.id);
 
     if (activeDetailsView === 'details') {
-      // If in details view, try to maintain selection or pick new one
-      if (currentValidSelection) {
-        newSelectedLogCandidate = currentValidSelection;
-      } else if (displayedSortedActiveLogs.length > 0) {
-        newSelectedLogCandidate = displayedSortedActiveLogs[0]; // Fallback to first active
-      } else if (sortedAndLimitedExpiredLogs.length > 0) {
-        newSelectedLogCandidate = sortedAndLimitedExpiredLogs[0]; // Fallback to first expired
-      } else {
-        // No logs available, but was in details view
-        setActiveDetailsView('about'); // Switch view, selection will be nulled by subsequent logic
+      if (!currentSelectionIsValid) { 
+        if (displayedSortedActiveLogs.length > 0) {
+          newSelectedLog = displayedSortedActiveLogs[0];
+        } else if (sortedAndLimitedExpiredLogs.length > 0) {
+          newSelectedLog = sortedAndLimitedExpiredLogs[0];
+        } else {
+          newSelectedLog = null;
+          newActiveView = 'about';
+        }
       }
-    } else { // activeDetailsView is 'about' or 'notifications'
-      // Auto-select first active log if available and no current selection
-      if (!selectedPredictionLog && displayedSortedActiveLogs.length > 0) {
-        newSelectedLogCandidate = displayedSortedActiveLogs[0];
-        switchToDetails = true; // Indicate view should change to 'details'
+    } else if (activeDetailsView === 'about') {
+      if (selectedPredictionLog === null && displayedSortedActiveLogs.length > 0) {
+        newSelectedLog = displayedSortedActiveLogs[0];
+        newActiveView = 'details';
       }
-      // If view is not 'details', any existing selection should effectively be cleared
-      // This is handled if newSelectedLogCandidate remains null or is explicitly set to null below.
+      // If view is 'about' and selectedPredictionLog is not null, it means handleActiveDetailsViewChange
+      // (which sets it to null) hasn't run yet or this effect is reacting to something else.
+      // The nullification is primarily responsibility of handleActiveDetailsViewChange for user actions.
     }
-    
-    // If activeDetailsView is not 'details' AND we are not about to switch to 'details'
-    // ensure that no log is selected.
-    if (activeDetailsView !== 'details' && !switchToDetails) {
-      newSelectedLogCandidate = null;
-    }
+    // For 'notifications', selectedPredictionLog should be null (set by handleActiveDetailsViewChange).
 
-    // Update selectedPredictionLog state only if there's a meaningful change
     const currentLogStringSnapshot = selectedPredictionLog ? JSON.stringify(selectedPredictionLog) : 'null';
-    const candidateLogStringSnapshot = newSelectedLogCandidate ? JSON.stringify(newSelectedLogCandidate) : 'null';
+    const candidateLogStringSnapshot = newSelectedLog ? JSON.stringify(newSelectedLog) : 'null';
 
     if (currentLogStringSnapshot !== candidateLogStringSnapshot) {
-      setSelectedPredictionLog(newSelectedLogCandidate ? produce(newSelectedLogCandidate, draft => draft) : null);
+      setSelectedPredictionLog(newSelectedLog ? produce(newSelectedLog, draft => draft) : null);
     }
 
-    // If we decided to switch to details view (due to auto-selection)
-    if (switchToDetails && newSelectedLogCandidate) { // ensure candidate is not null
-      setActiveDetailsView('details');
+    if (activeDetailsView !== newActiveView) {
+      setActiveDetailsView(newActiveView);
     }
 
   }, [
@@ -547,14 +539,13 @@ export default function GeoneraPage() {
       if (prevConfig && prevConfig.key === key) {
         return { key, direction: prevConfig.direction === 'asc' ? 'desc' : 'asc' };
       }
-      // Default sort direction based on column key
       const defaultDirection = (key === 'timestamp' || key === 'expiresAt') ? 'desc' : 'asc';
       return { key, direction: defaultDirection };
     });
   };
 
 
-  if (!isAuthCheckComplete || !currentTimeForFiltering) { // Added check for currentTimeForFiltering
+  if (!isAuthCheckComplete || !currentTimeForFiltering) { 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -564,7 +555,7 @@ export default function GeoneraPage() {
   }
 
   if (!currentUser && isAuthCheckComplete) {
-    // Redirect handled by useEffect
+    // This case is handled by the useEffect redirecting to /login
     return null; 
   }
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
@@ -582,7 +573,14 @@ export default function GeoneraPage() {
       />
 
       {currentUser && ( 
-        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-2 gap-1"> 
+        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] md:grid-cols-[auto_1fr_auto] gap-1 items-stretch"> 
+           <PairSelectorCard
+            variant="card"
+            selectedCurrencyPairs={selectedCurrencyPairs}
+            onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
+            isLoading={isLoading}
+            className="col-span-1"
+          />
           <PipsInputCard
             pipsSettings={pipsSettings}
             onPipsSettingsChange={handlePipsSettingsChange}
@@ -662,8 +660,8 @@ export default function GeoneraPage() {
                     onFilterSignalChange={setActiveTableFilterSignal}
                     displayLimit={displayedActiveLogsCount}
                     onDisplayLimitChange={setDisplayedActiveLogsCount}
-                    totalAvailableForDisplay={activeLogs.length} // Pass the total number of active logs that match filters
-                    maxLogs={MAX_PREDICTION_LOGS_CONFIG} // System-wide max config
+                    totalAvailableForDisplay={activeLogs.length} 
+                    maxLogsConfig={MAX_PREDICTION_LOGS_CONFIG} 
                   />
                 </div>
                 <div className="flex flex-col min-h-0 overflow-y-auto h-full">
@@ -680,8 +678,8 @@ export default function GeoneraPage() {
                     onFilterSignalChange={setExpiredTableFilterSignal}
                     displayLimit={displayedExpiredLogsCount}
                     onDisplayLimitChange={setDisplayedExpiredLogsCount}
-                    totalAvailableForDisplay={fullyFilteredExpiredExpiredLogs.length} // Pass total expired logs matching filters
-                    maxLogs={MAX_PREDICTION_LOGS_CONFIG} // System-wide max config
+                    totalAvailableForDisplay={fullyFilteredExpiredLogs.length} 
+                    maxLogsConfig={MAX_PREDICTION_LOGS_CONFIG} 
                   />
                 </div>
               </CardContent>
