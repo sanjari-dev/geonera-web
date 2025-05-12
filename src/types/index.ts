@@ -8,11 +8,16 @@ export interface CurrencyOption {
   icon?: LucideIcon;
 }
 
-export type PipsTargetValue = number;
-export type PipsTargetRange = {
-  min: PipsTargetValue;
-  max: PipsTargetValue;
-};
+export type PipsValue = number;
+export interface PipsRange {
+  min: PipsValue;
+  max: PipsValue;
+}
+
+export interface PipsSettings {
+  profitPips: PipsRange;
+  lossPips: PipsRange;
+}
 
 export type PredictionStatus = "IDLE" | "PENDING" | "SUCCESS" | "ERROR";
 
@@ -33,7 +38,7 @@ export interface PredictionLogItem {
   id: string;
   timestamp: Date;
   currencyPair: CurrencyPair; // A single currency pair for this specific log item
-  pipsTarget: PipsTargetRange;
+  pipsSettings: PipsSettings; // Changed from pipsTarget to pipsSettings
   status: PredictionStatus;
   predictionOutcome?: PipsPredictionOutcome;
   error?: string;
@@ -43,7 +48,7 @@ export interface PredictionLogItem {
 // This will be the input for the AI flow (or mock generator)
 export interface AnalyzePipsInfluenceInput {
   currencyPair: CurrencyPair; // AI or mock generator processes one pair at a time
-  pipsTarget: PipsTargetRange;
+  pipsSettings: PipsSettings; // Changed from pipsTarget to pipsSettings
 }
 
 export interface User {
@@ -57,7 +62,7 @@ export type AllFilterType = "ALL";
 export type StatusFilterType = PredictionStatus | AllFilterType;
 export type SignalFilterType = PipsPredictionOutcome["tradingSignal"] | AllFilterType;
 
-export type SortableColumnKey = 'status' | 'timestamp' | 'currencyPair' | 'pipsTargetMin' | 'tradingSignal' | 'expiresAt';
+export type SortableColumnKey = 'status' | 'timestamp' | 'currencyPair' | 'profitPipsMin' | 'lossPipsMin' | 'tradingSignal' | 'expiresAt';
 
 export interface SortConfig {
   key: SortableColumnKey;
@@ -69,4 +74,9 @@ export interface NotificationMessage {
   description: string;
   variant?: 'destructive' | 'default' | 'success';
   timestamp?: Date;
+}
+
+export interface DateRangeFilter {
+  start: Date | null;
+  end: Date | null;
 }

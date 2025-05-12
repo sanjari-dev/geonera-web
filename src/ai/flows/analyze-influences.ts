@@ -15,14 +15,19 @@ import {z} from 'genkit';
 import type { AnalyzePipsInfluenceInput, PipsPredictionOutcome } from '@/types';
 
 
+const PipsRangeSchema = z.object({
+  min: z.number().describe('The minimum target number of pips for the prediction (e.g., 5, 10).'),
+  max: z.number().describe('The maximum target number of pips for the prediction (e.g., 10, 20).')
+});
+
 const AnalyzePipsInfluenceInputSchema = z.object({
   currencyPair: z
     .string()
     .describe('The currency pair to analyze (e.g., XAU/USD, BTC/USD).'),
-  pipsTarget: z.object({
-      min: z.number().describe('The minimum target number of pips for the prediction (e.g., 5, 10).'),
-      max: z.number().describe('The maximum target number of pips for the prediction (e.g., 10, 20).')
-    }).describe('The target pips range for the prediction.'),
+  pipsSettings: z.object({
+    profitPips: PipsRangeSchema.describe('The target profit pips range for the prediction.'),
+    lossPips: PipsRangeSchema.describe('The acceptable loss pips range for the prediction.')
+  }).describe('The PIPS settings including profit and loss ranges.'),
 });
 
 const PipsPredictionOutcomeSchema = z.object({
@@ -39,6 +44,11 @@ const PipsPredictionOutcomeSchema = z.object({
     .describe(
       'The AI’s reasoning behind the prediction, including influential factors and analysis.'
     ),
+    openPrice: z.number().optional().describe('The opening price for the period considered.'),
+    closePrice: z.number().optional().describe('The closing price for the period considered.'),
+    highPrice: z.number().optional().describe('The highest price for the period considered.'),
+    lowPrice: z.number().optional().describe('The lowest price for the period considered.'),
+    volume: z.number().optional().describe('The trading volume for the period considered.'),
 });
 
 // Exporting the function that calls the flow
@@ -50,15 +60,17 @@ const prompt = ai.definePrompt({
   name: 'analyzePipsInfluencePrompt',
   input: {schema: AnalyzePipsInfluenceInputSchema},
   output: {schema: PipsPredictionOutcomeSchema},
-  prompt: `You are an expert Forex analyst. Your task is to predict whether the price of {{{currencyPair}}} will move by at least the minimum of the target pips range ({{{pipsTarget.min}}} - {{{pipsTarget.max}}} pips) in the short term (next 1-15 minutes), based on current market conditions and general knowledge of this currency pair.
+  prompt: `You are an expert Forex analyst. Your task is to predict whether the price of {{{currencyPair}}} will move significantly in the short term (next 1-15 minutes), considering both potential profit and loss, based on current market conditions and general knowledge of this currency pair.
 
 Currency Pair: {{{currencyPair}}}
-Target Pips Range: {{{pipsTarget.min}}} - {{{pipsTarget.max}}}
+Profit PIPS Target Range: {{{pipsSettings.profitPips.min}}} - {{{pipsSettings.profitPips.max}}}
+Loss PIPS Target Range: {{{pipsSettings.lossPips.min}}} - {{{pipsSettings.lossPips.max}}}
 
 Analyze current market sentiment and typical behavior for this pair and provide:
-1.  'tradingSignal': A trading signal (BUY, SELL, HOLD, WAIT, N/A) based on whether the minimum pips movement ({{{pipsTarget.min}}}) is likely.
-2.  'signalDetails': A clear statement describing the expected price movement in relation to the pips range (e.g., "Likely to increase by at least {{{pipsTarget.min}}} pips, potentially reaching {{{pipsTarget.max}}} pips", "Unlikely to reach {{{pipsTarget.min}}} pips, may decrease", "Neutral, price consolidation expected below {{{pipsTarget.min}}} pips movement").
-3.  'reasoning': A detailed explanation for your prediction, highlighting key factors and typical price patterns that support your conclusion regarding the pips target range and the trading signal.
+1.  'tradingSignal': A trading signal (BUY, SELL, HOLD, WAIT, N/A) based on whether the minimum profit pips movement ({{{pipsSettings.profitPips.min}}}) is likely, while also considering the loss pips range ({{{pipsSettings.lossPips.min}}}).
+2.  'signalDetails': A clear statement describing the expected price movement in relation to both profit and loss pips ranges (e.g., "Likely to increase by at least {{{pipsSettings.profitPips.min}}} pips, potentially reaching {{{pipsSettings.profitPips.max}}} pips, while staying above typical loss of {{{pipsSettings.lossPips.min}}} pips.", "Unlikely to reach {{{pipsSettings.profitPips.min}}} profit pips, may consolidate or risk hitting {{{pipsSettings.lossPips.min}}} loss pips.").
+3.  'reasoning': A detailed explanation for your prediction, highlighting key factors and typical price patterns that support your conclusion regarding the pips target ranges and the trading signal.
+4.  Optionally, include 'openPrice', 'closePrice', 'highPrice', 'lowPrice', and 'volume' if relevant market data influenced your decision.
 `,
 });
 

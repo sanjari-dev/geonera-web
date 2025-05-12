@@ -44,7 +44,7 @@ export function PredictionFilterControls({
   return (
     <div className="space-y-1.5 p-2 bg-card shadow-lg rounded-lg border border-border h-full flex flex-col">
       <div className="flex items-center gap-1.5 text-sm font-semibold text-primary">
-        <Filter className="h-4 w-4" />
+        <Filter className="h-4 w-4" aria-hidden="true" />
         <span>Filter Predictions</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 mt-auto">
@@ -70,7 +70,7 @@ export function PredictionFilterControls({
         </div>
         <div className="flex flex-col justify-end">
           <Label htmlFor="filter-signal" className="text-xs font-medium mb-0.5 block">
-            Filter by Signal (MT5)
+            Filter by Signal
           </Label>
           <Select
             value={filterSignal}

@@ -4,13 +4,14 @@
 import type { PredictionLogItem, PipsPredictionOutcome } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingFlat, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
 import { format as formatDateFns } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { VariantProps } from 'class-variance-authority';
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
+  maxPredictionLogs: number; // Added prop
 }
 
 const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
@@ -48,7 +49,13 @@ const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status 
 
 const formatPrice = (price?: number, currencyPair?: PredictionLogItem["currencyPair"]) => {
   if (price === undefined || price === null) return "N/A";
-  const fractionDigits = currencyPair === "BTC/USD" ? 0 : (currencyPair === "USD/JPY" ? 3 : 2); // Simplified, adjust as needed
+  // More refined decimal places based on typical Forex pairs
+  let fractionDigits = 2;
+  if (currencyPair === "BTC/USD") fractionDigits = 2; // BTC usually to 2 decimal places for price
+  else if (currencyPair && currencyPair.includes("JPY")) fractionDigits = 3; // JPY pairs usually to 3
+  else if (currencyPair === "XAU/USD") fractionDigits = 2; // Gold usually to 2
+  else fractionDigits = 5; // Most other Forex pairs to 5
+
   return price.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
 };
 
@@ -58,7 +65,7 @@ const formatVolume = (volume?: number) => {
 };
 
 
-export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetailsPanelProps) {
+export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }: PredictionDetailsPanelProps) {
   const marketOhlcData = selectedPrediction?.predictionOutcome;
   const marketDataAvailable = selectedPrediction && marketOhlcData && (
     marketOhlcData.openPrice !== undefined ||
@@ -91,19 +98,19 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
               </p>
               <ul className="list-disc list-inside space-y-1 pl-3 leading-relaxed">
                 <li>
-                  Use the <strong>Prediction Parameters</strong> section above to select currency pair(s) and define your desired PIPS target range (Min/Max).
+                  Use the <strong>Prediction Parameters</strong> section above to select currency pair(s) and define your desired Profit and Loss PIPS target ranges.
                 </li>
                 <li>
-                  Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Log</strong> to your left, updating every 5 seconds.
+                  Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Log</strong> to your left, updating every 30 seconds.
                 </li>
                 <li>
-                  Each prediction has a unique expiration time (DD HH:mm:ss) and will be removed from the log once expired. Max log size is 1500.
+                  Each prediction has a unique expiration time and will be categorized accordingly. Max log size is {maxPredictionLogs}.
                 </li>
                 <li>
                   Click on any row in the Prediction Log to view its detailed analysis in this panel.
                 </li>
                 <li>
-                  Utilize the <strong>Filter Predictions</strong> controls to narrow down the log based on status or trading signal. You can also sort columns by clicking their headers.
+                  Utilize the <strong>Filter Predictions</strong> controls to narrow down the log based on status, trading signal, or date range. You can also sort columns by clicking their headers.
                 </li>
               </ul>
               <p className="text-[0.7rem] italic pt-1 text-muted-foreground">
@@ -116,29 +123,41 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
           </ScrollArea>
         ) : (
           <ScrollArea className="h-full w-full">
-            <div className="space-y-1 pr-1.5"> {/* Reduced space-y and padding */}
-              <div className="flex items-center space-x-1.5"> {/* Reduced space-x */}
+            <div className="space-y-1 pr-1.5">
+              <div className="flex items-center space-x-1.5">
                 <Landmark className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />
                 <span className="font-medium text-xs whitespace-nowrap">Currency Pair:</span>
                 <span className="text-xs whitespace-nowrap">{selectedPrediction.currencyPair}</span>
               </div>
-              <div className="flex items-center space-x-1.5"> {/* Reduced space-x */}
-                <Target className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />
-                <span className="font-medium text-xs whitespace-nowrap">PIPS Target:</span>
-                <span className="text-xs whitespace-nowrap">{selectedPrediction.pipsTarget.min} - {selectedPrediction.pipsTarget.max}</span>
+
+              <div className="flex items-start space-x-1.5">
+                <Target className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" aria-hidden="true" />
+                <div className="flex flex-col">
+                    <div className="flex items-center">
+                        <TrendingUpIcon className="h-3.5 w-3.5 text-green-500 mr-1 flex-shrink-0" aria-hidden="true" />
+                        <span className="font-medium text-xs whitespace-nowrap">Profit PIPS:</span>
+                        <span className="text-xs whitespace-nowrap ml-1">{selectedPrediction.pipsSettings.profitPips.min} - {selectedPrediction.pipsSettings.profitPips.max}</span>
+                    </div>
+                    <div className="flex items-center">
+                        <TrendingDownIcon className="h-3.5 w-3.5 text-red-500 mr-1 flex-shrink-0" aria-hidden="true" />
+                        <span className="font-medium text-xs whitespace-nowrap">Loss PIPS:</span>
+                        <span className="text-xs whitespace-nowrap ml-1">{selectedPrediction.pipsSettings.lossPips.min} - {selectedPrediction.pipsSettings.lossPips.max}</span>
+                    </div>
+                </div>
               </div>
-              <div className="flex items-center space-x-1.5"> {/* Reduced space-x */}
+
+              <div className="flex items-center space-x-1.5">
                 <Clock className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />
                 <span className="font-medium text-xs whitespace-nowrap">Timestamp:</span>
                 <span className="text-xs whitespace-nowrap">{formatDateFns(new Date(selectedPrediction.timestamp), "yyyy-MM-dd HH:mm:ss XXX")}</span>
               </div>
-              <div className="flex items-center space-x-1.5"> {/* Reduced space-x */}
+              <div className="flex items-center space-x-1.5">
                 <div className="flex items-center justify-center h-4 w-4 flex-shrink-0" aria-hidden="true">
                   <StatusIcon status={selectedPrediction.status} />
                 </div>
                 <span className="font-medium text-xs whitespace-nowrap">Status:</span>
                 <Badge 
-                  className="text-[10px] px-1.5 py-0.5" // Dense badge
+                  className="text-[10px] px-1.5 py-0.5" 
                   variant={
                   selectedPrediction.status === "SUCCESS" ? "default" :
                   selectedPrediction.status === "ERROR" ? "destructive" :
@@ -149,12 +168,12 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
               </div>
 
               {marketDataAvailable && marketOhlcData && (
-                <div className="space-y-0.5 pt-0.5 mt-0.5 border-t border-border"> {/* Reduced space-y, pt, mt */}
+                <div className="space-y-0.5 pt-0.5 mt-0.5 border-t border-border">
                   <div className="flex items-center space-x-1.5">
                      <Briefcase className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />
                      <span className="font-semibold text-primary text-xs whitespace-nowrap">Market Data:</span>
                   </div>
-                  <div className="pl-2 space-y-0.5"> {/* Reduced pl and space-y */}
+                  <div className="pl-2 space-y-0.5">
                     {marketOhlcData.openPrice !== undefined && (
                       <div className="flex items-center space-x-1.5">
                         <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center" aria-hidden="true">
@@ -216,7 +235,7 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
 
 
               {selectedPrediction.expiresAt && (
-                <div className="flex items-center space-x-1.5 pt-0.5 mt-0.5 border-t border-border"> {/* Reduced pt, mt, space-x */}
+                <div className="flex items-center space-x-1.5 pt-0.5 mt-0.5 border-t border-border">
                   <Clock className="h-4 w-4 text-orange-500 flex-shrink-0" aria-hidden="true" />
                   <span className="font-medium text-xs whitespace-nowrap">Expires At:</span>
                   <span className="text-xs whitespace-nowrap">{formatDateFns(new Date(selectedPrediction.expiresAt), "yyyy-MM-dd HH:mm:ss XXX")}</span>
@@ -225,38 +244,38 @@ export function PredictionDetailsPanel({ selectedPrediction }: PredictionDetails
               
               {selectedPrediction.status === "SUCCESS" && selectedPrediction.predictionOutcome && (
                 <>
-                  <div className="flex items-center space-x-1.5 pt-0.5 mt-0.5 border-t border-border">  {/* Reduced pt, mt, space-x */}
+                  <div className="flex items-center space-x-1.5 pt-0.5 mt-0.5 border-t border-border"> 
                       <div className="flex items-center justify-center h-4 w-4 flex-shrink-0" aria-hidden="true">
                       <SignalIcon signal={selectedPrediction.predictionOutcome.tradingSignal} />
                       </div>
                     <span className="font-medium text-xs whitespace-nowrap">Trading Signal:</span>
                     <Badge 
-                      className="text-[10px] px-1.5 py-0.5" // Dense badge
+                      className="text-[10px] px-1.5 py-0.5" 
                       variant={getSignalBadgeVariant(selectedPrediction.predictionOutcome.tradingSignal)}
                     >
                       {selectedPrediction.predictionOutcome.tradingSignal}
                     </Badge>
                   </div>
-                  <div className="space-y-0.5"> {/* Reduced space-y */}
+                  <div className="space-y-0.5"> 
                     <span className="font-medium text-primary text-xs block whitespace-nowrap">Signal Details:</span>
-                    <p className="text-[11px] bg-muted/50 p-1 rounded">{selectedPrediction.predictionOutcome.signalDetails}</p> {/* Reduced font size and p */}
+                    <p className="text-[11px] bg-muted/50 p-1 rounded">{selectedPrediction.predictionOutcome.signalDetails}</p> 
                   </div>
-                  <div className="space-y-0.5"> {/* Reduced space-y */}
+                  <div className="space-y-0.5"> 
                     <span className="font-medium text-primary text-xs block whitespace-nowrap">Reasoning:</span>
-                    <p className="text-[11px] bg-muted/50 p-1 rounded">{selectedPrediction.predictionOutcome.reasoning}</p> {/* Reduced font size and p */}
+                    <p className="text-[11px] bg-muted/50 p-1 rounded">{selectedPrediction.predictionOutcome.reasoning}</p> 
                   </div>
                 </>
               )}
 
               {selectedPrediction.status === "ERROR" && selectedPrediction.error && (
-                <div className="space-y-0.5 pt-0.5 mt-0.5 border-t border-border"> {/* Reduced space-y, pt, mt */}
+                <div className="space-y-0.5 pt-0.5 mt-0.5 border-t border-border"> 
                   <span className="font-medium text-destructive text-xs block whitespace-nowrap">Error:</span>
-                  <p className="text-[11px] bg-destructive/10 text-destructive p-1 rounded">{selectedPrediction.error}</p> {/* Reduced font size and p */}
+                  <p className="text-[11px] bg-destructive/10 text-destructive p-1 rounded">{selectedPrediction.error}</p> 
                 </div>
               )}
               
               {selectedPrediction.status === "PENDING" && (
-                  <div className="flex items-center space-x-1.5 text-muted-foreground pt-0.5 mt-0.5 border-t border-border" role="status" aria-live="polite"> {/* Reduced pt, mt, space-x */}
+                  <div className="flex items-center space-x-1.5 text-muted-foreground pt-0.5 mt-0.5 border-t border-border" role="status" aria-live="polite"> 
                     <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" aria-hidden="true" />
                     <span className="text-xs whitespace-nowrap">Awaiting analysis...</span>
                   </div>
