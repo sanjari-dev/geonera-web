@@ -1,7 +1,7 @@
 // src/components/geonera/predictions-table.tsx
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen } from "lucide-react";
-import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen, Filter, Save } from "lucide-react";
+import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, StatusFilterType, SignalFilterType } from '@/types';
+import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS } from '@/types'; // Import filter options
 import { format as formatDateFns } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -25,16 +26,22 @@ import {
 } from "@/components/ui/tooltip";
 import { CountdownTimer } from "./countdown-timer";
 import { ScrollArea } from "../ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 
 interface PredictionsTableProps {
-  title: string; // "Active Predictions" or "Expired Predictions"
+  title: string; 
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
   maxLogs: number;
   sortConfig: SortConfig | null;
   onSort: (key: SortableColumnKey) => void;
+  filterStatus: StatusFilterType;
+  onFilterStatusChange: (value: StatusFilterType) => void;
+  filterSignal: SignalFilterType;
+  onFilterSignalChange: (value: SignalFilterType) => void;
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -90,19 +97,6 @@ const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: Sortab
   return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" aria-label="Sorted ascending" /> : <ArrowDown className="ml-1 h-3 w-3" aria-label="Sorted descending" />;
 };
 
-const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
-    switch (key) {
-      case 'status': return log.status;
-      case 'timestamp': return log.timestamp;
-      case 'currencyPair': return log.currencyPair;
-      case 'profitPipsMin': return log.pipsSettings.profitPips.min; // Sorting by min, can be max or avg too
-      case 'lossPipsMin': return log.pipsSettings.lossPips.min; // Sorting by min
-      case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
-      case 'expiresAt': return log.expiresAt;
-      default: return undefined;
-    }
-};
-
 
 export function PredictionsTable({
   title,
@@ -112,7 +106,41 @@ export function PredictionsTable({
   maxLogs,
   sortConfig,
   onSort,
+  filterStatus,
+  onFilterStatusChange,
+  filterSignal,
+  onFilterSignalChange,
 }: PredictionsTableProps) {
+  const [viewMode, setViewMode] = useState<'table' | 'filter'>('table');
+  const [tempFilterStatus, setTempFilterStatus] = useState<StatusFilterType>(filterStatus);
+  const [tempFilterSignal, setTempFilterSignal] = useState<SignalFilterType>(filterSignal);
+
+  useEffect(() => {
+    setTempFilterStatus(filterStatus);
+  }, [filterStatus]);
+
+  useEffect(() => {
+    setTempFilterSignal(filterSignal);
+  }, [filterSignal]);
+
+  const handleApplyFilters = () => {
+    onFilterStatusChange(tempFilterStatus);
+    onFilterSignalChange(tempFilterSignal);
+    setViewMode('table');
+  };
+
+  const handleCancelFilters = () => {
+    setTempFilterStatus(filterStatus); // Reset to original prop values
+    setTempFilterSignal(filterSignal);
+    setViewMode('table');
+  };
+
+  const handleGearClick = () => {
+    setTempFilterStatus(filterStatus); // Initialize with current filters when opening
+    setTempFilterSignal(filterSignal);
+    setViewMode('filter');
+  };
+
 
   const renderSortableHeader = (label: string | React.ReactNode, columnKey: SortableColumnKey, tooltipContent: string, icon?: React.ReactNode, headerClassName?: string) => (
     <TableHead
@@ -131,11 +159,25 @@ export function PredictionsTable({
     </TableHead>
   );
 
+  const tableHeaders = (
+    <TableRow className="h-auto">
+      {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status", undefined, "w-10")}
+      {renderSortableHeader(<CalendarDays className="h-3.5 w-3.5 mx-auto" aria-label="Time" />, "timestamp", "Prediction Timestamp")}
+      {renderSortableHeader(<Coins className="h-3.5 w-3.5 mx-auto" aria-label="Pair" />, "currencyPair", "Currency Pair")}
+      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Profit PIPS" />, "profitPipsMin", "Profit PIPS (Min)")}
+      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Profit PIPS Max" />, "profitPipsMax", "Profit PIPS (Max)")}
+      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Loss PIPS" />, "lossPipsMin", "Loss PIPS (Min)")}
+      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Loss PIPS Max" />, "lossPipsMax", "Loss PIPS (Max)")}
+      {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
+      {renderSortableHeader(<Zap className="h-3.5 w-3.5 mx-auto" aria-label="Expires" />, "expiresAt", "Expires In (DD HH:MM:SS)")}
+    </TableRow>
+  );
+  
   const renderTableRows = (data: PredictionLogItem[]) => {
     if (data.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-xs">
+          <TableCell colSpan={9} className="h-24 text-center text-muted-foreground text-xs">
             {title === "Active Predictions" ? "No active predictions found." : "No expired predictions found."}
           </TableCell>
         </TableRow>
@@ -161,14 +203,16 @@ export function PredictionsTable({
         </TableCell>
         <TableCell className="px-1 py-0.5 font-medium text-center whitespace-nowrap text-[11px]">{log.currencyPair}</TableCell>
         <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
-            <span className="text-green-500 flex items-center justify-center">
-              <TrendingUpIcon className="h-2.5 w-2.5 mr-0.5" aria-hidden="true" /> {log.pipsSettings.profitPips.min}-{log.pipsSettings.profitPips.max}
-            </span>
+             {log.pipsSettings.profitPips.min}
+        </TableCell>
+         <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
+             {log.pipsSettings.profitPips.max}
         </TableCell>
         <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
-            <span className="text-red-500 flex items-center justify-center">
-              <TrendingDownIcon className="h-2.5 w-2.5 mr-0.5" aria-hidden="true" /> {log.pipsSettings.lossPips.min}-{log.pipsSettings.lossPips.max}
-            </span>
+            {log.pipsSettings.lossPips.min}
+        </TableCell>
+        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
+            {log.pipsSettings.lossPips.max}
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[11px] text-center whitespace-nowrap">
           {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
@@ -195,17 +239,6 @@ export function PredictionsTable({
     ));
   };
 
-  const tableHeaders = (
-    <TableRow className="h-auto">
-      {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status", undefined, "w-10")}
-      {renderSortableHeader(<CalendarDays className="h-3.5 w-3.5 mx-auto" aria-label="Time" />, "timestamp", "Prediction Timestamp")}
-      {renderSortableHeader(<Coins className="h-3.5 w-3.5 mx-auto" aria-label="Pair" />, "currencyPair", "Currency Pair")}
-      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Profit PIPS" />, "profitPipsMin", "Profit PIPS Range (Min-Max)")}
-      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Loss PIPS" />, "lossPipsMin", "Loss PIPS Range (Min-Max)")}
-      {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
-      {renderSortableHeader(<Zap className="h-3.5 w-3.5 mx-auto" aria-label="Expires" />, "expiresAt", "Expires In (DD HH:MM:SS)")}
-    </TableRow>
-  );
 
   return (
     <TooltipProvider>
@@ -215,37 +248,88 @@ export function PredictionsTable({
             {title === "Active Predictions" ? <PackageCheck className="h-4 w-4 mr-1.5" /> : <PackageOpen className="h-4 w-4 mr-1.5" />}
             {title}
           </CardTitle>
-          {(title === "Active Predictions" || title === "Expired Predictions") && (
-             <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 p-1" aria-label={`${title} Settings`}>
-                        <Settings className="h-4 w-4 text-primary/80" />
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>Settings for {title} (e.g., Filter/Sort - not implemented yet)</p>
-                </TooltipContent>
-            </Tooltip>
-          )}
+          <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 p-1" aria-label={`Filter ${title}`} onClick={handleGearClick}>
+                      <Filter className="h-4 w-4 text-primary/80" />
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                  <p>Filter {title}</p>
+              </TooltipContent>
+          </Tooltip>
         </CardHeader>
 
         <CardContent className="p-0 flex-grow overflow-hidden">
+          {viewMode === 'table' ? (
             <ScrollArea className="h-full rounded-md border-0">
                 <Table className="min-w-full table-fixed">
                     <TableHeader className="sticky top-0 bg-card z-10">{tableHeaders}</TableHeader>
                     <TableBody>{renderTableRows(predictions)}</TableBody>
                 </Table>
             </ScrollArea>
+          ) : (
+            <div className="p-3 space-y-3">
+              <h4 className="text-sm font-medium text-primary">Filter {title}</h4>
+              <div className="space-y-1">
+                <Label htmlFor={`${title}-filter-status`} className="text-xs">Status</Label>
+                <Select
+                  value={tempFilterStatus}
+                  onValueChange={(value) => setTempFilterStatus(value as StatusFilterType)}
+                >
+                  <SelectTrigger id={`${title}-filter-status`} className="w-full text-xs py-1 h-8">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_FILTER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value} className="text-xs py-1">
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor={`${title}-filter-signal`} className="text-xs">Signal</Label>
+                <Select
+                  value={tempFilterSignal}
+                  onValueChange={(value) => setTempFilterSignal(value as SignalFilterType)}
+                >
+                  <SelectTrigger id={`${title}-filter-signal`} className="w-full text-xs py-1 h-8">
+                    <SelectValue placeholder="Select signal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SIGNAL_FILTER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value} className="text-xs py-1">
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={handleCancelFilters} className="text-xs">Cancel</Button>
+                <Button size="sm" onClick={handleApplyFilters} className="text-xs">
+                  <Save className="h-3.5 w-3.5 mr-1" /> Apply Filters
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
 
         <CardFooter className="p-1.5 text-[10px] text-muted-foreground border-t">
-          Displayed: {predictions.length}. (Overall Max: {maxLogs}).
-          {predictions.length === 0 && (
+          Displayed: {predictions.length}. (Max Logs: {maxLogs}).
+          {predictions.length === 0 && viewMode === 'table' && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
-                {title === "Active Predictions" ? "No active logs. Set parameters or adjust filters." : "No expired logs found for the current filters."}
+                {title === "Active Predictions" ? "No active logs. Set parameters or adjust filters." : "No expired logs found for current filters."}
             </span>
-        )}
+           )}
+           {viewMode === 'filter' && (
+            <span className="ml-2 flex items-center italic">
+                Adjust filters and click Apply.
+            </span>
+           )}
         </CardFooter>
       </Card>
     </TooltipProvider>

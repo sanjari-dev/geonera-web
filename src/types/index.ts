@@ -23,7 +23,7 @@ export type PredictionStatus = "IDLE" | "PENDING" | "SUCCESS" | "ERROR";
 
 // This will be the output structure from the AI flow or mock generator
 export interface PipsPredictionOutcome {
-  tradingSignal: "BUY" | "SELL" | "HOLD" | "WAIT" | "N/A"; // For "Buy/Sell/etc (MT5)" column
+  tradingSignal: "BUY" | "SELL" | "HOLD" | "WAIT" | "N/A"; // For "Buy/Sell/etc" column
   signalDetails: string; // Descriptive outcome, e.g., "Price expected to increase by ~15 pips."
   reasoning: string; // AI's reasoning or mock data reasoning
   openPrice?: number;
@@ -38,7 +38,7 @@ export interface PredictionLogItem {
   id: string;
   timestamp: Date;
   currencyPair: CurrencyPair; // A single currency pair for this specific log item
-  pipsSettings: PipsSettings; // Changed from pipsTarget to pipsSettings
+  pipsSettings: PipsSettings; 
   status: PredictionStatus;
   predictionOutcome?: PipsPredictionOutcome;
   error?: string;
@@ -47,8 +47,8 @@ export interface PredictionLogItem {
 
 // This will be the input for the AI flow (or mock generator)
 export interface AnalyzePipsInfluenceInput {
-  currencyPair: CurrencyPair; // AI or mock generator processes one pair at a time
-  pipsSettings: PipsSettings; // Changed from pipsTarget to pipsSettings
+  currencyPair: CurrencyPair; 
+  pipsSettings: PipsSettings; 
 }
 
 export interface User {
@@ -62,7 +62,7 @@ export type AllFilterType = "ALL";
 export type StatusFilterType = PredictionStatus | AllFilterType;
 export type SignalFilterType = PipsPredictionOutcome["tradingSignal"] | AllFilterType;
 
-export type SortableColumnKey = 'status' | 'timestamp' | 'currencyPair' | 'profitPipsMin' | 'lossPipsMin' | 'tradingSignal' | 'expiresAt';
+export type SortableColumnKey = 'status' | 'timestamp' | 'currencyPair' | 'profitPipsMin' | 'profitPipsMax' | 'lossPipsMin' | 'lossPipsMax' | 'tradingSignal' | 'expiresAt';
 
 export interface SortConfig {
   key: SortableColumnKey;
@@ -80,3 +80,20 @@ export interface DateRangeFilter {
   start: Date | null;
   end: Date | null;
 }
+
+// Constants for filter options
+export const STATUS_FILTER_OPTIONS: { value: StatusFilterType; label: string }[] = [
+  { value: "ALL", label: "All Statuses" },
+  { value: "PENDING", label: "Pending" },
+  { value: "SUCCESS", label: "Success" },
+  { value: "ERROR", label: "Error" },
+];
+
+export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[] = [
+  { value: "ALL", label: "All Signals" },
+  { value: "BUY", label: "Buy" },
+  { value: "SELL", label: "Sell" },
+  { value: "HOLD", label: "Hold" },
+  { value: "WAIT", label: "Wait" },
+  { value: "N/A", label: "N/A" },
+];
