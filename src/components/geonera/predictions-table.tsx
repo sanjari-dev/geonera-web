@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen, Filter, Save, Sigma } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, StatusFilterType, SignalFilterType } from '@/types';
-import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT } from '@/types'; // Import filter options
+import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT } from '@/types'; // Import filter options
 import { format as formatDateFns } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -121,7 +121,7 @@ export function PredictionsTable({
   const [viewMode, setViewMode] = useState<'table' | 'filter'>('table');
   const [tempFilterStatus, setTempFilterStatus] = useState<StatusFilterType>(filterStatus);
   const [tempFilterSignal, setTempFilterSignal] = useState<SignalFilterType>(filterSignal);
-  const [tempDisplayLimit, setTempDisplayLimit] = useState<number>(displayLimit ?? DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT);
+  const [tempDisplayLimit, setTempDisplayLimit] = useState<number>(displayLimit ?? (title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT));
 
   useEffect(() => {
     setTempFilterStatus(filterStatus);
@@ -132,18 +132,19 @@ export function PredictionsTable({
   }, [filterSignal]);
 
   useEffect(() => {
-    setTempDisplayLimit(displayLimit ?? DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT);
-  }, [displayLimit]);
+    setTempDisplayLimit(displayLimit ?? (title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT));
+  }, [displayLimit, title]);
 
 
   const handleApplyFilters = () => {
     onFilterStatusChange(tempFilterStatus);
     onFilterSignalChange(tempFilterSignal);
-    if (title === "Expired Predictions" && onDisplayLimitChange) {
+    if (onDisplayLimitChange) {
       let newLimit = parseInt(String(tempDisplayLimit), 10);
+      const defaultLimit = title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT;
       if (Number.isNaN(newLimit) || newLimit <= 0) {
-        newLimit = DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT; // Default to 50 if input is invalid
-      } else if (newLimit > maxLogs) { // Ensure it doesn't exceed global max storage
+        newLimit = defaultLimit; 
+      } else if (newLimit > maxLogs) { 
         newLimit = maxLogs;
       }
       onDisplayLimitChange(newLimit);
@@ -152,20 +153,16 @@ export function PredictionsTable({
   };
 
   const handleCancelFilters = () => {
-    setTempFilterStatus(filterStatus); // Reset to original prop values
+    setTempFilterStatus(filterStatus); 
     setTempFilterSignal(filterSignal);
-    if (title === "Expired Predictions") {
-      setTempDisplayLimit(displayLimit ?? DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT);
-    }
+    setTempDisplayLimit(displayLimit ?? (title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT));
     setViewMode('table');
   };
 
   const handleGearClick = () => {
-    setTempFilterStatus(filterStatus); // Initialize with current filters when opening
+    setTempFilterStatus(filterStatus); 
     setTempFilterSignal(filterSignal);
-    if (title === "Expired Predictions") {
-      setTempDisplayLimit(displayLimit ?? DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT);
-    }
+    setTempDisplayLimit(displayLimit ?? (title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT));
     setViewMode('filter');
   };
 
@@ -335,7 +332,7 @@ export function PredictionsTable({
                   </SelectContent>
                 </Select>
               </div>
-              {title === "Expired Predictions" && (
+              {onDisplayLimitChange && ( // Show for both active and expired if onDisplayLimitChange is provided
                 <div className="space-y-1">
                   <Label htmlFor={`${title}-display-limit`} className="text-xs flex items-center">
                     <Sigma className="h-3 w-3 mr-1" /> Max Logs to Display
@@ -346,9 +343,9 @@ export function PredictionsTable({
                     value={String(tempDisplayLimit)}
                     onChange={(e) => setTempDisplayLimit(parseInt(e.target.value, 10))}
                     min="1"
-                    max={maxLogs} // Cannot exceed global storage max
+                    max={maxLogs} 
                     className="w-full text-xs py-1 h-8"
-                    placeholder={`e.g., ${DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT} (max ${maxLogs})`}
+                    placeholder={`e.g., ${title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT} (max ${maxLogs})`}
                   />
                 </div>
               )}
@@ -364,7 +361,7 @@ export function PredictionsTable({
 
         <CardFooter className="p-1.5 text-[10px] text-muted-foreground border-t">
           Displayed: {predictions.length}
-          {title === "Expired Predictions" && displayLimit !== undefined && totalAvailableForDisplay !== undefined && predictions.length < totalAvailableForDisplay 
+          {displayLimit !== undefined && totalAvailableForDisplay !== undefined && predictions.length < totalAvailableForDisplay 
             ? ` of ${totalAvailableForDisplay} (Display limit: ${displayLimit})` 
             : ''}.
           (Storage Max: {maxLogs}).

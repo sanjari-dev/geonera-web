@@ -23,6 +23,7 @@ import type {
   NotificationMessage,
   DateRangeFilter,
 } from '@/types';
+import { DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT } from '@/types'; // Import new constant
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2, CalendarDays } from 'lucide-react';
@@ -36,7 +37,7 @@ const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 75;
 const MAX_PREDICTION_LOGS = 500;
-const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
+
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
   if (!date || !isValid(date)) return '';
@@ -78,6 +79,7 @@ export default function GeoneraPage() {
   const [sortConfigExpired, setSortConfigExpired] = useState<SortConfig>({ key: 'timestamp', direction: 'desc' });
   
   const [currentTimeForFiltering, setCurrentTimeForFiltering] = useState(new Date());
+  const [displayedActiveLogsCount, setDisplayedActiveLogsCount] = useState<number>(DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT);
   const [displayedExpiredLogsCount, setDisplayedExpiredLogsCount] = useState<number>(DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT);
 
 
@@ -488,7 +490,8 @@ export default function GeoneraPage() {
     });
   }, [getSortableValue]);
 
-  const sortedActiveLogs = useMemo(() => sortLogs(activeLogs, sortConfigActive), [activeLogs, sortConfigActive, sortLogs]);
+  const sortedActiveLogsData = useMemo(() => sortLogs(activeLogs, sortConfigActive), [activeLogs, sortConfigActive, sortLogs]);
+  const displayedSortedActiveLogs = useMemo(() => sortedActiveLogsData.slice(0, displayedActiveLogsCount), [sortedActiveLogsData, displayedActiveLogsCount]);
   
   const sortedAndLimitedExpiredLogs = useMemo(() => {
     const sorted = sortLogs(fullyFilteredExpiredLogs, sortConfigExpired);
@@ -505,7 +508,7 @@ export default function GeoneraPage() {
   
     let newSelectedLogCandidate: PredictionLogItem | null = null;
   
-    const combinedSortedLogsForSelection = [...sortedActiveLogs, ...(showExpired ? sortedAndLimitedExpiredLogs : [])];
+    const combinedSortedLogsForSelection = [...displayedSortedActiveLogs, ...(showExpired ? sortedAndLimitedExpiredLogs : [])];
   
     if (combinedSortedLogsForSelection.length > 0) {
       const currentSelectionStillEligible = selectedPredictionLog && combinedSortedLogsForSelection.find(log => log.id === selectedPredictionLog.id);
@@ -524,7 +527,7 @@ export default function GeoneraPage() {
       setSelectedPredictionLog(newSelectedLogCandidate);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, sortedActiveLogs, sortedAndLimitedExpiredLogs, showExpired]); // `selectedPredictionLog` removed from deps to avoid loop, but it's used for comparison.
+  }, [currentUser, isAuthCheckComplete, displayedSortedActiveLogs, sortedAndLimitedExpiredLogs, showExpired]); // `selectedPredictionLog` removed from deps to avoid loop, but it's used for comparison.
 
   const handleSort = (key: SortableColumnKey, tableType: 'active' | 'expired') => {
     const setSortConfig = tableType === 'active' ? setSortConfigActive : setSortConfigExpired;
@@ -637,7 +640,7 @@ export default function GeoneraPage() {
                 <div className="flex flex-col min-h-0 overflow-y-auto h-full">
                   <PredictionsTable
                     title="Active Predictions"
-                    predictions={sortedActiveLogs}
+                    predictions={displayedSortedActiveLogs}
                     onRowClick={handlePredictionSelect}
                     selectedPredictionId={finalSelectedPredictionForChildren?.id}
                     maxLogs={MAX_PREDICTION_LOGS} // Global storage limit
@@ -647,6 +650,9 @@ export default function GeoneraPage() {
                     onFilterStatusChange={setActiveTableFilterStatus}
                     filterSignal={activeTableFilterSignal}
                     onFilterSignalChange={setActiveTableFilterSignal}
+                    displayLimit={displayedActiveLogsCount}
+                    onDisplayLimitChange={setDisplayedActiveLogsCount}
+                    totalAvailableForDisplay={activeLogs.length}
                   />
                 </div>
                 <div className="flex flex-col min-h-0 overflow-y-auto h-full">

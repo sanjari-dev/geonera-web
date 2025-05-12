@@ -99,3 +99,4 @@ export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[]
 ];
 
 export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
+export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = 50; // Added for active logs display limit
