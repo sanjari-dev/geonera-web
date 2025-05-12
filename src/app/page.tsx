@@ -21,10 +21,10 @@ import type {
   NotificationMessage,
   DateRangeFilter,
 } from '@/types';
-import { DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG } from '@/types';
+import { DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG, MIN_EXPIRATION_SECONDS, MAX_EXPIRATION_SECONDS } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, CalendarDays } from 'lucide-react';
+import { Loader2, CalendarDays, Filter } from 'lucide-react';
 import { startOfDay, endOfDay, isValid, format as formatDateFns } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,8 +32,8 @@ import { Label } from '@/components/ui/label';
 
 
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
-const MIN_EXPIRATION_SECONDS = 10;
-const MAX_EXPIRATION_SECONDS = 75;
+// const MIN_EXPIRATION_SECONDS = 10; // Moved to types/index.ts
+// const MAX_EXPIRATION_SECONDS = 75; // Moved to types/index.ts
 const MAX_NOTIFICATIONS = 100;
 
 
@@ -340,7 +340,7 @@ export default function GeoneraPage() {
       if (timeoutId) clearTimeout(timeoutId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, generateId, isLoading, selectedPredictionLog, addNotification]); 
+  }, [currentUser, isAuthCheckComplete, generateId, addNotification]); 
 
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) return;
@@ -645,6 +645,7 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
 
 
 

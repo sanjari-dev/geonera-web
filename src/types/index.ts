@@ -99,7 +99,10 @@ export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[]
   { value: "N/A", label: "N/A" },
 ];
 
+export const MIN_EXPIRATION_SECONDS = 10;
+export const MAX_EXPIRATION_SECONDS = 75;
 export const MAX_PREDICTION_LOGS_CONFIG = 500;
-export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG;
+export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; // By default, show all possible active logs up to the system max.
 export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
+
 

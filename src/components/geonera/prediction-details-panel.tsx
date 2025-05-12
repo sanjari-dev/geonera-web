@@ -4,7 +4,7 @@
 import type { PredictionLogItem, PipsPredictionOutcome, NotificationMessage } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List, Filter } from "lucide-react";
 import { format as formatDateFns } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useState, useEffect } from 'react';
@@ -16,6 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
+import { MIN_EXPIRATION_SECONDS, MAX_EXPIRATION_SECONDS } from '@/types';
+
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
@@ -422,4 +424,5 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
 }
 
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
 
