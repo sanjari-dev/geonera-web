@@ -9,7 +9,7 @@ import { PairSelectorCard } from '@/components/geonera/pair-selector-card';
 import { PipsInputCard } from '@/components/geonera/pips-input-card';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
-import { PredictionFilterControls } from '@/components/geonera/prediction-filter-controls';
+// import { PredictionFilterControls } from '@/components/geonera/prediction-filter-controls'; // Removed
 import { NotificationDisplay } from '@/components/geonera/notification-display';
 import type {
   PredictionLogItem,
@@ -61,8 +61,8 @@ export default function GeoneraPage() {
   const [selectedPredictionLog, setSelectedPredictionLog] = useState<PredictionLogItem | null>(null);
   const [latestNotification, setLatestNotification] = useState<NotificationMessage | null>(null);
 
-  // Global Filtering State (Show Expired, Date Range)
-  const [showExpired, setShowExpired] = useState(true); // Default to true
+  // Global Filtering State (Date Range)
+  // const [showExpired, setShowExpired] = useState(true); // Default to true -> Removed, expired logs always shown
   const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({ 
     start: typeof window !== 'undefined' ? startOfDay(new Date()) : null, 
     end: typeof window !== 'undefined' ? endOfDay(new Date()) : null 
@@ -458,13 +458,13 @@ export default function GeoneraPage() {
   
   // For expired logs, we first filter then sort then slice
   const fullyFilteredExpiredExpiredLogs = useMemo(() => {
-    if (!showExpired) return [];
+    // Expired logs are always processed, showExpired state is removed
     return potentialExpiredLogs.filter(log => {
       if (expiredTableFilterStatus !== "ALL" && log.status !== expiredTableFilterStatus) return false;
       if (expiredTableFilterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== expiredTableFilterSignal)) return false;
       return true;
     });
-  }, [potentialExpiredLogs, expiredTableFilterStatus, expiredTableFilterSignal, showExpired]);
+  }, [potentialExpiredLogs, expiredTableFilterStatus, expiredTableFilterSignal]);
 
 
   const sortLogs = useCallback((logs: PredictionLogItem[], config: SortConfig) => {
@@ -508,7 +508,8 @@ export default function GeoneraPage() {
   
     let newSelectedLogCandidate: PredictionLogItem | null = null;
   
-    const combinedSortedLogsForSelection = [...displayedSortedActiveLogs, ...(showExpired ? sortedAndLimitedExpiredLogs : [])];
+    // Expired logs are always considered for auto-selection if available
+    const combinedSortedLogsForSelection = [...displayedSortedActiveLogs, ...sortedAndLimitedExpiredLogs];
   
     if (combinedSortedLogsForSelection.length > 0) {
       const currentSelectionStillEligible = selectedPredictionLog && combinedSortedLogsForSelection.find(log => log.id === selectedPredictionLog.id);
@@ -527,7 +528,7 @@ export default function GeoneraPage() {
       setSelectedPredictionLog(newSelectedLogCandidate);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, displayedSortedActiveLogs, sortedAndLimitedExpiredLogs, showExpired]); // `selectedPredictionLog` removed from deps to avoid loop, but it's used for comparison.
+  }, [currentUser, isAuthCheckComplete, displayedSortedActiveLogs, sortedAndLimitedExpiredLogs]); // `selectedPredictionLog` removed from deps to avoid loop, but it's used for comparison.
 
   const handleSort = (key: SortableColumnKey, tableType: 'active' | 'expired') => {
     const setSortConfig = tableType === 'active' ? setSortConfigActive : setSortConfigExpired;
@@ -562,7 +563,7 @@ export default function GeoneraPage() {
       <AppHeader user={currentUser} onLogout={handleLogout} />
 
       {currentUser && ( 
-        <div className="w-full px-2 py-1 grid grid-cols-[1.5fr_3fr_2fr_2fr] gap-1"> {/* Adjusted grid for new layout */}
+        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1"> {/* Adjusted grid for new layout */}
           <PairSelectorCard
             selectedCurrencyPairs={selectedCurrencyPairs}
             onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
@@ -575,11 +576,7 @@ export default function GeoneraPage() {
             isLoading={isLoading}
             className="col-span-1" // Pips input
           />
-          <PredictionFilterControls // This now only handles 'Show Expired'
-            showExpired={showExpired}
-            onShowExpiredChange={setShowExpired}
-            className="col-span-1" // Filter controls
-          />
+          {/* PredictionFilterControls removed */}
           <NotificationDisplay notification={latestNotification} className="col-span-1" />
         </div>
       )}
