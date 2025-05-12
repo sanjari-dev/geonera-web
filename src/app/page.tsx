@@ -25,15 +25,22 @@ import type {
 } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2 } from 'lucide-react';
-import { startOfDay, endOfDay, isValid } from 'date-fns';
+import { Loader2, CalendarDays } from 'lucide-react';
+import { startOfDay, endOfDay, isValid, format as formatDateFns } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
 const MIN_EXPIRATION_SECONDS = 10;
 const MAX_EXPIRATION_SECONDS = 75;
 const MAX_PREDICTION_LOGS = 500;
+
+const formatDateToDateTimeLocal = (date: Date | null): string => {
+  if (!date || !isValid(date)) return '';
+  return formatDateFns(date, "yyyy-MM-dd'T'HH:mm:ss");
+};
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -553,8 +560,6 @@ export default function GeoneraPage() {
               onFilterStatusChange={setFilterStatus}
               filterSignal={filterSignal}
               onFilterSignalChange={setFilterSignal}
-              dateRangeFilter={dateRangeFilter}
-              onDateRangeChange={handleDateRangeChange}
               showExpired={showExpired}
               onShowExpiredChange={setShowExpired}
               className="col-span-1"
@@ -573,10 +578,48 @@ export default function GeoneraPage() {
         <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-3 gap-1 overflow-hidden">
           <div className="md:col-span-2 flex flex-col min-h-0"> {/* Container for Prediction Logs Card */}
             <Card className="shadow-xl h-full flex flex-col">
-              <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
+              <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold text-primary">
                   Prediction Logs
                 </CardTitle>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="date-filter-start" className="text-xs font-medium flex items-center text-primary">
+                      <CalendarDays className="h-3 w-3 mr-1" /> From:
+                  </Label>
+                  <Input
+                      type="datetime-local"
+                      id="date-filter-start"
+                      value={formatDateToDateTimeLocal(dateRangeFilter.start)}
+                      onChange={(e) => {
+                        const newStart = e.target.value ? new Date(e.target.value) : null;
+                        if (newStart && isValid(newStart)) {
+                          handleDateRangeChange({ ...dateRangeFilter, start: newStart });
+                        } else if (!e.target.value) {
+                           handleDateRangeChange({ ...dateRangeFilter, start: null });
+                        }
+                      }}
+                      className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                      aria-label="Filter start date and time"
+                    />
+                  <Label htmlFor="date-filter-end" className="text-xs font-medium flex items-center text-primary">
+                      <CalendarDays className="h-3 w-3 mr-1" /> To:
+                  </Label>
+                  <Input
+                      type="datetime-local"
+                      id="date-filter-end"
+                      value={formatDateToDateTimeLocal(dateRangeFilter.end)}
+                      onChange={(e) => {
+                        const newEnd = e.target.value ? new Date(e.target.value) : null;
+                        if (newEnd && isValid(newEnd)) {
+                          handleDateRangeChange({ ...dateRangeFilter, end: newEnd });
+                        } else if (!e.target.value) {
+                          handleDateRangeChange({ ...dateRangeFilter, end: null });
+                        }
+                      }}
+                      className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                      aria-label="Filter end date and time"
+                    />
+                </div>
               </CardHeader>
               <CardContent className="p-1 flex-grow grid grid-cols-1 md:grid-cols-2 gap-1 overflow-hidden">
                 {/* Active Predictions Table */}
