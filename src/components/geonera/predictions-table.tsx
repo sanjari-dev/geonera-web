@@ -49,7 +49,7 @@ interface PredictionsTableProps {
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
-  const commonClass = "h-3.5 w-3.5";
+  const commonClass = "h-3.5 w-3.5 mx-auto"; // Added mx-auto for centering
   let iconElement;
   let tooltipContent;
 
@@ -71,7 +71,7 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
        tooltipContent = "Idle";
        break;
     default:
-      return null;
+      return <div className="flex justify-center items-center h-full w-full">?</div>;
   }
   return (
     <Tooltip>
@@ -187,14 +187,14 @@ export function PredictionsTable({
   const tableHeaders = (
     <TableRow className="h-auto">
       {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status", undefined, "w-10")}
-      {renderSortableHeader(<CalendarDays className="h-3.5 w-3.5 mx-auto" aria-label="Time" />, "timestamp", "Prediction Timestamp")}
-      {renderSortableHeader(<Coins className="h-3.5 w-3.5 mx-auto" aria-label="Pair" />, "currencyPair", "Currency Pair")}
-      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Min Profit PIPS" />, "profitPipsMin", "Min Profit PIPS")}
-      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Max Profit PIPS" />, "profitPipsMax", "Max Profit PIPS")}
-      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Min Loss PIPS" />, "lossPipsMin", "Min Loss PIPS")}
-      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Max Loss PIPS" />, "lossPipsMax", "Max Loss PIPS")}
+      {renderSortableHeader("Time", "timestamp", "Prediction Timestamp", <CalendarDays className="h-3.5 w-3.5 mx-auto" />)}
+      {renderSortableHeader("Pair", "currencyPair", "Currency Pair", <Coins className="h-3.5 w-3.5 mx-auto" />)}
+      {renderSortableHeader("P.Min", "profitPipsMin", "Min Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" />)}
+      {renderSortableHeader("P.Max", "profitPipsMax", "Max Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" />)}
+      {renderSortableHeader("L.Min", "lossPipsMin", "Min Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" />)}
+      {renderSortableHeader("L.Max", "lossPipsMax", "Max Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" />)}
       {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
-      {renderSortableHeader(<Zap className="h-3.5 w-3.5 mx-auto" aria-label="Expires" />, "expiresAt", "Expires In (DD HH:MM:SS)")}
+      {renderSortableHeader("Expires", "expiresAt", "Expires In (DD HH:MM:SS)", <Zap className="h-3.5 w-3.5 mx-auto" />)}
     </TableRow>
   );
   
@@ -332,7 +332,7 @@ export function PredictionsTable({
                   </SelectContent>
                 </Select>
               </div>
-              {onDisplayLimitChange && ( // Show for both active and expired if onDisplayLimitChange is provided
+              {onDisplayLimitChange && ( 
                 <div className="space-y-1">
                   <Label htmlFor={`${title}-display-limit`} className="text-xs flex items-center">
                     <Sigma className="h-3 w-3 mr-1" /> Max Logs to Display
@@ -346,6 +346,7 @@ export function PredictionsTable({
                     max={maxLogs} 
                     className="w-full text-xs py-1 h-8"
                     placeholder={`e.g., ${title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT} (max ${maxLogs})`}
+                    aria-label={`Maximum logs to display for ${title}`}
                   />
                 </div>
               )}
@@ -361,10 +362,9 @@ export function PredictionsTable({
 
         <CardFooter className="p-1.5 text-[10px] text-muted-foreground border-t">
           Displayed: {predictions.length}
-          {displayLimit !== undefined && totalAvailableForDisplay !== undefined && predictions.length < totalAvailableForDisplay 
-            ? ` of ${totalAvailableForDisplay} (Display limit: ${displayLimit})` 
-            : ''}.
-          (Storage Max: {maxLogs}).
+          {totalAvailableForDisplay !== undefined ? ` of ${totalAvailableForDisplay}` : ''}.
+          {displayLimit !== undefined ? ` (Display limit: ${displayLimit}).` : ''}
+          &nbsp;(Overall Storage Max: {maxLogs}).
           {predictions.length === 0 && viewMode === 'table' && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
@@ -384,3 +384,4 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
