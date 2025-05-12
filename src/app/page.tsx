@@ -326,6 +326,7 @@ export default function GeoneraPage() {
           const log = draft[i];
           let removeLog = false;
           
+          // Remove if pair is no longer selected (this check is broad, might need refinement based on desired behavior for already "SUCCESS" logs)
           if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS" || log.status === "ERROR")) {
             removeLog = true;
           }
@@ -338,12 +339,12 @@ export default function GeoneraPage() {
             didChange = true;
           }
         }
-        if (!didChange) return undefined; 
+        if (!didChange) return undefined; // Important for Immer to not create a new state if no changes
       }));
-    }, 1000); 
+    }, 1000); // Check every second for cleanup
 
     return () => clearInterval(cleanupIntervalId); 
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); 
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); // Removed currentSelectedPairs from deps as ref is used
 
 
   
@@ -375,13 +376,13 @@ export default function GeoneraPage() {
 
           return true;
         })
-        .sort((a, b) => { 
+        .sort((a, b) => { // Apply sorting here for consistent selection logic
             const valA = getSortableValue(a, sortConfig.key);
             const valB = getSortableValue(b, sortConfig.key);
 
             if (valA === undefined && valB === undefined) return 0;
-            if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1; 
-            if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1; 
+            if (valA === undefined) return sortConfig.direction === 'asc' ? 1 : -1; // Undefined values go to the end for asc
+            if (valB === undefined) return sortConfig.direction === 'asc' ? -1 : 1; // Undefined values go to the end for asc
             
             let comparison = 0;
             if (typeof valA === 'number' && typeof valB === 'number') {
@@ -391,6 +392,7 @@ export default function GeoneraPage() {
             } else if (typeof valA === 'string' && typeof valB === 'string') {
               comparison = valA.localeCompare(valB);
             } else {
+              // Fallback for other types, convert to string for comparison
               comparison = String(valA).localeCompare(String(valB));
             }
             return sortConfig.direction === 'asc' ? comparison : -comparison;
@@ -400,13 +402,18 @@ export default function GeoneraPage() {
         const currentSelectionStillEligible = selectedPredictionLog && eligibleLogs.find(log => log.id === selectedPredictionLog.id);
   
         if (currentSelectionStillEligible) {
+          // Ensure the instance is fresh from the sorted/filtered list
           newSelectedLogCandidate = produce(eligibleLogs.find(log => log.id === selectedPredictionLog!.id)!, draft => draft);
         } else {
+          // Default to the first item in the sorted eligible list
           newSelectedLogCandidate = produce(eligibleLogs[0], draft => draft);
         }
       }
     } 
     
+    // Only update if the candidate is different or if selection was null and now there's a candidate
+    // Or if selection existed and now it's null
+    // Or if the content of the selected log has changed (e.g. status update)
     if (selectedPredictionLog?.id !== newSelectedLogCandidate?.id || 
         (selectedPredictionLog && newSelectedLogCandidate && JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedLogCandidate)) ||
         (!selectedPredictionLog && newSelectedLogCandidate) || (selectedPredictionLog && !newSelectedLogCandidate)
@@ -418,8 +425,11 @@ export default function GeoneraPage() {
   const handleSort = (key: SortableColumnKey) => {
     setSortConfig(prevConfig => {
       if (prevConfig && prevConfig.key === key) {
+        // Toggle direction if same key
         return { key, direction: prevConfig.direction === 'asc' ? 'desc' : 'asc' };
       }
+      // Default direction for new sort key
+      // Typically, timestamp and expiresAt might default to 'desc', others to 'asc'
       const defaultDirection = (key === 'timestamp' || key === 'expiresAt') ? 'desc' : 'asc';
       return { key, direction: defaultDirection };
     });
@@ -440,7 +450,7 @@ export default function GeoneraPage() {
       case 'tradingSignal':
         return log.predictionOutcome?.tradingSignal;
       case 'expiresAt':
-        return log.expiresAt; 
+        return log.expiresAt; // Assuming expiresAt is a Date object or can be converted
       default:
         return undefined;
     }
@@ -467,9 +477,9 @@ export default function GeoneraPage() {
       </div>
     );
   }
-  if (!currentUser) { 
-    // Should ideally be handled by the redirect, but as a fallback
-    return null; // Or a minimal "Please login" message if redirect fails
+  if (!currentUser) { // Should be unreachable if redirect works, but acts as a fallback
+    // router.replace('/login'); // This can cause "Error: Cannot update a component (`Router`) while rendering a different component (`GeoneraPage`)"
+    return null; // Render nothing, useEffect will handle redirect.
   }
   
   const nowForFilter = new Date();
@@ -484,7 +494,7 @@ export default function GeoneraPage() {
       if (dateRangeFilter.end && logTimestamp > dateRangeFilter.end) return false;
 
       if (!showExpired && log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= nowForFilter) {
-        return false; 
+        return false; // Hide expired if showExpired is false
       }
       
       return true;
@@ -510,15 +520,18 @@ export default function GeoneraPage() {
           isLoading={isLoading}
           className="col-span-1"
         />
-        <PredictionFilterControls
-          filterStatus={filterStatus}
-          onFilterStatusChange={setFilterStatus}
-          filterSignal={filterSignal}
-          onFilterSignalChange={setFilterSignal}
-          showExpired={showExpired}
-          onShowExpiredChange={setShowExpired}
-          className="col-span-1"
-        />
+        <div className="col-span-1 grid grid-cols-2 gap-1">
+          <PredictionFilterControls
+            filterStatus={filterStatus}
+            onFilterStatusChange={setFilterStatus}
+            filterSignal={filterSignal}
+            onFilterSignalChange={setFilterSignal}
+            showExpired={showExpired}
+            onShowExpiredChange={setShowExpired}
+            className="col-span-1" 
+          />
+          <NotificationDisplay notification={latestNotification} className="col-span-1" />
+        </div>
       </div>
       
       <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-1 overflow-hidden">
@@ -532,12 +545,11 @@ export default function GeoneraPage() {
             onSort={handleSort}
             dateRangeFilter={dateRangeFilter}
             onDateRangeChange={handleDateRangeChange}
-            showExpired={showExpired}
+            showExpired={showExpired} // Pass showExpired to table for footer text logic
           />
         </div>
-        <div className="flex flex-col min-h-0 grid grid-rows-[4fr_1fr] gap-1"> 
+        <div className="flex flex-col min-h-0"> 
           <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} maxPredictionLogs={MAX_PREDICTION_LOGS} />
-          <NotificationDisplay notification={latestNotification} className="col-span-1" />
         </div>
       </main>
       <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">
@@ -546,4 +558,3 @@ export default function GeoneraPage() {
     </div>
   );
 }
-

@@ -10,12 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, History, Zap, CalendarDays, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, DateRangeFilter } from '@/types';
 import { format as formatDateFns, isValid } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -38,7 +37,7 @@ interface PredictionsTableProps {
   onSort: (key: SortableColumnKey) => void;
   dateRangeFilter: DateRangeFilter;
   onDateRangeChange: (newRange: DateRangeFilter) => void;
-  showExpired: boolean; 
+  showExpired: boolean; // Prop to know if expired items are included in 'predictions'
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -122,13 +121,12 @@ export function PredictionsTable({
   onSort,
   dateRangeFilter,
   onDateRangeChange,
-  showExpired,
+  showExpired, // Used for footer text now
 }: PredictionsTableProps) {
-  const now = useMemo(() => new Date(), []); // Memoize `now` to prevent re-renders if not necessary
 
-  const sortLogs = (logs: PredictionLogItem[]) => {
-    if (!sortConfig) return [...logs]; 
-    return [...logs].sort((a, b) => {
+  const sortedPredictions = useMemo(() => {
+    if (!sortConfig) return [...predictions]; 
+    return [...predictions].sort((a, b) => {
       const valA = getSortableValue(a, sortConfig.key);
       const valB = getSortableValue(b, sortConfig.key);
       if (valA === undefined && valB === undefined) return 0;
@@ -141,23 +139,7 @@ export function PredictionsTable({
       else comparison = String(valA).localeCompare(String(valB));
       return sortConfig.direction === 'asc' ? comparison : -comparison;
     });
-  };
-
-  const activePredictions = useMemo(() => {
-    const filtered = predictions.filter(log => {
-        if (!showExpired && log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now) {
-            return false; 
-        }
-        return log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > now));
-    });
-    return sortLogs(filtered);
-  }, [predictions, now, sortConfig, showExpired]); 
-
-  const expiredPredictions = useMemo(() => {
-    if (!showExpired) return [];
-    const filtered = predictions.filter(log => log.status === "SUCCESS" && log.expiresAt && new Date(log.expiresAt) <= now);
-    return sortLogs(filtered);
-  }, [predictions, now, sortConfig, showExpired]);
+  }, [predictions, sortConfig]);
 
 
   const renderSortableHeader = (label: string | React.ReactNode, columnKey: SortableColumnKey, tooltipContent: string, icon?: React.ReactNode, headerClassName?: string) => (
@@ -177,19 +159,19 @@ export function PredictionsTable({
     </TableHead>
   );
 
-  const renderTableRows = (data: PredictionLogItem[], listType: 'active' | 'expired') => {
+  const renderTableRows = (data: PredictionLogItem[]) => {
     if (data.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-xs">
-            No {listType} predictions found for the selected date range and filters.
+          <TableCell colSpan={6} className="h-24 text-center text-muted-foreground text-xs">
+            No predictions found for the selected date range and filters.
           </TableCell>
         </TableRow>
       );
     }
     return data.map((log) => (
       <TableRow 
-        key={`${listType}-${log.id}`}
+        key={log.id}
         onClick={() => onRowClick(log)}
         className={cn(
           "cursor-pointer hover:bg-muted/50 transition-colors",
@@ -244,33 +226,21 @@ export function PredictionsTable({
   const tableHeaders = (
     <TableRow className="h-auto">
       {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Status", undefined, "w-10")}
-      {renderSortableHeader("Time", "timestamp", "Timestamp")}
+      {renderSortableHeader(<CalendarDays className="h-3.5 w-3.5 mx-auto" aria-label="Time" />, "timestamp", "Timestamp")}
       {renderSortableHeader("Pair", "currencyPair", "Currency Pair")}
       {renderSortableHeader(
         "PIPS (P/L)", 
-        "profitPipsMin",
+        "profitPipsMin", // Sorting by profitPipsMin as representative
         "Profit / Loss PIPS Range"
       )}
       {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
-      {renderSortableHeader("Expires", "expiresAt", "Expires In")}
+      {renderSortableHeader(<Zap className="h-3.5 w-3.5 mx-auto" aria-label="Expires" />, "expiresAt", "Expires In")}
     </TableRow>
   );
 
-  const renderTableSection = (data: PredictionLogItem[], listType: 'active' | 'expired', tabValue: string) => (
-      <TabsContent value={tabValue} className="m-0 p-0 h-full flex flex-col min-h-0">
-          <ScrollArea className="flex-grow rounded-md border-0 overflow-hidden">
-              <Table className="min-w-full table-fixed">
-                  <TableHeader className="sticky top-0 bg-card z-10">{tableHeaders}</TableHeader>
-                  <TableBody>{renderTableRows(data, listType)}</TableBody>
-              </Table>
-          </ScrollArea>
-      </TabsContent>
-  );
-
-
   return (
     <TooltipProvider>
-      <Card className="shadow-xl h-full grid grid-rows-[auto_auto_1fr_auto]" aria-labelledby="prediction-log-title">
+      <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby="prediction-log-title">
         <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-row items-center justify-between">
           <CardTitle id="prediction-log-title" className="text-lg font-semibold text-primary">Prediction Log</CardTitle>
            <div className="flex items-end gap-1.5">
@@ -313,22 +283,18 @@ export function PredictionsTable({
           </div>
         </CardHeader>
         
-        <Tabs defaultValue="active" className="p-1 flex flex-col min-h-0 flex-grow">
-            <TabsList className="grid w-full grid-cols-2 mb-1 h-auto p-0.5">
-                <TabsTrigger value="active" className="text-xs py-1 h-auto data-[state=active]:bg-primary/10 data-[state=active]:text-primary" aria-controls="active-predictions-content">
-                    <Zap className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" /> Active ({activePredictions.length})
-                </TabsTrigger>
-                <TabsTrigger value="expired" className="text-xs py-1 h-auto data-[state=active]:bg-muted data-[state=active]:text-foreground" disabled={!showExpired} aria-controls="expired-predictions-content">
-                    <History className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" /> Expired ({showExpired ? expiredPredictions.length : 0})
-                </TabsTrigger>
-            </TabsList>
-            {renderTableSection(activePredictions, 'active', "active")}
-            {showExpired && renderTableSection(expiredPredictions, 'expired', "expired")}
-        </Tabs>
+        <div className="flex-grow overflow-hidden">
+            <ScrollArea className="h-full rounded-md border-0">
+                <Table className="min-w-full table-fixed">
+                    <TableHeader className="sticky top-0 bg-card z-10">{tableHeaders}</TableHeader>
+                    <TableBody>{renderTableRows(sortedPredictions)}</TableBody>
+                </Table>
+            </ScrollArea>
+        </div>
         
         <CardFooter className="p-2 text-[10px] text-muted-foreground border-t">
-          Total Displayed: {activePredictions.length + (showExpired ? expiredPredictions.length : 0)} (Max {maxLogs} overall)
-          {(activePredictions.length + (showExpired ? expiredPredictions.length : 0)) === 0 && (
+          Total Displayed: {sortedPredictions.length} (Max {maxLogs} overall stored). {showExpired ? "Showing expired logs." : "Expired logs hidden."}
+          {sortedPredictions.length === 0 && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
                 No predictions found. Set parameters or adjust filters.
