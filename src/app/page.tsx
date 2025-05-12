@@ -29,6 +29,7 @@ import { startOfDay, endOfDay, isValid, format as formatDateFns } from 'date-fns
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PairSelectorCard } from '@/components/geonera/pair-selector-card';
 
 
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
@@ -508,13 +509,19 @@ export default function GeoneraPage() {
       <AppHeader 
         user={currentUser} 
         onLogout={handleLogout}
-        selectedCurrencyPairs={selectedCurrencyPairs}
-        onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
-        isLoading={isLoading}
+        selectedCurrencyPairs={selectedCurrencyPairs} // Pass this down
+        onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange} // Pass this down
+        isLoading={isLoading} // Pass this down
       />
 
       {currentUser && ( 
-        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-2 gap-1"> 
+        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-3 gap-1"> 
+          <PairSelectorCard
+            selectedCurrencyPairs={selectedCurrencyPairs}
+            onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange}
+            isLoading={isLoading}
+            className="col-span-1"
+          />
           <PipsInputCard
             pipsSettings={pipsSettings}
             onPipsSettingsChange={handlePipsSettingsChange}
@@ -531,8 +538,8 @@ export default function GeoneraPage() {
       )}
 
       {currentUser && ( 
-        <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-4 gap-1 overflow-hidden">
-          <div className="md:col-span-3 flex flex-col min-h-0"> 
+        <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-10 gap-1 overflow-hidden">
+          <div className="md:col-span-7 flex flex-col min-h-0"> 
             <Card className="shadow-xl h-full flex flex-col">
               <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold text-primary">
@@ -593,6 +600,7 @@ export default function GeoneraPage() {
                     displayLimit={displayedActiveLogsCount}
                     onDisplayLimitChange={setDisplayedActiveLogsCount}
                     totalAvailableForDisplay={activeLogs.length}
+                    maxLogs={MAX_PREDICTION_LOGS_CONFIG}
                   />
                 </div>
                 <div className="flex flex-col min-h-0 overflow-y-auto h-full">
@@ -610,13 +618,14 @@ export default function GeoneraPage() {
                     displayLimit={displayedExpiredLogsCount}
                     onDisplayLimitChange={setDisplayedExpiredLogsCount}
                     totalAvailableForDisplay={fullyFilteredExpiredExpiredLogs.length}
+                    maxLogs={MAX_PREDICTION_LOGS_CONFIG}
                   />
                 </div>
               </CardContent>
             </Card>
           </div>
           
-          <div className="md:col-span-1 flex flex-col min-h-0"> 
+          <div className="md:col-span-3 flex flex-col min-h-0"> 
             <PredictionDetailsPanel selectedPrediction={finalSelectedPredictionForChildren} maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG} />
           </div>
         </main>
