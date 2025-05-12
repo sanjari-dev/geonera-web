@@ -36,20 +36,20 @@ interface PredictionsTableProps {
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
-  maxLogs: number; // Global storage max, still used for capping input
+  maxLogs: number; 
   sortConfig: SortConfig | null;
   onSort: (key: SortableColumnKey) => void;
   filterStatus: StatusFilterType;
   onFilterStatusChange: (value: StatusFilterType) => void;
   filterSignal: SignalFilterType;
   onFilterSignalChange: (value: SignalFilterType) => void;
-  displayLimit?: number; // Max items to display in this table instance
-  onDisplayLimitChange?: (value: number) => void; // Handler to change displayLimit
-  totalAvailableForDisplay?: number; // Total items available before displayLimit slicing
+  displayLimit: number; 
+  onDisplayLimitChange: (value: number) => void; 
+  totalAvailableForDisplay: number; 
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
-  const commonClass = "h-3.5 w-3.5 mx-auto"; // Added mx-auto for centering
+  const commonClass = "h-3.5 w-3.5 mx-auto"; 
   let iconElement;
   let tooltipContent;
 
@@ -107,7 +107,7 @@ export function PredictionsTable({
   predictions,
   onRowClick,
   selectedPredictionId,
-  maxLogs, // Global storage max, still used for capping input
+  maxLogs, 
   sortConfig,
   onSort,
   filterStatus,
@@ -121,7 +121,7 @@ export function PredictionsTable({
   const [viewMode, setViewMode] = useState<'table' | 'filter'>('table');
   const [tempFilterStatus, setTempFilterStatus] = useState<StatusFilterType>(filterStatus);
   const [tempFilterSignal, setTempFilterSignal] = useState<SignalFilterType>(filterSignal);
-  const [tempDisplayLimit, setTempDisplayLimit] = useState<number>(displayLimit ?? (title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT));
+  const [tempDisplayLimit, setTempDisplayLimit] = useState<number>(displayLimit);
 
   useEffect(() => {
     setTempFilterStatus(filterStatus);
@@ -132,37 +132,36 @@ export function PredictionsTable({
   }, [filterSignal]);
 
   useEffect(() => {
-    setTempDisplayLimit(displayLimit ?? (title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT));
-  }, [displayLimit, title]);
+    setTempDisplayLimit(displayLimit);
+  }, [displayLimit]);
 
 
   const handleApplyFilters = () => {
     onFilterStatusChange(tempFilterStatus);
     onFilterSignalChange(tempFilterSignal);
-    if (onDisplayLimitChange) {
-      let newLimit = parseInt(String(tempDisplayLimit), 10);
-      const defaultLimit = title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT;
-      if (Number.isNaN(newLimit) || newLimit <= 0) {
-        newLimit = defaultLimit; 
-      } else if (newLimit > maxLogs) { 
-        newLimit = maxLogs;
-      }
-      onDisplayLimitChange(newLimit);
+    
+    let newLimit = parseInt(String(tempDisplayLimit), 10);
+    const defaultLimit = title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT;
+    if (Number.isNaN(newLimit) || newLimit <= 0) {
+      newLimit = defaultLimit; 
+    } else if (newLimit > maxLogs) { 
+      newLimit = maxLogs;
     }
+    onDisplayLimitChange(newLimit);
     setViewMode('table');
   };
 
   const handleCancelFilters = () => {
     setTempFilterStatus(filterStatus); 
     setTempFilterSignal(filterSignal);
-    setTempDisplayLimit(displayLimit ?? (title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT));
+    setTempDisplayLimit(displayLimit);
     setViewMode('table');
   };
 
   const handleGearClick = () => {
     setTempFilterStatus(filterStatus); 
     setTempFilterSignal(filterSignal);
-    setTempDisplayLimit(displayLimit ?? (title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT));
+    setTempDisplayLimit(displayLimit);
     setViewMode('filter');
   };
 
@@ -189,9 +188,7 @@ export function PredictionsTable({
       {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status", undefined, "w-10")}
       {renderSortableHeader("Time", "timestamp", "Prediction Timestamp", <CalendarDays className="h-3.5 w-3.5 mx-auto" />)}
       {renderSortableHeader("Pair", "currencyPair", "Currency Pair", <Coins className="h-3.5 w-3.5 mx-auto" />)}
-      {renderSortableHeader("P.Min", "profitPipsMin", "Min Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" />)}
       {renderSortableHeader("P.Max", "profitPipsMax", "Max Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" />)}
-      {renderSortableHeader("L.Min", "lossPipsMin", "Min Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" />)}
       {renderSortableHeader("L.Max", "lossPipsMax", "Max Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" />)}
       {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
       {renderSortableHeader("Expires", "expiresAt", "Expires In (DD HH:MM:SS)", <Zap className="h-3.5 w-3.5 mx-auto" />)}
@@ -202,7 +199,7 @@ export function PredictionsTable({
     if (data.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={9} className="h-24 text-center text-muted-foreground text-xs">
+          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-xs">
             {title === "Active Predictions" ? "No active predictions found." : "No expired predictions found."}
           </TableCell>
         </TableRow>
@@ -227,14 +224,8 @@ export function PredictionsTable({
           {formatDateFns(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss XXX")}
         </TableCell>
         <TableCell className="px-1 py-0.5 font-medium text-center whitespace-nowrap text-[11px]">{log.currencyPair}</TableCell>
-        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
-             {log.pipsSettings.profitPips.min}
-        </TableCell>
          <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
              {log.pipsSettings.profitPips.max}
-        </TableCell>
-        <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
-            {log.pipsSettings.lossPips.min}
         </TableCell>
         <TableCell className="px-1 py-0.5 text-center whitespace-nowrap text-[10px]">
             {log.pipsSettings.lossPips.max}
@@ -332,24 +323,22 @@ export function PredictionsTable({
                   </SelectContent>
                 </Select>
               </div>
-              {onDisplayLimitChange && ( 
-                <div className="space-y-1">
-                  <Label htmlFor={`${title}-display-limit`} className="text-xs flex items-center">
-                    <Sigma className="h-3 w-3 mr-1" /> Max Logs to Display
-                  </Label>
-                  <Input
-                    id={`${title}-display-limit`}
-                    type="number"
-                    value={String(tempDisplayLimit)}
-                    onChange={(e) => setTempDisplayLimit(parseInt(e.target.value, 10))}
-                    min="1"
-                    max={maxLogs} 
-                    className="w-full text-xs py-1 h-8"
-                    placeholder={`e.g., ${title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT} (max ${maxLogs})`}
-                    aria-label={`Maximum logs to display for ${title}`}
-                  />
-                </div>
-              )}
+              <div className="space-y-1">
+                <Label htmlFor={`${title}-display-limit`} className="text-xs flex items-center">
+                  <Sigma className="h-3 w-3 mr-1" /> Max Logs to Display
+                </Label>
+                <Input
+                  id={`${title}-display-limit`}
+                  type="number"
+                  value={String(tempDisplayLimit)}
+                  onChange={(e) => setTempDisplayLimit(parseInt(e.target.value, 10))}
+                  min="1"
+                  max={maxLogs} 
+                  className="w-full text-xs py-1 h-8"
+                  placeholder={`e.g., ${title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT} (max ${maxLogs})`}
+                  aria-label={`Maximum logs to display for ${title}`}
+                />
+              </div>
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={handleCancelFilters} className="text-xs">Cancel</Button>
                 <Button size="sm" onClick={handleApplyFilters} className="text-xs">
@@ -363,7 +352,7 @@ export function PredictionsTable({
         <CardFooter className="p-1.5 text-[10px] text-muted-foreground border-t">
           Displayed: {predictions.length}
           {totalAvailableForDisplay !== undefined ? ` of ${totalAvailableForDisplay}` : ''}.
-          {displayLimit !== undefined ? ` (Display limit: ${displayLimit}).` : ''}
+          {displayLimit !== undefined ? ` (Limit: ${displayLimit}).` : ''}
           {predictions.length === 0 && viewMode === 'table' && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
@@ -383,3 +372,4 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+

@@ -5,7 +5,6 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { produce } from 'immer';
 import { AppHeader } from '@/components/geonera/header';
-// import { PairSelectorCard } from '@/components/geonera/pair-selector-card'; // Moved to AppHeader
 import { PipsInputCard } from '@/components/geonera/pips-input-card';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
 import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
@@ -370,9 +369,7 @@ export default function GeoneraPage() {
       case 'status': return log.status;
       case 'timestamp': return log.timestamp;
       case 'currencyPair': return log.currencyPair;
-      case 'profitPipsMin': return log.pipsSettings.profitPips.min;
       case 'profitPipsMax': return log.pipsSettings.profitPips.max;
-      case 'lossPipsMin': return log.pipsSettings.lossPips.min;
       case 'lossPipsMax': return log.pipsSettings.lossPips.max;
       case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
       case 'expiresAt': return log.expiresAt;
@@ -517,8 +514,7 @@ export default function GeoneraPage() {
       />
 
       {currentUser && ( 
-        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-2 gap-1"> {/* Adjusted to 2 columns */}
-          {/* PairSelectorCard removed from here */}
+        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-2 gap-1"> 
           <PipsInputCard
             pipsSettings={pipsSettings}
             onPipsSettingsChange={handlePipsSettingsChange}
@@ -588,7 +584,6 @@ export default function GeoneraPage() {
                     predictions={displayedSortedActiveLogs}
                     onRowClick={handlePredictionSelect}
                     selectedPredictionId={finalSelectedPredictionForChildren?.id}
-                    maxLogs={MAX_PREDICTION_LOGS_CONFIG} 
                     sortConfig={sortConfigActive}
                     onSort={(key) => handleSort(key, 'active')}
                     filterStatus={activeTableFilterStatus}
@@ -606,7 +601,6 @@ export default function GeoneraPage() {
                     predictions={sortedAndLimitedExpiredLogs}
                     onRowClick={handlePredictionSelect}
                     selectedPredictionId={finalSelectedPredictionForChildren?.id}
-                    maxLogs={MAX_PREDICTION_LOGS_CONFIG} 
                     sortConfig={sortConfigExpired}
                     onSort={(key) => handleSort(key, 'expired')}
                     filterStatus={expiredTableFilterStatus}
@@ -634,4 +628,3 @@ export default function GeoneraPage() {
     </div>
   );
 }
-

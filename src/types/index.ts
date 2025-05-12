@@ -62,7 +62,7 @@ export type AllFilterType = "ALL";
 export type StatusFilterType = PredictionStatus | AllFilterType;
 export type SignalFilterType = PipsPredictionOutcome["tradingSignal"] | AllFilterType;
 
-export type SortableColumnKey = 'status' | 'timestamp' | 'currencyPair' | 'profitPipsMin' | 'profitPipsMax' | 'lossPipsMin' | 'lossPipsMax' | 'tradingSignal' | 'expiresAt';
+export type SortableColumnKey = 'status' | 'timestamp' | 'currencyPair' | 'profitPipsMax' | 'lossPipsMax' | 'tradingSignal' | 'expiresAt';
 
 export interface SortConfig {
   key: SortableColumnKey;
@@ -99,6 +99,5 @@ export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[]
 ];
 
 export const MAX_PREDICTION_LOGS_CONFIG = 500;
-export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; // Default to show all up to storage max
-export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50; // Default expired logs to display
-
+export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; // Default to max for active logs
+export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
