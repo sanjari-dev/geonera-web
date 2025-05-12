@@ -69,6 +69,7 @@ export default function GeoneraPage() {
     end: typeof window !== 'undefined' ? endOfDay(new Date()) : null 
   });
   const [showExpired, setShowExpired] = useState(true); // Default to true
+  const [currentTimeForFiltering, setCurrentTimeForFiltering] = useState(new Date());
 
 
   const router = useRouter();
@@ -113,6 +114,13 @@ export default function GeoneraPage() {
       // No redirection here, page will render in logged-out state
     }
   }, [currentUser, isAuthCheckComplete, router]);
+
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setCurrentTimeForFiltering(new Date());
+    }, 1000); // Update 'now' every second for filtering
+    return () => clearInterval(timerId);
+  }, []);
 
 
   const generateId = useCallback(() => {
@@ -422,16 +430,14 @@ export default function GeoneraPage() {
     });
   }, [predictionLogs, filterStatus, filterSignal, dateRangeFilter]); // latestSelectedCurrencyPairsRef is stable
 
-  const now = useMemo(() => new Date(), []); // Stable 'now' for consistent filtering within a render pass
-
   const activeLogs = useMemo(() => {
-    return filteredLogs.filter(log => !log.expiresAt || new Date(log.expiresAt) > now);
-  }, [filteredLogs, now]);
+    return filteredLogs.filter(log => !log.expiresAt || new Date(log.expiresAt) > currentTimeForFiltering);
+  }, [filteredLogs, currentTimeForFiltering]);
 
   const expiredLogs = useMemo(() => {
     if (!showExpired) return []; // If showExpired is false, return empty array
-    return filteredLogs.filter(log => log.expiresAt && new Date(log.expiresAt) <= now);
-  }, [filteredLogs, now, showExpired]);
+    return filteredLogs.filter(log => log.expiresAt && new Date(log.expiresAt) <= currentTimeForFiltering);
+  }, [filteredLogs, currentTimeForFiltering, showExpired]);
 
   const sortLogs = useCallback((logs: PredictionLogItem[], config: SortConfig) => {
     return [...logs].sort((a, b) => {
@@ -662,3 +668,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
