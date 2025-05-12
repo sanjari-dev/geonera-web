@@ -77,11 +77,12 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
   const [forceShowAbout, setForceShowAbout] = useState(false);
 
   useEffect(() => {
-    // If no prediction is selected, reset forceShowAbout to ensure default behavior
-    // which is to show "About Geonera".
-    if (!selectedPrediction) {
+    if (selectedPrediction) {
+      // If a new prediction is selected, ensure we are showing its details.
       setForceShowAbout(false);
     }
+    // If !selectedPrediction, `shouldShowAbout` (derived from `forceShowAbout || !selectedPrediction`)
+    // will naturally be true if forceShowAbout is false (initial state), leading to "About Geonera" being shown.
   }, [selectedPrediction]);
 
   const marketOhlcData = selectedPrediction?.predictionOutcome;
@@ -341,4 +342,3 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
 // Define VariantProps type locally if not globally available or for clarity
 // This is a helper type and might already be available if you're using a library like CVA
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
