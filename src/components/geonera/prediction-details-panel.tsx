@@ -97,7 +97,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
               </p>
               <ul className="list-disc list-inside space-y-1 pl-3 leading-relaxed">
                 <li>
-                  Use the <strong>Prediction Parameters</strong> section above to select currency pair(s) and define your desired Profit and Loss PIPS target ranges.
+                  Use the <strong>PIPS Targets</strong> and <strong>Currency Pair(s)</strong> selection in the header to define your parameters.
                 </li>
                 <li>
                   Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Logs</strong> to your left, updating every 30 seconds.
@@ -109,7 +109,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
                   Click on any row in the Prediction Logs to view its detailed analysis in this panel.
                 </li>
                 <li>
-                  Utilize the <strong>Filter Predictions</strong> controls to narrow down the logs based on status, trading signal, or date range. You can also sort columns by clicking their headers.
+                  Utilize the <strong>Filter <Info className="inline h-3 w-3" /></strong> controls within each log table and the <strong>Date Range</strong> filter in the Prediction Logs header to narrow down results. You can also sort columns by clicking their headers.
                 </li>
               </ul>
               <p className="text-[0.7rem] italic pt-1 text-muted-foreground">
@@ -134,13 +134,13 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
                 <div className="flex flex-col">
                     <div className="flex items-center">
                         <TrendingUpIcon className="h-3.5 w-3.5 text-green-500 mr-1 flex-shrink-0" aria-hidden="true" />
-                        <span className="font-medium text-xs whitespace-nowrap">Profit PIPS:</span>
-                        <span className="text-xs whitespace-nowrap ml-1">{selectedPrediction.pipsSettings.profitPips.min} - {selectedPrediction.pipsSettings.profitPips.max}</span>
+                        <span className="font-medium text-xs whitespace-nowrap">Max Profit PIPS:</span>
+                        <span className="text-xs whitespace-nowrap ml-1">{selectedPrediction.pipsSettings.profitPips.max}</span>
                     </div>
                     <div className="flex items-center">
                         <TrendingDownIcon className="h-3.5 w-3.5 text-red-500 mr-1 flex-shrink-0" aria-hidden="true" />
-                        <span className="font-medium text-xs whitespace-nowrap">Loss PIPS:</span>
-                        <span className="text-xs whitespace-nowrap ml-1">{selectedPrediction.pipsSettings.lossPips.min} - {selectedPrediction.pipsSettings.lossPips.max}</span>
+                        <span className="font-medium text-xs whitespace-nowrap">Max Loss PIPS:</span>
+                        <span className="text-xs whitespace-nowrap ml-1">{selectedPrediction.pipsSettings.lossPips.max}</span>
                     </div>
                 </div>
               </div>
@@ -289,4 +289,3 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs }
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
