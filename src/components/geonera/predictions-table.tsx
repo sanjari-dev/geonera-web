@@ -10,8 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, PackageOpen, PackageCheck, Coins } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, PackageOpen, PackageCheck, Coins, SettingsIcon as Settings } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey } from '@/types';
 import { format as formatDateFns } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
@@ -88,6 +89,20 @@ const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: Sortab
   }
   return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" aria-label="Sorted ascending" /> : <ArrowDown className="ml-1 h-3 w-3" aria-label="Sorted descending" />;
 };
+
+
+const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
+    switch (key) {
+      case 'status': return log.status;
+      case 'timestamp': return log.timestamp;
+      case 'currencyPair': return log.currencyPair;
+      case 'profitPipsMin': return log.pipsSettings.profitPips.min;
+      case 'lossPipsMin': return log.pipsSettings.lossPips.min;
+      case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
+      case 'expiresAt': return log.expiresAt;
+      default: return undefined;
+    }
+  };
 
 
 export function PredictionsTable({ 
@@ -183,13 +198,13 @@ export function PredictionsTable({
   
   const tableHeaders = (
     <TableRow className="h-auto">
-      {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Status", undefined, "w-10")}
-      {renderSortableHeader(<CalendarDays className="h-3.5 w-3.5 mx-auto" aria-label="Time" />, "timestamp", "Timestamp")}
+      {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status (Pending, Success, Error)", undefined, "w-10")}
+      {renderSortableHeader(<CalendarDays className="h-3.5 w-3.5 mx-auto" aria-label="Time" />, "timestamp", "Prediction Timestamp")}
       {renderSortableHeader(<Coins className="h-3.5 w-3.5 mx-auto" aria-label="Pair" />, "currencyPair", "Currency Pair")}
-      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Profit PIPS" />, "profitPipsMin", "Profit PIPS Range")}
-      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Loss PIPS" />, "lossPipsMin", "Loss PIPS Range")}
-      {renderSortableHeader("Signal", "tradingSignal", "Trading Signal")}
-      {renderSortableHeader(<Zap className="h-3.5 w-3.5 mx-auto" aria-label="Expires" />, "expiresAt", "Expires In")}
+      {renderSortableHeader(<TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-green-500" aria-label="Profit PIPS" />, "profitPipsMin", "Profit PIPS Range (Min-Max)")}
+      {renderSortableHeader(<TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-red-500" aria-label="Loss PIPS" />, "lossPipsMin", "Loss PIPS Range (Min-Max)")}
+      {renderSortableHeader("Signal", "tradingSignal", "Trading Signal (Buy, Sell, Hold, Wait)")}
+      {renderSortableHeader(<Zap className="h-3.5 w-3.5 mx-auto" aria-label="Expires" />, "expiresAt", "Expires In (DD HH:MM:SS)")}
     </TableRow>
   );
 
@@ -197,10 +212,22 @@ export function PredictionsTable({
     <TooltipProvider>
       <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby={`${title.toLowerCase().replace(/\s+/g, '-')}-title`}>
         <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-row items-center justify-between">
-          <CardTitle id={`${title.toLowerCase().replace(/\s+/g, '-')}-title`} className="text-lg font-semibold text-primary flex items-center">
-            {title === "Active Predictions" ? <PackageCheck className="h-5 w-5 mr-2" /> : <PackageOpen className="h-5 w-5 mr-2" />}
+          <CardTitle id={`${title.toLowerCase().replace(/\s+/g, '-')}-title`} className="text-base font-semibold text-primary flex items-center">
+            {title === "Active Predictions" ? <PackageCheck className="h-4 w-4 mr-1.5" /> : <PackageOpen className="h-4 w-4 mr-1.5" />}
             {title}
           </CardTitle>
+          {title === "Active Predictions" && (
+             <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 p-1" aria-label="Active Predictions Settings">
+                        <Settings className="h-4 w-4 text-primary/80" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Settings for Active Predictions (Filter/Sort)</p>
+                </TooltipContent>
+            </Tooltip>
+          )}
         </CardHeader>
         
         <CardContent className="p-0 flex-grow overflow-hidden">
@@ -212,7 +239,7 @@ export function PredictionsTable({
             </ScrollArea>
         </CardContent>
         
-        <CardFooter className="p-2 text-[10px] text-muted-foreground border-t">
+        <CardFooter className="p-1.5 text-[10px] text-muted-foreground border-t">
           Displayed: {predictions.length}. (Overall Max: {maxLogs}).
           {predictions.length === 0 && (
             <span className="ml-2 flex items-center">
@@ -228,4 +255,3 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
