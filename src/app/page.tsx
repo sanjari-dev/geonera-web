@@ -7,7 +7,7 @@ import { produce } from 'immer';
 import { AppHeader } from '@/components/geonera/header';
 import { PipsInputCard } from '@/components/geonera/pips-input-card';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
-import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
+import { PredictionDetailsPanel, type ActiveDetailsView } from '@/components/geonera/prediction-details-panel';
 import { NotificationDisplay } from '@/components/geonera/notification-display';
 import type {
   PredictionLogItem,
@@ -32,8 +32,6 @@ import { Label } from '@/components/ui/label';
 
 
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
-// const MIN_EXPIRATION_SECONDS = 10; // Moved to types/index.ts
-// const MAX_EXPIRATION_SECONDS = 75; // Moved to types/index.ts
 const MAX_NOTIFICATIONS = 100;
 
 
@@ -75,6 +73,7 @@ export default function GeoneraPage() {
   const [currentTimeForFiltering, setCurrentTimeForFiltering] = useState(new Date());
   const [displayedActiveLogsCount, setDisplayedActiveLogsCount] = useState<number>(DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT);
   const [displayedExpiredLogsCount, setDisplayedExpiredLogsCount] = useState<number>(DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT);
+  const [activeDetailsView, setActiveDetailsView] = useState<ActiveDetailsView>('about');
 
 
   const router = useRouter();
@@ -135,7 +134,7 @@ export default function GeoneraPage() {
     return Date.now().toString() + (typeof window !== 'undefined' ? Math.random().toString(36).substring(2,7) : "serverid" + Math.floor(Math.random() * 10000));
   }, [uuidAvailable]);
 
-  const addNotification = useCallback((notification: Omit<NotificationMessage, 'timestamp'>) => {
+  const addNotification = useCallback((notification: Omit<NotificationMessage, 'timestamp' | 'id'>) => {
     setNotificationsList(prevNotifications => {
       const newNotificationWithMessageId = { ...notification, timestamp: new Date(), id: generateId() };
       const updatedNotifications = [newNotificationWithMessageId, ...prevNotifications];
@@ -155,6 +154,7 @@ export default function GeoneraPage() {
     setPredictionLogs([]); 
     setSelectedPredictionLog(null); 
     setSelectedCurrencyPairs([]); 
+    setActiveDetailsView('about');
     addNotification({ title: "Logged Out", description: "You have been successfully logged out.", variant: 'default' });
   };
 
@@ -173,7 +173,16 @@ export default function GeoneraPage() {
     } else {
       setSelectedPredictionLog(produce(log, draft => draft));
     }
+    setActiveDetailsView('details');
   }, [predictionLogs]); 
+
+  const handleActiveDetailsViewChange = useCallback((view: ActiveDetailsView) => {
+    setActiveDetailsView(view);
+    if (view === 'about' || view === 'notifications') {
+      setSelectedPredictionLog(null);
+    }
+  }, []);
+
 
   const handleDateRangeChange = useCallback((newRange: DateRangeFilter) => {
     setDateRangeFilter(newRange);
@@ -277,6 +286,7 @@ export default function GeoneraPage() {
           if (!activePairsAfterAsync.includes(pendingLog.currencyPair)) {
               if (selectedPredictionLog && selectedPredictionLog.id === pendingLog.id) {
                 setSelectedPredictionLog(null);
+                if (activeDetailsView === 'details') setActiveDetailsView('about');
               }
               draft.splice(logIndex, 1);
               return; 
@@ -301,6 +311,7 @@ export default function GeoneraPage() {
 
           if (selectedPredictionLog && removedItems.find(item => item.id === selectedPredictionLog.id)) {
             setSelectedPredictionLog(null);
+             if (activeDetailsView === 'details') setActiveDetailsView('about');
           }
         }
       }));
@@ -340,7 +351,7 @@ export default function GeoneraPage() {
       if (timeoutId) clearTimeout(timeoutId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, generateId, addNotification]); 
+  }, [currentUser, isAuthCheckComplete, generateId, addNotification, activeDetailsView]); 
 
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) return;
@@ -361,6 +372,7 @@ export default function GeoneraPage() {
           if (removeLog) {
             if (selectedPredictionLog && selectedPredictionLog.id === log.id) {
               setSelectedPredictionLog(null);
+              if (activeDetailsView === 'details') setActiveDetailsView('about');
             }
             draft.splice(i, 1);
             didChange = true;
@@ -371,7 +383,8 @@ export default function GeoneraPage() {
     }, 1000); 
 
     return () => clearInterval(cleanupIntervalId);
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog, activeDetailsView]); 
 
 
   const getSortableValue = useCallback((log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
@@ -456,13 +469,14 @@ export default function GeoneraPage() {
 
 
   useEffect(() => {
-    if (!currentUser || !isAuthCheckComplete) {
-      if (selectedPredictionLog !== null) setSelectedPredictionLog(null);
+    if (!currentUser || !isAuthCheckComplete || activeDetailsView !== 'details') {
+       if (selectedPredictionLog !== null && activeDetailsView !== 'details') {
+           setSelectedPredictionLog(null);
+       }
       return;
     }
   
     let newSelectedLogCandidate: PredictionLogItem | null = null;
-  
     const combinedSortedLogsForSelection = [...displayedSortedActiveLogs, ...sortedAndLimitedExpiredLogs];
   
     if (combinedSortedLogsForSelection.length > 0) {
@@ -482,7 +496,7 @@ export default function GeoneraPage() {
       setSelectedPredictionLog(newSelectedLogCandidate);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, displayedSortedActiveLogs, sortedAndLimitedExpiredLogs]); 
+  }, [currentUser, isAuthCheckComplete, displayedSortedActiveLogs, sortedAndLimitedExpiredLogs, activeDetailsView]); 
 
   const handleSort = (key: SortableColumnKey, tableType: 'active' | 'expired') => {
     const setSortConfig = tableType === 'active' ? setSortConfigActive : setSortConfigExpired;
@@ -631,6 +645,8 @@ export default function GeoneraPage() {
           
           <div className="md:col-span-1 flex flex-col min-h-0"> 
             <PredictionDetailsPanel 
+              activeView={activeDetailsView}
+              onActiveViewChange={handleActiveDetailsViewChange}
               selectedPrediction={finalSelectedPredictionForChildren} 
               maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG}
               notifications={notificationsList}
@@ -645,6 +661,7 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
 
 
 

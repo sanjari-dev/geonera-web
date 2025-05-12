@@ -4,10 +4,10 @@
 import type { PredictionLogItem, PipsPredictionOutcome, NotificationMessage } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List, Filter } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List, Filter, AlertCircle as AlertTriangleIcon } from "lucide-react"; // Added AlertTriangleIcon alias
 import { format as formatDateFns } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useState, useEffect } from 'react';
+// import { useState, useEffect } from 'react'; // Removed useState, useEffect
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -19,13 +19,15 @@ import { cn } from '@/lib/utils';
 import { MIN_EXPIRATION_SECONDS, MAX_EXPIRATION_SECONDS } from '@/types';
 
 
+export type ActiveDetailsView = 'about' | 'details' | 'notifications';
+
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
   maxPredictionLogs: number; 
   notifications: NotificationMessage[];
+  activeView: ActiveDetailsView;
+  onActiveViewChange: (view: ActiveDetailsView) => void;
 }
-
-type ActiveDetailsView = 'about' | 'details' | 'notifications';
 
 
 // New component for rendering the list of notifications
@@ -36,7 +38,7 @@ const NotificationListItem: React.FC<{ notification: NotificationMessage }> = ({
 
   switch (notification.variant) {
     case "destructive":
-      IconComponent = AlertTriangle;
+      IconComponent = AlertTriangleIcon; // Use alias
       iconColorClass = "text-destructive";
       titleColorClass = "text-destructive";
       break;
@@ -140,19 +142,8 @@ const formatVolume = (volume?: number) => {
 };
 
 
-export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, notifications }: PredictionDetailsPanelProps) {
-  const [activeView, setActiveView] = useState<ActiveDetailsView>('about');
-
-  useEffect(() => {
-    if (selectedPrediction && activeView !== 'notifications') { // If a prediction is selected, and we are not looking at notifications
-      setActiveView('details');
-    } else if (!selectedPrediction && activeView === 'details') { // If no prediction selected, but view is 'details', switch to 'about'
-      setActiveView('about');
-    }
-    // If view is 'notifications' or 'about' (and no prediction), keep it as is.
-  }, [selectedPrediction, activeView]);
-
-
+export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, notifications, activeView, onActiveViewChange }: PredictionDetailsPanelProps) {
+  
   const marketOhlcData = selectedPrediction?.predictionOutcome;
   const marketDataAvailable = selectedPrediction && marketOhlcData && (
     marketOhlcData.openPrice !== undefined ||
@@ -188,17 +179,17 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => setActiveView('about')} className="text-xs">
+                    <DropdownMenuItem onSelect={() => onActiveViewChange('about')} className="text-xs">
                         <Info className="mr-2 h-3.5 w-3.5" /> About Geonera
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                        onSelect={() => setActiveView('details')} 
+                        onSelect={() => onActiveViewChange('details')} 
                         disabled={!selectedPrediction} 
                         className="text-xs"
                     >
                         <List className="mr-2 h-3.5 w-3.5" /> Prediction Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => setActiveView('notifications')} className="text-xs">
+                    <DropdownMenuItem onSelect={() => onActiveViewChange('notifications')} className="text-xs">
                         <BellRing className="mr-2 h-3.5 w-3.5" /> Notification History
                     </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -424,5 +415,6 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
 }
 
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
 
 
