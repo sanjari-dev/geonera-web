@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { MIN_EXPIRATION_SECONDS, REFRESH_INTERVAL_OPTIONS, MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC, MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC } from '@/types';
+import { REFRESH_INTERVAL_OPTIONS, MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC, MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC } from '@/types';
 import { formatSecondsToDurationString } from '@/lib/datetime-utils';
 
 
@@ -223,7 +223,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                     <strong>Prediction Logs:</strong> Generated predictions appear in the "Prediction Logs" area, split into <strong>Active Predictions</strong> and <strong>Expired Predictions</strong> tables.
                   </li>
                   <li>
-                    <strong>Expiration:</strong> Each prediction has a unique expiration time, randomly set between {MIN_EXPIRATION_SECONDS} seconds and your configured 'Max Prediction Lifetime' (which can range from {formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC)} to {formatSecondsToDurationString(MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC)}). Once expired, it moves to the "Expired Predictions" table.
+                    <strong>Expiration:</strong> Each prediction has a unique expiration time, randomly set between 2 minutes and your configured 'Max Prediction Lifetime' (which can range from {formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC)} to {formatSecondsToDurationString(MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC)}). Once expired, it moves to the "Expired Predictions" table.
                   </li>
                   <li>
                     <strong>Log Management:</strong> You can configure the maximum number of logs to display in each table using their respective <Filter className="inline h-3 w-3" aria-label="Filter Settings" /> icon. The system has an overall cap of {maxPredictionLogs} total logs.
@@ -426,3 +426,4 @@ type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends un
 
 // Constant for Notification History display
 const MAX_NOTIFICATIONS_HISTORY = 100;
+
