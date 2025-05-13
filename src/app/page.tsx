@@ -30,7 +30,7 @@ import {
   DEFAULT_REFRESH_INTERVAL_VALUE,
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, CalendarDays, Settings as SettingsIcon, List } from 'lucide-react';
+import { Loader2, CalendarDays, Settings as SettingsIcon, List, Smartphone } from 'lucide-react';
 import { 
   startOfDay, endOfDay, isValid,
 } from 'date-fns';
@@ -43,9 +43,12 @@ import { formatDateToDateTimeLocal } from '@/lib/datetime-utils';
 import { getSortableValue } from '@/lib/table-utils';
 import { usePredictionEngine } from '@/hooks/use-prediction-engine';
 import { useLogDisplay } from '@/hooks/use-log-display';
+import { UnsupportedResolutionMessage } from '@/components/geonera/unsupported-resolution-message';
 
 
 const MAX_NOTIFICATIONS = 100;
+const MIN_WIDTH = 1280;
+const MIN_HEIGHT = 720;
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -81,6 +84,7 @@ export default function GeoneraPage() {
   const [activeDetailsView, setActiveDetailsView] = useState<ActiveDetailsView>('about');
   const [predictionLogsViewMode, setPredictionLogsViewMode] = useState<'logs' | 'pipsSettings'>('logs');
   const [selectedRefreshIntervalValue, setSelectedRefreshIntervalValue] = useState<RefreshIntervalValue>(DEFAULT_REFRESH_INTERVAL_VALUE);
+  const [isResolutionSupported, setIsResolutionSupported] = useState(true);
 
   const router = useRouter();
 
@@ -119,6 +123,16 @@ export default function GeoneraPage() {
         }
     }
     setIsAuthCheckComplete(true);
+
+    const checkResolution = () => {
+      if (typeof window !== 'undefined') {
+        setIsResolutionSupported(window.innerWidth >= MIN_WIDTH && window.innerHeight >= MIN_HEIGHT);
+      }
+    };
+    checkResolution();
+    window.addEventListener('resize', checkResolution);
+    return () => window.removeEventListener('resize', checkResolution);
+
   }, []); 
 
   useEffect(() => {
@@ -313,6 +327,10 @@ export default function GeoneraPage() {
     // It's important that this returns null or a minimal loading/redirect indicator if needed,
     // and does not attempt to render the main page structure which might rely on currentUser.
     return null; 
+  }
+
+  if (!isResolutionSupported) {
+    return <UnsupportedResolutionMessage minWidth={MIN_WIDTH} minHeight={MIN_HEIGHT} />;
   }
 
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
