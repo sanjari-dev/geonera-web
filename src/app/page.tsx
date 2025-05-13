@@ -821,6 +821,7 @@ export default function GeoneraPage() {
               selectedPrediction={finalSelectedPredictionForChildren} 
               maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG}
               notifications={notificationsList}
+              className="flex-grow min-h-0"
             />
             {currentUser && ( 
               <NotificationDisplay notification={latestNotificationForDisplay} className="w-full flex-shrink-0" />
