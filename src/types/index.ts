@@ -99,10 +99,46 @@ export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[]
   { value: "N/A", label: "N/A" },
 ];
 
+export type RefreshIntervalValue = string; // e.g., "30s", "1m", "5m", "1h", "1D"
+export interface RefreshIntervalOption {
+  value: RefreshIntervalValue;
+  label: string;
+  milliseconds: number;
+}
+
+export const REFRESH_INTERVAL_OPTIONS: RefreshIntervalOption[] = [
+  { value: '30s', label: '30 Sec', milliseconds: 30 * 1000 },
+  { value: '1m', label: '1 Min', milliseconds: 1 * 60 * 1000 },
+  { value: '2m', label: '2 Min', milliseconds: 2 * 60 * 1000 },
+  { value: '3m', label: '3 Min', milliseconds: 3 * 60 * 1000 },
+  { value: '4m', label: '4 Min', milliseconds: 4 * 60 * 1000 },
+  { value: '5m', label: '5 Min', milliseconds: 5 * 60 * 1000 },
+  { value: '6m', label: '6 Min', milliseconds: 6 * 60 * 1000 },
+  { value: '10m', label: '10 Min', milliseconds: 10 * 60 * 1000 },
+  { value: '12m', label: '12 Min', milliseconds: 12 * 60 * 1000 },
+  { value: '15m', label: '15 Min', milliseconds: 15 * 60 * 1000 },
+  { value: '20m', label: '20 Min', milliseconds: 20 * 60 * 1000 },
+  { value: '30m', label: '30 Min', milliseconds: 30 * 60 * 1000 },
+  { value: '1h', label: '1 Hour', milliseconds: 1 * 60 * 60 * 1000 },
+  { value: '2h', label: '2 Hours', milliseconds: 2 * 60 * 60 * 1000 },
+  { value: '3h', label: '3 Hours', milliseconds: 3 * 60 * 60 * 1000 },
+  { value: '4h', label: '4 Hours', milliseconds: 4 * 60 * 60 * 1000 },
+  { value: '6h', label: '6 Hours', milliseconds: 6 * 60 * 60 * 1000 },
+  { value: '8h', label: '8 Hours', milliseconds: 8 * 60 * 60 * 1000 },
+  { value: '12h', label: '12 Hours', milliseconds: 12 * 60 * 60 * 1000 },
+  { value: '1D', label: '1 Day', milliseconds: 1 * 24 * 60 * 60 * 1000 },
+  { value: '2D', label: '2 Days', milliseconds: 2 * 24 * 60 * 60 * 1000 },
+  { value: '3D', label: '3 Days', milliseconds: 3 * 24 * 60 * 60 * 1000 },
+  { value: '4D', label: '4 Days', milliseconds: 4 * 24 * 60 * 60 * 1000 },
+  { value: '5D', label: '5 Days', milliseconds: 5 * 24 * 60 * 60 * 1000 },
+];
+
+export const DEFAULT_REFRESH_INTERVAL_VALUE: RefreshIntervalValue = '30s';
+export const DEFAULT_REFRESH_INTERVAL_MS = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === DEFAULT_REFRESH_INTERVAL_VALUE)?.milliseconds || 30000;
+
+
 export const MIN_EXPIRATION_SECONDS = 10;
 export const MAX_EXPIRATION_SECONDS = 75;
 export const MAX_PREDICTION_LOGS_CONFIG = 500;
 export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; // By default, show all possible active logs up to the system max.
 export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
-
-

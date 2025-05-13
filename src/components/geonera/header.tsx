@@ -1,5 +1,6 @@
-import { Brain, LogOut, LogIn as LogInIcon, Maximize, Minimize, Clock } from 'lucide-react';
-import type { User, CurrencyPair } from '@/types'; // Added CurrencyPair
+import { Brain, LogOut, LogIn as LogInIcon, Maximize, Minimize, Clock, RefreshCw } from 'lucide-react';
+import type { User, CurrencyPair, RefreshIntervalValue, RefreshIntervalOption } from '@/types';
+import { REFRESH_INTERVAL_OPTIONS } from '@/types';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,11 +11,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format as formatDateFns } from 'date-fns';
-import { PairSelectorCard } from '@/components/geonera/pair-selector-card'; // Added import
+import { PairSelectorCard } from '@/components/geonera/pair-selector-card';
 
 interface AppHeaderProps {
   user: User | null;
@@ -22,6 +30,8 @@ interface AppHeaderProps {
   selectedCurrencyPairs: CurrencyPair[];
   onSelectedCurrencyPairsChange: (value: CurrencyPair[]) => void;
   isLoading: boolean;
+  selectedRefreshInterval: RefreshIntervalValue;
+  onRefreshIntervalChange: (value: RefreshIntervalValue) => void;
 }
 
 export function AppHeader({
@@ -30,6 +40,8 @@ export function AppHeader({
   selectedCurrencyPairs,
   onSelectedCurrencyPairsChange,
   isLoading,
+  selectedRefreshInterval,
+  onRefreshIntervalChange,
 }: AppHeaderProps) {
   const router = useRouter();
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -63,7 +75,7 @@ export function AppHeader({
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.addEventListener('fullscreenchange', handleFullscreenChange);
-      setIsFullScreen(!!document.fullscreenElement);
+      setIsFullScreen(!!document.fullscreenElement); // Set initial state
       return () => {
         document.removeEventListener('fullscreenchange', handleFullscreenChange);
       };
@@ -77,14 +89,14 @@ export function AppHeader({
       try {
         await document.documentElement.requestFullscreen();
       } catch (err) {
-         console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+         console.error(`Error attempting to enable full-screen mode: ${err instanceof Error ? err.message : String(err)} (${err instanceof Error ? err.name : 'UnknownError'})`);
       }
     } else {
       if (document.exitFullscreen) {
         try {
           await document.exitFullscreen();
         } catch (err) {
-          console.error(`Error attempting to exit full-screen mode: ${err.message} (${err.name})`);
+           console.error(`Error attempting to exit full-screen mode: ${err instanceof Error ? err.message : String(err)} (${err instanceof Error ? err.name : 'UnknownError'})`);
         }
       }
     }
@@ -110,14 +122,46 @@ export function AppHeader({
           <h1 className="text-3xl font-bold text-primary">
             Geonera
           </h1>
-          {user && ( // Only show PairSelectorCard if user is logged in
-            <PairSelectorCard
-              variant="button"
-              selectedCurrencyPairs={selectedCurrencyPairs}
-              onSelectedCurrencyPairsChange={onSelectedCurrencyPairsChange}
-              isLoading={isLoading}
-              className="ml-4" // Added margin for spacing
-            />
+          {user && (
+            <div className="flex items-center ml-4 gap-2">
+              <PairSelectorCard
+                variant="button"
+                selectedCurrencyPairs={selectedCurrencyPairs}
+                onSelectedCurrencyPairsChange={onSelectedCurrencyPairsChange}
+                isLoading={isLoading}
+              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center">
+                       <RefreshCw className="h-4 w-4 text-primary mr-1" />
+                        <Select
+                            value={selectedRefreshInterval}
+                            onValueChange={(value) => onRefreshIntervalChange(value as RefreshIntervalValue)}
+                            disabled={isLoading}
+                        >
+                            <SelectTrigger 
+                                className="text-xs py-1 h-8 min-w-[100px] max-w-[120px] border-primary/30 focus:border-primary"
+                                aria-label="Select refresh interval"
+                            >
+                                <SelectValue placeholder="Interval" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {REFRESH_INTERVAL_OPTIONS.map((option: RefreshIntervalOption) => (
+                                <SelectItem key={option.value} value={option.value} className="text-xs py-1">
+                                {option.label}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Prediction Refresh Interval</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           )}
         </div>
 

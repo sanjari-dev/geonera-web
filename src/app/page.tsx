@@ -20,11 +20,20 @@ import type {
   SortableColumnKey,
   NotificationMessage,
   DateRangeFilter,
+  RefreshIntervalValue,
 } from '@/types';
-import { DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG, MIN_EXPIRATION_SECONDS, MAX_EXPIRATION_SECONDS } from '@/types';
+import { 
+  DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, 
+  DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, 
+  MAX_PREDICTION_LOGS_CONFIG, 
+  MIN_EXPIRATION_SECONDS, 
+  MAX_EXPIRATION_SECONDS,
+  REFRESH_INTERVAL_OPTIONS,
+  DEFAULT_REFRESH_INTERVAL_VALUE,
+} from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, CalendarDays, Filter, Settings as SettingsIcon, List } from 'lucide-react';
+import { Loader2, CalendarDays, Settings as SettingsIcon, List } from 'lucide-react'; // Filter icon removed as it's used internally in PredictionsTable
 import { startOfDay, endOfDay, isValid, format as formatDateFns } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,15 +42,11 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
-const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
 const MAX_NOTIFICATIONS = 100;
 
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
   if (!date || !isValid(date)) return '';
-  // Ensure the date is treated as local by offsetting timezone for input[type=datetime-local]
-  // This is a common workaround because datetime-local input expects non-timezone-offset string
-  // but Date objects inherently carry timezone info from the system.
   const tempDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
   return tempDate.toISOString().slice(0, 16);
 };
@@ -80,9 +85,8 @@ export default function GeoneraPage() {
   const [displayedActiveLogsCount, setDisplayedActiveLogsCount] = useState<number>(DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT);
   const [displayedExpiredLogsCount, setDisplayedExpiredLogsCount] = useState<number>(DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT);
   const [activeDetailsView, setActiveDetailsView] = useState<ActiveDetailsView>('about');
-
-  // New state for the view mode of the prediction logs card
   const [predictionLogsViewMode, setPredictionLogsViewMode] = useState<'logs' | 'pipsSettings'>('logs');
+  const [selectedRefreshIntervalValue, setSelectedRefreshIntervalValue] = useState<RefreshIntervalValue>(DEFAULT_REFRESH_INTERVAL_VALUE);
 
 
   const router = useRouter();
@@ -96,6 +100,11 @@ export default function GeoneraPage() {
   useEffect(() => {
     latestPipsSettingsRef.current = pipsSettings;
   }, [pipsSettings]);
+
+  const latestSelectedRefreshIntervalValueRef = useRef(selectedRefreshIntervalValue);
+  useEffect(() => {
+    latestSelectedRefreshIntervalValueRef.current = selectedRefreshIntervalValue;
+  }, [selectedRefreshIntervalValue]);
 
 
   useEffect(() => {
@@ -204,15 +213,23 @@ export default function GeoneraPage() {
     setPredictionLogsViewMode(prev => prev === 'logs' ? 'pipsSettings' : 'logs');
   };
 
+  const handleRefreshIntervalChange = useCallback((value: RefreshIntervalValue) => {
+    setSelectedRefreshIntervalValue(value);
+  }, []);
+
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) return; 
 
     let timeoutId: NodeJS.Timeout | undefined = undefined;
 
     const performPrediction = async () => {
+      const currentIntervalOption = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === latestSelectedRefreshIntervalValueRef.current);
+      const currentPredictionIntervalMs = currentIntervalOption ? currentIntervalOption.milliseconds : 30000;
+
+
       if (isLoading) { 
         if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
+        timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
         return;
       }
 
@@ -228,7 +245,7 @@ export default function GeoneraPage() {
 
       if (noCurrenciesSelected) {
         if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
+        timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
         return;
       }
 
@@ -241,7 +258,7 @@ export default function GeoneraPage() {
              });
         }
         if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
+        timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
         return;
       }
 
@@ -266,7 +283,7 @@ export default function GeoneraPage() {
       if (newPendingLogs.length === 0) { 
         setIsLoading(false);
         if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
+        timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
         return;
       }
 
@@ -357,17 +374,21 @@ export default function GeoneraPage() {
 
       setIsLoading(false);
       if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
+      timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
     };
+    
+    const initialIntervalOption = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === latestSelectedRefreshIntervalValueRef.current);
+    const initialPredictionIntervalMs = initialIntervalOption ? initialIntervalOption.milliseconds : 30000;
+
 
     if (timeoutId) clearTimeout(timeoutId); 
-    timeoutId = setTimeout(performPrediction, PREDICTION_INTERVAL_MS);
+    timeoutId = setTimeout(performPrediction, initialPredictionIntervalMs);
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, generateId, addNotification, activeDetailsView]); 
+  }, [currentUser, isAuthCheckComplete, generateId, addNotification, activeDetailsView, selectedRefreshIntervalValue]); 
 
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) return;
@@ -551,7 +572,9 @@ export default function GeoneraPage() {
         onLogout={handleLogout}
         selectedCurrencyPairs={selectedCurrencyPairs} 
         onSelectedCurrencyPairsChange={handleSelectedCurrencyPairsChange} 
-        isLoading={isLoading} 
+        isLoading={isLoading}
+        selectedRefreshInterval={selectedRefreshIntervalValue}
+        onRefreshIntervalChange={handleRefreshIntervalChange}
       />
 
       {!currentUser && isAuthCheckComplete && (
@@ -704,10 +727,8 @@ export default function GeoneraPage() {
       )}
       <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">
         {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved.
-        {currentUser && " Predictions update automatically every 30 seconds if parameters are valid."}
+        {currentUser && ` Predictions update automatically every ${REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === selectedRefreshIntervalValue)?.label || selectedRefreshIntervalValue} if parameters are valid.`}
       </footer>
     </div>
   );
 }
-
-
