@@ -45,14 +45,14 @@ export function PipsInputCard({
   };
   
   return (
-    <Card className={cn("shadow-lg", className)}> {/* Removed h-full and flex flex-col */}
+    <Card className={cn("shadow-lg", className)}>
       <CardHeader className="px-2 pt-2 pb-1">
         <CardTitle className="text-sm font-semibold text-primary flex items-center">
           <Target className="h-4 w-4 mr-1.5" aria-hidden="true" />
           <span>Set PIPS Targets</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-2 pt-0"> {/* Removed flex-grow, flex-col, justify-center */}
+      <CardContent className="p-2 pt-0">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
             <div>
               <Label htmlFor="min-profit-pips" className="text-xs font-medium mb-0.5 block">Min Profit</Label>

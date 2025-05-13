@@ -407,8 +407,8 @@ export default function GeoneraPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 space-y-4"> 
-                    <div>
+                  <div className="p-2 space-y-2"> 
+                    <div className="ml-2 shadow-lg shadow-none border-0 bg-transparent">
                       <Label className="text-sm font-medium text-primary mb-1 block">Date Range Filter</Label>
                       <div className="flex items-center justify-start gap-2 flex-wrap">
                         <div className='flex items-center gap-1'>
@@ -457,7 +457,7 @@ export default function GeoneraPage() {
                       pipsSettings={pipsSettings}
                       onPipsSettingsChange={handlePipsSettingsChange}
                       isLoading={isLoading}
-                      className="shadow-none border-0 bg-transparent p-0" 
+                      className="shadow-none border-0 bg-transparent" 
                     />
                   </div>
                 )}
