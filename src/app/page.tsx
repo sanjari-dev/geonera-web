@@ -53,6 +53,7 @@ const MAX_NOTIFICATIONS = 100;
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
   if (!date || !isValid(date)) return '';
+  // Adjust for local timezone for input[type="datetime-local"]
   const tempDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
   return tempDate.toISOString().slice(0, 16);
 };
@@ -63,55 +64,101 @@ const calculateDelayUntilNextScheduledRun = (intervalValue: RefreshIntervalValue
 
   const intervalOption = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === intervalValue);
   if (!intervalOption) {
-    return DEFAULT_REFRESH_INTERVAL_MS; 
+    console.warn(`GeoneraPage: Unknown interval value ${intervalValue}, defaulting to ${DEFAULT_REFRESH_INTERVAL_MS}ms`);
+    return DEFAULT_REFRESH_INTERVAL_MS;
   }
 
   const unitChar = intervalValue.slice(-1); // 'm', 'h', 'D'
   const amountStr = intervalValue.slice(0, -1);
-  
-  if (amountStr === '' || isNaN(parseInt(amountStr, 10))) { // Handle cases like 'D' for '1D' or invalid amounts
-     return DEFAULT_REFRESH_INTERVAL_MS;
-  }
-  const amount = parseInt(amountStr, 10);
+  const amount = amountStr === '' ? 1 : parseInt(amountStr, 10); // Default to 1 if no number (e.g., 'D' for '1D')
 
+  if (isNaN(amount) || amount <= 0) {
+    console.warn(`GeoneraPage: Invalid amount for interval ${intervalValue}, defaulting to ${DEFAULT_REFRESH_INTERVAL_MS}ms`);
+    return DEFAULT_REFRESH_INTERVAL_MS;
+  }
 
   switch (unitChar) {
     case 'm':
-      nextRunTime = startOfMinute(now);
-      do {
-        nextRunTime = addMinutes(nextRunTime, amount);
-      } while (nextRunTime <= now);
+      nextRunTime = startOfMinute(now); // Start with current minute, 0 seconds, 0 ms
+      // Loop until we find a minute that is a multiple of 'amount' AND is strictly in the future
+      while (nextRunTime.getMinutes() % amount !== 0 || nextRunTime <= now) {
+        nextRunTime = addMinutes(nextRunTime, 1);
+        // Ensure we are checking the start of the newly incremented minute
+        nextRunTime = startOfMinute(nextRunTime); 
+      }
       break;
     case 'h':
-      nextRunTime = startOfHour(now);
-      do {
-        nextRunTime = addHours(nextRunTime, amount);
-      } while (nextRunTime <= now);
+      nextRunTime = startOfHour(now); // Start with current hour, 0 minutes, 0 seconds, 0 ms
+      // Loop until we find an hour that is a multiple of 'amount' AND is strictly in the future
+      while (nextRunTime.getHours() % amount !== 0 || nextRunTime <= now) {
+        nextRunTime = addHours(nextRunTime, 1);
+        // Ensure we are checking the start of the newly incremented hour
+        nextRunTime = startOfHour(nextRunTime);
+      }
       break;
     case 'D':
-      nextRunTime = startOfDay(now);
-      do {
-        nextRunTime = addDays(nextRunTime, amount);
-      } while (nextRunTime <= now);
+      nextRunTime = startOfDay(now); // Start with today at 00:00:00.000
+      // Loop until nextRunTime is strictly in the future AND satisfies the "every X day" logic.
+      // For "every X days", if amount is 1, it's every day at 00:00.
+      // If amount > 1, it's every X days at 00:00 (e.g., 2D means today, then 2 days later, etc., always at 00:00)
+      // The initial nextRunTime is startOfDay(now). If it's already past for today, or not aligned with 'amount', we advance.
+      if (amount === 1) { // Every day at 00:00
+         if (nextRunTime <= now) { // If current time is past 00:00 today
+          nextRunTime = addDays(nextRunTime, 1); // Schedule for 00:00 tomorrow
+        }
+      } else { // Every X days (where X > 1), aligned with multiples of X from some epoch or simply X days from the last run.
+               // A simpler interpretation: the next day at 00:00 which is at least X days from today's 00:00 if today's 00:00 has passed.
+               // Or, the next occurrence of a day N*X days from an epoch.
+               // Let's use: find the first 00:00 time that is >= startOfDay(now) and (day_of_year_or_epoch % amount == 0)
+               // This is too complex. Let's stick to "add 'amount' days until it's in the future".
+        while (nextRunTime <= now) {
+            nextRunTime = addDays(nextRunTime, amount);
+        }
+      }
       break;
     default:
-      return intervalOption.milliseconds; // Fallback to defined milliseconds
+      console.warn(`GeoneraPage: Unhandled unit character ${unitChar} in interval ${intervalValue}, defaulting to interval's milliseconds or default.`);
+      return intervalOption.milliseconds || DEFAULT_REFRESH_INTERVAL_MS;
   }
 
   let delay = differenceInMilliseconds(nextRunTime, now);
+
+  // This safeguard should ideally not be hit if the while loops are correct.
+  // It handles cases where nextRunTime might be exactly 'now' or calculation errors.
   if (delay <= 0) {
-    // If calculated nextRunTime is in the past or now, it means we might have missed it
-    // or the calculation logic led to it. Schedule for the *next* valid interval.
-    // This can happen if 'amount' is large and the 'do-while' pushes it too far initially.
-    // A simple robust way is to calculate again based on the *next* interval start.
-    // For simplicity here, if delay is <=0, use a small positive delay to re-evaluate soon.
-    // Or, if it's significantly past, schedule based on the next logical interval from `now`.
-    // e.g. if interval is 1m, and now is 10:00:05, next run 10:01:00. If now 10:00:59, next 10:01:00.
-    // If now 10:01:01, next 10:02:00. The do-while should handle this correctly.
-    // The only case delay <= 0 should happen is if now IS the nextRunTime, or very slightly past.
-    // In such case, a small delay (e.g. 100ms) is fine before re-running performPrediction.
-     delay = 100; 
+    console.warn(`GeoneraPage: Calculated delay for ${intervalValue} is ${delay}ms. Re-adjusting to next interval.`);
+    // Advance to the *next* logical interval from the already calculated `nextRunTime`
+    switch (unitChar) {
+        case 'm':
+            // If 10:02:00 was calculated and delay is <=0, next should be 10:02:00 + amount minutes
+            let tempM = addMinutes(startOfMinute(nextRunTime), amount); // Ensure it's from start of minute
+            while(tempM.getMinutes() % amount !== 0) { // re-align if simple additon misaligns
+                tempM = addMinutes(tempM,1);
+                tempM = startOfMinute(tempM);
+            }
+            nextRunTime = tempM;
+            break;
+        case 'h':
+            let tempH = addHours(startOfHour(nextRunTime), amount);
+             while(tempH.getHours() % amount !== 0) {
+                tempH = addHours(tempH,1);
+                tempH = startOfHour(tempH);
+            }
+            nextRunTime = tempH;
+            break;
+        case 'D':
+            // If it was Jan 1, 00:00 and delay <=0, next should be Jan 1, 00:00 + amount days
+            nextRunTime = addDays(startOfDay(nextRunTime), amount);
+            break;
+    }
+    delay = differenceInMilliseconds(nextRunTime, now);
+    
+    if (delay <= 0) { // If still non-positive, something is very wrong, use a small default
+        console.error(`GeoneraPage: Critical - delay still ${delay}ms after readjustment for ${intervalValue}. Defaulting to 100ms to prevent tight loop.`);
+        delay = 100;
+    }
   }
+  // console.log(`GeoneraPage: Next run for ${intervalValue} at ${formatDateFns(nextRunTime, "yyyy-MM-dd HH:mm:ss XXX")}, delay: ${delay}ms (Now: ${formatDateFns(now, "yyyy-MM-dd HH:mm:ss XXX")})`);
   return delay;
 };
 
@@ -257,6 +304,7 @@ export default function GeoneraPage() {
      if (logFromState) {
       setSelectedPredictionLog(produce(logFromState, draft => draft)); 
     } else {
+      // This case should ideally not happen if selection is always from existing logs
       setSelectedPredictionLog(produce(log, draft => draft));
     }
     setActiveDetailsView('details');
@@ -289,6 +337,7 @@ export default function GeoneraPage() {
 
     const performPrediction = async () => {
       if (isLoading) { 
+        // If already loading, reschedule for the next valid slot without making a new request yet
         const delay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
         if (timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(performPrediction, delay);
@@ -306,6 +355,7 @@ export default function GeoneraPage() {
       const noCurrenciesSelected = currentSelectedPairs.length === 0;
 
       if (noCurrenciesSelected) {
+        // If no currencies are selected, just wait for the next interval
         const delay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
         if (timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(performPrediction, delay);
@@ -313,13 +363,14 @@ export default function GeoneraPage() {
       }
 
       if (isPipsSettingsInvalid) {
-        if (currentSelectedPairs.length > 0) {
+        if (currentSelectedPairs.length > 0) { // Only notify if pairs are selected but settings are bad
             addNotification({
                 title: "Prediction Paused",
                 description: "Ensure Min/Max PIPS for profit & loss are valid (Min > 0, Max > 0, Min <= Max). Predictions update automatically if parameters are valid.",
-                variant: "default", 
+                variant: "default", // Or "warning" if such variant is styled
              });
         }
+        // Still schedule the next check, in case settings become valid
         const delay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
         if (timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(performPrediction, delay);
@@ -331,19 +382,21 @@ export default function GeoneraPage() {
 
       const newPendingLogs: PredictionLogItem[] = [];
       currentSelectedPairs.forEach(currencyPair => {
-        const numPredictionsForPair = Math.floor(Math.random() * 10) + 1; 
+        // For each selected currency pair, generate a random number of predictions (1 to 10)
+        const numPredictionsForPair = Math.floor(Math.random() * 10) + 1; // 1 to 10 predictions
         for (let i = 0; i < numPredictionsForPair; i++) {
           const newLogId = generateId();
           newPendingLogs.push({
             id: newLogId,
             timestamp: new Date(),
             currencyPair: currencyPair,
-            pipsSettings: currentPipsSettings, 
+            pipsSettings: currentPipsSettings, // Use the current global pips settings
             status: "PENDING",
           });
         }
       });
 
+      // If, after potential filtering, no new logs are to be added (e.g. if numPredictionsForPair was 0, though it's 1-10)
       if (newPendingLogs.length === 0) { 
         setIsLoading(false);
         const delay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
@@ -354,43 +407,52 @@ export default function GeoneraPage() {
 
       setPredictionLogs(produce(draft => {
         newPendingLogs.forEach(log => {
-          draft.push(log); 
+          draft.push(log); // Add new pending logs
         });
+        // Cap total logs
         if (draft.length > MAX_PREDICTION_LOGS_CONFIG) {
           draft.splice(0, draft.length - MAX_PREDICTION_LOGS_CONFIG);
         }
       }));
 
+      // Simulate fetching predictions for all new pending logs
+      // The actual action 'getPipsPredictionAction' generates mock data.
       const predictionPromises = newPendingLogs.map(async (pendingLog) => {
+        // Pass the specific currencyPair and currentPipsSettings for this prediction
         const result = await getPipsPredictionAction(pendingLog.currencyPair, pendingLog.pipsSettings);
-        return { result, pendingLog }; 
+        return { result, pendingLog }; // Return both to associate result with its origin
       });
 
 
+      // Wait for all prediction "fetches" to complete
       const results = await Promise.all(predictionPromises);
 
       let successCount = 0;
       let errorCount = 0;
 
       setPredictionLogs(produce(draft => {
+        // Get the most up-to-date selected pairs *after* the async operations
         const activePairsAfterAsync = latestSelectedCurrencyPairsRef.current; 
 
         results.forEach(({ result, pendingLog }) => {
           const logIndex = draft.findIndex(log => log.id === pendingLog.id);
           if (logIndex === -1) {
+            // Log might have been removed by another process (e.g., cleanup if pair deselected)
             return;
           }
 
+          // If the currency pair for this log is no longer selected, remove the pending log
           if (!activePairsAfterAsync.includes(pendingLog.currencyPair)) {
               if (selectedPredictionLog && selectedPredictionLog.id === pendingLog.id) {
                 setSelectedPredictionLog(null);
+                // Optionally reset view if current details were for this removed log
                 if (activeDetailsView === 'details') setActiveDetailsView('about');
               }
               draft.splice(logIndex, 1);
-              return; 
+              return; // Skip further processing for this log
           }
 
-          let logToUpdate = draft[logIndex]; 
+          let logToUpdate = draft[logIndex]; // This is a Immer draft object
 
           if (result.error) {
             errorCount++;
@@ -400,13 +462,17 @@ export default function GeoneraPage() {
             successCount++;
             const randomExpirationSeconds = Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS;
             const randomExpirationMs = randomExpirationSeconds * 1000;
+            // Update the log item directly
             Object.assign(logToUpdate, { status: "SUCCESS", predictionOutcome: result.data, expiresAt: new Date(Date.now() + randomExpirationMs) });
           }
+          // else: if no data and no error, it remains PENDING (or handle as appropriate)
         });
+        // Re-apply MAX_PREDICTION_LOGS_CONFIG cap after updates/removals
         if (draft.length > MAX_PREDICTION_LOGS_CONFIG) {
           const removedCount = draft.length - MAX_PREDICTION_LOGS_CONFIG;
-          const removedItems = draft.splice(0, removedCount); 
+          const removedItems = draft.splice(0, removedCount); // Remove oldest logs
 
+          // If the currently selected detail view was for a log that got capped, clear it
           if (selectedPredictionLog && removedItems.find(item => item.id === selectedPredictionLog.id)) {
             setSelectedPredictionLog(null);
              if (activeDetailsView === 'details') setActiveDetailsView('about');
@@ -414,10 +480,11 @@ export default function GeoneraPage() {
         }
       }));
 
+      // Notify user about the outcome of the batch
       if (results.length > 0 && (successCount > 0 || errorCount > 0)) {
         let toastTitle = "Predictions Updated";
         let toastDescription = "";
-        const relevantPairs = latestSelectedCurrencyPairsRef.current.join(', '); 
+        const relevantPairs = latestSelectedCurrencyPairsRef.current.join(', '); // Pairs that were targeted
 
         if (successCount > 0 && errorCount === 0) {
           toastDescription = `${successCount} prediction(s) completed for ${relevantPairs}.`;
@@ -428,6 +495,7 @@ export default function GeoneraPage() {
           toastTitle = "Prediction Errors";
           toastDescription = `${errorCount} prediction(s) failed for ${relevantPairs}.`;
         }
+        // Only show notification if there was something to report for *currently selected* pairs
         if (toastDescription && latestSelectedCurrencyPairsRef.current.length > 0) {
           addNotification({
             title: toastTitle,
@@ -438,26 +506,29 @@ export default function GeoneraPage() {
       }
 
       setIsLoading(false);
+      // Schedule the next run
       const nextDelay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId); // Should be clear, but good practice
       timeoutId = setTimeout(performPrediction, nextDelay);
     };
     
+    // Initial scheduling when component mounts or dependencies change
     const initialDelay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
-    if (timeoutId) clearTimeout(timeoutId); 
+    if (timeoutId) clearTimeout(timeoutId); // Clear any existing timer before setting a new one
     timeoutId = setTimeout(performPrediction, initialDelay);
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId); // Cleanup on unmount or re-run
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, generateId, addNotification, activeDetailsView, selectedRefreshIntervalValue]); 
+  }, [currentUser, isAuthCheckComplete, generateId, addNotification, activeDetailsView, selectedRefreshIntervalValue]); // Dependencies that should re-trigger scheduling
 
+  // Effect for cleaning up logs whose currency pairs are no longer selected (non-expired logs)
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) return;
 
     const cleanupIntervalId = setInterval(() => {
-      const currentSelectedPairs = latestSelectedCurrencyPairsRef.current; 
+      const currentSelectedPairs = latestSelectedCurrencyPairsRef.current; // Use ref for up-to-date value
 
       setPredictionLogs(produce(draft => {
         let didChange = false;
@@ -465,26 +536,31 @@ export default function GeoneraPage() {
           const log = draft[i];
           let removeLog = false;
 
-          if (!currentSelectedPairs.includes(log.currencyPair) && (log.status === "PENDING" || log.status === "SUCCESS" || log.status === "ERROR")) {
+          // Condition 1: Log's currency pair is no longer in the selected list
+          // Only remove if it's not yet expired (SUCCESS logs without expiresAt or PENDING/ERROR)
+          // Expired logs should persist regardless of current pair selection for historical view.
+          if (!currentSelectedPairs.includes(log.currencyPair) && 
+              (log.status === "PENDING" || log.status === "ERROR" || (log.status === "SUCCESS" && (!log.expiresAt || new Date(log.expiresAt) > new Date())))) {
             removeLog = true;
           }
 
           if (removeLog) {
+            // If the log being removed is the one currently selected for details, clear the details view
             if (selectedPredictionLog && selectedPredictionLog.id === log.id) {
               setSelectedPredictionLog(null);
-              if (activeDetailsView === 'details') setActiveDetailsView('about');
+              if (activeDetailsView === 'details') setActiveDetailsView('about'); // Or some other default view
             }
             draft.splice(i, 1);
             didChange = true;
           }
         }
-        if (!didChange) return undefined; 
+        if (!didChange) return undefined; // Immer optimization: if no changes, return undefined
       }));
-    }, 1000); 
+    }, 1000); // Run cleanup every second (adjust as needed)
 
     return () => clearInterval(cleanupIntervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, selectedPredictionLog, activeDetailsView]); 
+  }, [currentUser, isAuthCheckComplete, selectedPredictionLog, activeDetailsView]); // Dependencies for the cleanup effect
 
 
   const getSortableValue = useCallback((log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
@@ -501,16 +577,20 @@ export default function GeoneraPage() {
   }, []);
 
   const baseFilteredLogs = useMemo(() => {
+    // Filter by selected currency pairs first.
+    // Then filter by date range.
     return predictionLogs.filter(log => {
-      if (!latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) return false;
-      const logTimestamp = new Date(log.timestamp); 
+      if (!latestSelectedCurrencyPairsRef.current.includes(log.currencyPair)) return false; // Filter by currently selected pairs
+      
+      const logTimestamp = new Date(log.timestamp); // Ensure it's a Date object
       if (dateRangeFilter.start && isValid(dateRangeFilter.start) && logTimestamp < dateRangeFilter.start) return false;
       if (dateRangeFilter.end && isValid(dateRangeFilter.end) && logTimestamp > dateRangeFilter.end) return false;
       
       return true;
     });
-  }, [predictionLogs, dateRangeFilter]); 
+  }, [predictionLogs, dateRangeFilter]); // latestSelectedCurrencyPairsRef is a ref, its change won't trigger re-memo, but predictionLogs will.
 
+  // Separate logs into potentially active and potentially expired based on current time
   const potentialActiveLogs = useMemo(() => {
     return baseFilteredLogs.filter(log => !log.expiresAt || new Date(log.expiresAt) > currentTimeForFiltering);
   }, [baseFilteredLogs, currentTimeForFiltering]);
@@ -519,6 +599,7 @@ export default function GeoneraPage() {
     return baseFilteredLogs.filter(log => log.expiresAt && new Date(log.expiresAt) <= currentTimeForFiltering);
   }, [baseFilteredLogs, currentTimeForFiltering]);
 
+  // Apply status and signal filters to active logs
   const activeLogs = useMemo(() => {
     return potentialActiveLogs.filter(log => {
       if (activeTableFilterStatus !== "ALL" && log.status !== activeTableFilterStatus) return false;
@@ -527,6 +608,7 @@ export default function GeoneraPage() {
     });
   }, [potentialActiveLogs, activeTableFilterStatus, activeTableFilterSignal]);
   
+  // Apply status and signal filters to expired logs
   const fullyFilteredExpiredExpiredLogs = useMemo(() => {
     return potentialExpiredLogs.filter(log => {
       if (expiredTableFilterStatus !== "ALL" && log.status !== expiredTableFilterStatus) return false;
@@ -542,8 +624,8 @@ export default function GeoneraPage() {
       const valB = getSortableValue(b, config.key);
 
       if (valA === undefined && valB === undefined) return 0;
-      if (valA === undefined) return config.direction === 'asc' ? 1 : -1; 
-      if (valB === undefined) return config.direction === 'asc' ? -1 : 1; 
+      if (valA === undefined) return config.direction === 'asc' ? 1 : -1; // Sort undefined values to the end
+      if (valB === undefined) return config.direction === 'asc' ? -1 : 1; // Sort undefined values to the end
 
       let comparison = 0;
       if (typeof valA === 'number' && typeof valB === 'number') {
@@ -553,23 +635,28 @@ export default function GeoneraPage() {
       } else if (typeof valA === 'string' && typeof valB === 'string') {
         comparison = valA.localeCompare(valB);
       } else {
+        // Fallback for mixed types or other types: compare as strings
         comparison = String(valA).localeCompare(String(valB));
       }
       return config.direction === 'asc' ? comparison : -comparison;
     });
   }, [getSortableValue]);
 
+  // Sort active logs and limit display
   const sortedActiveLogsData = useMemo(() => sortLogs(activeLogs, sortConfigActive), [activeLogs, sortConfigActive, sortLogs]);
   const displayedSortedActiveLogs = useMemo(() => sortedActiveLogsData.slice(0, displayedActiveLogsCount), [sortedActiveLogsData, displayedActiveLogsCount]);
   
+  // Sort expired logs and limit display
   const sortedAndLimitedExpiredLogs = useMemo(() => {
     const sorted = sortLogs(fullyFilteredExpiredExpiredLogs, sortConfigExpired);
     return sorted.slice(0, displayedExpiredLogsCount);
   }, [fullyFilteredExpiredExpiredLogs, sortConfigExpired, displayedExpiredLogsCount, sortLogs]);
 
 
+  // Effect to auto-select a prediction log for the details panel
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete || activeDetailsView !== 'details') {
+       // If view is not 'details', ensure no prediction is selected, or if user logs out.
        if (selectedPredictionLog !== null && activeDetailsView !== 'details') {
            setSelectedPredictionLog(null);
        }
@@ -577,37 +664,58 @@ export default function GeoneraPage() {
     }
   
     let newSelectedLogCandidate: PredictionLogItem | null = null;
-    const combinedSortedLogsForSelection = [...displayedSortedActiveLogs, ...sortedAndLimitedExpiredLogs];
   
-    if (combinedSortedLogsForSelection.length > 0) {
-      const currentSelectionStillEligible = selectedPredictionLog && combinedSortedLogsForSelection.find(log => log.id === selectedPredictionLog.id);
+    // Priority:
+    // 1. If a log is already selected and still in the (newly filtered/sorted) displayed active logs, keep it.
+    // 2. Else, if still in displayed expired logs, keep it.
+    // 3. Else, pick the first from displayed active logs.
+    // 4. Else, pick the first from displayed expired logs.
+    // 5. Else, null.
   
-      if (currentSelectionStillEligible) {
-        newSelectedLogCandidate = produce(combinedSortedLogsForSelection.find(log => log.id === selectedPredictionLog!.id)!, draft => draft);
-      } else {
-        newSelectedLogCandidate = produce(combinedSortedLogsForSelection[0], draft => draft);
+    if (selectedPredictionLog) {
+      if (displayedSortedActiveLogs.find(log => log.id === selectedPredictionLog!.id)) {
+        newSelectedLogCandidate = displayedSortedActiveLogs.find(log => log.id === selectedPredictionLog!.id)!;
+      } else if (sortedAndLimitedExpiredLogs.find(log => log.id === selectedPredictionLog!.id)) {
+        newSelectedLogCandidate = sortedAndLimitedExpiredLogs.find(log => log.id === selectedPredictionLog!.id)!;
       }
     }
   
-    if (selectedPredictionLog?.id !== newSelectedLogCandidate?.id ||
-        (selectedPredictionLog && newSelectedLogCandidate && JSON.stringify(selectedPredictionLog) !== JSON.stringify(newSelectedLogCandidate)) || 
-        (!selectedPredictionLog && newSelectedLogCandidate) || (selectedPredictionLog && !newSelectedLogCandidate)
-       ) {
-      setSelectedPredictionLog(newSelectedLogCandidate);
+    if (!newSelectedLogCandidate) { // If current selection is no longer valid or no selection existed
+      if (displayedSortedActiveLogs.length > 0) {
+        newSelectedLogCandidate = displayedSortedActiveLogs[0];
+      } else if (sortedAndLimitedExpiredLogs.length > 0) {
+        newSelectedLogCandidate = sortedAndLimitedExpiredLogs[0];
+      }
     }
+    
+    // Update selectedPredictionLog only if it has actually changed to avoid unnecessary re-renders
+    // This includes content change of the same ID, or ID change, or from/to null
+    const currentSelectionString = selectedPredictionLog ? JSON.stringify(selectedPredictionLog) : null;
+    const newCandidateString = newSelectedLogCandidate ? JSON.stringify(newSelectedLogCandidate) : null;
+
+    if (currentSelectionString !== newCandidateString) {
+         setSelectedPredictionLog(newSelectedLogCandidate ? produce(newSelectedLogCandidate, draft => draft) : null);
+    }
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isAuthCheckComplete, displayedSortedActiveLogs, sortedAndLimitedExpiredLogs, activeDetailsView]); 
+  }, [currentUser, isAuthCheckComplete, displayedSortedActiveLogs, sortedAndLimitedExpiredLogs, activeDetailsView]); // Not including selectedPredictionLog itself to avoid loop, but changes to displayed logs will trigger.
 
   const handleSort = (key: SortableColumnKey, tableType: 'active' | 'expired') => {
+    const currentSortConfig = tableType === 'active' ? sortConfigActive : sortConfigExpired;
     const setSortConfig = tableType === 'active' ? setSortConfigActive : setSortConfigExpired;
 
-    setSortConfig(prevConfig => {
-      if (prevConfig && prevConfig.key === key) {
-        return { key, direction: prevConfig.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      const defaultDirection = (key === 'timestamp' || key === 'expiresAt') ? 'desc' : 'asc';
-      return { key, direction: defaultDirection };
-    });
+    let direction: 'asc' | 'desc' = 'asc';
+    // Default sort directions for specific columns
+    if (key === 'timestamp' || key === 'expiresAt') {
+        direction = 'desc'; // Newer items first for time-based columns
+    }
+
+    if (currentSortConfig && currentSortConfig.key === key) {
+      // If same key, toggle direction
+      direction = currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
+    }
+    // Otherwise, set new key with its default or toggled direction
+    setSortConfig({ key, direction });
   };
 
 
@@ -620,10 +728,15 @@ export default function GeoneraPage() {
     );
   }
 
+  // Redirect is handled by useEffect, this return is for when redirect hasn't happened yet
   if (!currentUser && isAuthCheckComplete) {
-    // Handled by useEffect redirecting to /login
+    // This part of the UI should not be rendered if user is null and auth check is complete,
+    // as the useEffect hook would have initiated a redirect to /login.
+    // However, to prevent potential flashes of content or errors,
+    // we can return null or a minimal loading/redirecting message.
     return null; 
   }
+  // Ensure that finalSelectedPredictionForChildren is a fresh, non-proxy object if it exists
   const finalSelectedPredictionForChildren = selectedPredictionLog ? produce(selectedPredictionLog, draft => draft) : null;
   const latestNotificationForDisplay = notificationsList.length > 0 ? notificationsList[0] : null;
 
@@ -640,14 +753,16 @@ export default function GeoneraPage() {
         onRefreshIntervalChange={handleRefreshIntervalChange}
       />
 
+      {/* This message is for the case where user somehow lands here without being redirected by useEffect. */}
       {!currentUser && isAuthCheckComplete && (
         <div className="p-4 text-center text-muted-foreground">
           Please log in to view and manage Forex predictions.
         </div>
       )}
 
-      {currentUser && ( 
+      {currentUser && ( // Only render main content if user is logged in
         <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-3 gap-1 overflow-hidden">
+          {/* Prediction Logs Section (Left, 2/3 width on md) */}
           <div className="md:col-span-2 flex flex-col min-h-0"> 
             <Card className="shadow-xl h-full flex flex-col">
               <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-col items-center relative">
@@ -670,7 +785,7 @@ export default function GeoneraPage() {
                           const newStart = e.target.value ? new Date(e.target.value) : null;
                           if (newStart && isValid(newStart)) {
                             handleDateRangeChange({ ...dateRangeFilter, start: newStart });
-                          } else if (!e.target.value) {
+                          } else if (!e.target.value) { // Handle empty input
                              handleDateRangeChange({ ...dateRangeFilter, start: null });
                           }
                         }}
@@ -688,7 +803,7 @@ export default function GeoneraPage() {
                           const newEnd = e.target.value ? new Date(e.target.value) : null;
                           if (newEnd && isValid(newEnd)) {
                             handleDateRangeChange({ ...dateRangeFilter, end: newEnd });
-                          } else if (!e.target.value) {
+                          } else if (!e.target.value) { // Handle empty input
                             handleDateRangeChange({ ...dateRangeFilter, end: null });
                           }
                         }}
@@ -723,10 +838,11 @@ export default function GeoneraPage() {
               <CardContent className="p-1 flex-grow overflow-auto">
                 {predictionLogsViewMode === 'logs' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-1 h-full">
+                    {/* Active Predictions Table */}
                     <div className="flex flex-col min-h-0 overflow-y-auto h-full">
                       <PredictionsTable
                         title="Active Predictions"
-                        titleIcon={<PackageCheck className="h-4 w-4 mr-1.5" />}
+                        titleIcon={<PackageCheck className="h-4 w-4 mr-1.5" />} // Icon for Active table
                         predictions={displayedSortedActiveLogs}
                         onRowClick={handlePredictionSelect}
                         selectedPredictionId={finalSelectedPredictionForChildren?.id}
@@ -738,15 +854,16 @@ export default function GeoneraPage() {
                         onFilterSignalChange={setActiveTableFilterSignal}
                         displayLimit={displayedActiveLogsCount}
                         onDisplayLimitChange={setDisplayedActiveLogsCount}
-                        totalAvailableForDisplay={activeLogs.length}
-                        maxLogs={MAX_PREDICTION_LOGS_CONFIG}
+                        totalAvailableForDisplay={activeLogs.length} // Total matching active filters
+                        maxLogs={MAX_PREDICTION_LOGS_CONFIG} // System-wide cap for context
                       />
                     </div>
+                    {/* Expired Predictions Table */}
                     <div className="flex flex-col min-h-0 overflow-y-auto h-full">
                       <PredictionsTable
                         title="Expired Predictions"
-                        titleIcon={<PackageOpen className="h-4 w-4 mr-1.5" />}
-                        predictions={sortedAndLimitedExpiredLogs}
+                        titleIcon={<PackageOpen className="h-4 w-4 mr-1.5" />} // Icon for Expired table
+                        predictions={sortedAndLimitedExpiredLogs} // Already sorted and limited
                         onRowClick={handlePredictionSelect}
                         selectedPredictionId={finalSelectedPredictionForChildren?.id}
                         sortConfig={sortConfigExpired}
@@ -757,18 +874,19 @@ export default function GeoneraPage() {
                         onFilterSignalChange={setExpiredTableFilterSignal}
                         displayLimit={displayedExpiredLogsCount}
                         onDisplayLimitChange={setDisplayedExpiredLogsCount}
-                        totalAvailableForDisplay={fullyFilteredExpiredExpiredLogs.length}
-                        maxLogs={MAX_PREDICTION_LOGS_CONFIG}
+                        totalAvailableForDisplay={fullyFilteredExpiredExpiredLogs.length} // Total matching expired filters
+                        maxLogs={MAX_PREDICTION_LOGS_CONFIG} // System-wide cap for context
                       />
                     </div>
                   </div>
                 ) : (
+                  // PIPS Input Card View
                   <div className="p-4"> {/* Add padding for PipsInputCard view */}
                     <PipsInputCard
                       pipsSettings={pipsSettings}
                       onPipsSettingsChange={handlePipsSettingsChange}
                       isLoading={isLoading}
-                      className="shadow-none border-0 bg-transparent" 
+                      className="shadow-none border-0 bg-transparent" // Blend with parent card
                     />
                   </div>
                 )}
@@ -776,7 +894,9 @@ export default function GeoneraPage() {
             </Card>
           </div>
           
+          {/* Details and Notifications Section (Right, 1/3 width on md) */}
           <div className="md:col-span-1 flex flex-col min-h-0 gap-1"> 
+            {/* Prediction Details / About / Notifications Panel */}
             <PredictionDetailsPanel 
               activeView={activeDetailsView}
               onActiveViewChange={handleActiveDetailsViewChange}
@@ -784,7 +904,8 @@ export default function GeoneraPage() {
               maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG}
               notifications={notificationsList}
             />
-            {currentUser && (
+            {/* Latest Notification Display (conditionally rendered) */}
+            {currentUser && ( // This ensures it doesn't try to render if user is null during logout transition
               <NotificationDisplay notification={latestNotificationForDisplay} className="w-full flex-shrink-0" />
             )}
           </div>
@@ -797,4 +918,5 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
 
