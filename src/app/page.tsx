@@ -32,7 +32,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2, CalendarDays, Settings as SettingsIcon, List } from 'lucide-react';
 import { 
-  startOfDay, endOfDay, isValid, format as formatDateFns,
+  startOfDay, endOfDay, isValid,
 } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -309,6 +309,9 @@ export default function GeoneraPage() {
   }
 
   if (!currentUser && isAuthCheckComplete) {
+    // router.replace('/login') is handled in useEffect, this just prevents rendering the page content
+    // It's important that this returns null or a minimal loading/redirect indicator if needed,
+    // and does not attempt to render the main page structure which might rely on currentUser.
     return null; 
   }
 
@@ -327,7 +330,7 @@ export default function GeoneraPage() {
         onRefreshIntervalChange={handleRefreshIntervalChange}
       />
 
-      {!currentUser && isAuthCheckComplete && (
+      {!currentUser && isAuthCheckComplete && ( // This condition is likely redundant due to earlier return, but kept for safety
         <div className="p-4 text-center text-muted-foreground">
           Please log in to view and manage Forex predictions.
         </div>
@@ -339,7 +342,7 @@ export default function GeoneraPage() {
             <Card className="shadow-xl h-full flex flex-col">
               <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-col items-center relative">
                 <CardTitle className="text-lg font-semibold text-primary text-center w-full mb-1">
-                  {predictionLogsViewMode === 'logs' ? 'Prediction Logs' : 'PIPS & Date Range Settings'}
+                  {predictionLogsViewMode === 'logs' ? 'Prediction Logs' : 'Settings Prediction Logs'}
                 </CardTitle>
                 
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
