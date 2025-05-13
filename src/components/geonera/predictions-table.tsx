@@ -1,7 +1,7 @@
 // src/components/geonera/predictions-table.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -11,11 +11,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-// Badge is no longer used for signal, but might be used elsewhere or can be removed if truly unused.
-// import { Badge } from "@/components/ui/badge"; 
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock } from "lucide-react"; // Removed PackageCheck, PackageOpen as they will be passed as props
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, StatusFilterType, SignalFilterType } from '@/types';
-import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG } from '@/types'; // Import filter options
+import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG } from '@/types';
 import { format as formatDateFns } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -30,29 +28,43 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 
 
 interface PredictionsTableProps {
-  title: string; 
-  titleIcon?: React.ReactNode; // New prop for dynamic icon
+  title: string;
+  titleIcon?: React.ReactNode;
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
-  // maxLogs prop no longer needed here as it's derived from types or passed differently for display purposes
   sortConfig: SortConfig | null;
   onSort: (key: SortableColumnKey) => void;
   filterStatus: StatusFilterType;
   onFilterStatusChange: (value: StatusFilterType) => void;
   filterSignal: SignalFilterType;
   onFilterSignalChange: (value: SignalFilterType) => void;
-  displayLimit: number; 
-  onDisplayLimitChange: (value: number) => void; 
-  totalAvailableForDisplay: number; 
-  maxLogs: number; // Keep this for the input field constraint
+  displayLimit: number;
+  onDisplayLimitChange: (value: number) => void;
+  totalAvailableForDisplay: number;
+  maxLogs: number;
 }
 
+const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
+  switch (key) {
+    case 'status': return log.status;
+    case 'timestamp': return log.timestamp;
+    case 'currencyPair': return log.currencyPair;
+    case 'profitPipsMax': return log.pipsSettings.profitPips.max;
+    case 'lossPipsMax': return log.pipsSettings.lossPips.max;
+    case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
+    case 'expiresAt': return log.expiresAt;
+    default: return undefined;
+  }
+};
+
+
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
-  const commonClass = "h-3.5 w-3.5 mx-auto"; 
+  const commonClass = "h-3.5 w-3.5 mx-auto";
   let iconElement;
   let tooltipContent;
 
@@ -74,7 +86,7 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
        tooltipContent = "Idle";
        break;
     default:
-      return <div className="flex justify-center items-center h-full w-full">?</div>;
+      return <div className="flex justify-center items-center h-full w-full" aria-label="Unknown status">?</div>;
   }
   return (
     <Tooltip>
@@ -85,7 +97,7 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
 };
 
 
-const SignalIcon: React.FC<{ signal?: PipsPredictionOutcome["tradingSignal"], className?: string }> = ({ signal, className }) => {
+const SignalIconDisplay: React.FC<{ signal?: PipsPredictionOutcome["tradingSignal"], className?: string }> = ({ signal, className }) => {
   const iconCommonClass = "h-3.5 w-3.5 mx-auto";
   let iconElement: React.ReactNode;
   let tooltipText: string = "N/A";
@@ -95,19 +107,19 @@ const SignalIcon: React.FC<{ signal?: PipsPredictionOutcome["tradingSignal"], cl
      tooltipText = "N/A";
   } else {
     switch (signal) {
-      case "BUY": 
+      case "BUY":
         iconElement = <TrendingUp className={cn(iconCommonClass, "text-green-500", className)} aria-label="Buy Signal" />;
         tooltipText = "BUY";
         break;
-      case "SELL": 
+      case "SELL":
         iconElement = <TrendingDown className={cn(iconCommonClass, "text-red-500", className)} aria-label="Sell Signal" />;
         tooltipText = "SELL";
         break;
-      case "HOLD": 
+      case "HOLD":
         iconElement = <PauseCircle className={cn(iconCommonClass, "text-yellow-500", className)} aria-label="Hold Signal" />;
         tooltipText = "HOLD";
         break;
-      case "WAIT": 
+      case "WAIT":
         iconElement = <Clock className={cn(iconCommonClass, "text-blue-500", className)} aria-label="Wait Signal" />;
         tooltipText = "WAIT";
         break;
@@ -137,7 +149,7 @@ const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: Sortab
 
 export function PredictionsTable({
   title,
-  titleIcon, // Use the new prop
+  titleIcon,
   predictions,
   onRowClick,
   selectedPredictionId,
@@ -173,12 +185,12 @@ export function PredictionsTable({
   const handleApplyFilters = () => {
     onFilterStatusChange(tempFilterStatus);
     onFilterSignalChange(tempFilterSignal);
-    
+
     let newLimit = parseInt(String(tempDisplayLimit), 10);
     const defaultLimit = title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT;
     if (Number.isNaN(newLimit) || newLimit <= 0) {
-      newLimit = defaultLimit; 
-    } else if (newLimit > MAX_PREDICTION_LOGS_CONFIG) { // Use MAX_PREDICTION_LOGS_CONFIG from types
+      newLimit = defaultLimit;
+    } else if (newLimit > MAX_PREDICTION_LOGS_CONFIG) {
       newLimit = MAX_PREDICTION_LOGS_CONFIG;
     }
     onDisplayLimitChange(newLimit);
@@ -186,14 +198,14 @@ export function PredictionsTable({
   };
 
   const handleCancelFilters = () => {
-    setTempFilterStatus(filterStatus); 
+    setTempFilterStatus(filterStatus);
     setTempFilterSignal(filterSignal);
     setTempDisplayLimit(displayLimit);
     setViewMode('table');
   };
 
   const handleGearClick = () => {
-    setTempFilterStatus(filterStatus); 
+    setTempFilterStatus(filterStatus);
     setTempFilterSignal(filterSignal);
     setTempDisplayLimit(displayLimit);
     setViewMode('filter');
@@ -224,11 +236,11 @@ export function PredictionsTable({
       {renderSortableHeader("Pair", "currencyPair", "Currency Pair", <Coins className="h-3.5 w-3.5 mx-auto" aria-hidden="true" />)}
       {renderSortableHeader("P.Max", "profitPipsMax", "Max Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-2))]" aria-hidden="true" />)}
       {renderSortableHeader("L.Max", "lossPipsMax", "Max Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-1))]" aria-hidden="true" />)}
-      {renderSortableHeader(<Sigma className="h-3.5 w-3.5 mx-auto" aria-label="Signal" />, "tradingSignal", "Trading Signal")}
+      {renderSortableHeader(<Sigma className="h-3.5 w-3.5 mx-auto" aria-label="Trading Signal" />, "tradingSignal", "Trading Signal")}
       {renderSortableHeader("Expires", "expiresAt", "Expires In (DD HH:MM:SS)", <Zap className="h-3.5 w-3.5 mx-auto" aria-hidden="true" />)}
     </TableRow>
   );
-  
+
   const renderTableRows = (data: PredictionLogItem[]) => {
     if (data.length === 0) {
       return (
@@ -266,16 +278,36 @@ export function PredictionsTable({
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[11px] text-center whitespace-nowrap">
           {log.status === "SUCCESS" && log.predictionOutcome?.tradingSignal ? (
-            <SignalIcon signal={log.predictionOutcome.tradingSignal} />
+            <SignalIconDisplay signal={log.predictionOutcome.tradingSignal} />
           ) : log.status === "PENDING" ? (
             <span className="text-muted-foreground">...</span>
           ) : (
-             <SignalIcon signal={undefined} />
+             <SignalIconDisplay signal={undefined} />
           )}
         </TableCell>
         <TableCell className="px-1 py-0.5 text-[10px] text-center whitespace-nowrap">
-          {log.expiresAt && log.status === "SUCCESS" ? (
-            <CountdownTimer expiresAt={log.expiresAt} className="text-[10px]" />
+          {log.expiresAt && log.status === "SUCCESS" && title === "Active Predictions" ? (
+            <div className="flex flex-col items-center justify-center">
+              <CountdownTimer expiresAt={log.expiresAt} className="text-[10px]" />
+              {(() => {
+                const totalDuration = new Date(log.expiresAt).getTime() - new Date(log.timestamp).getTime();
+                if (totalDuration <= 0) return null;
+                const timeNow = typeof window !== 'undefined' ? new Date().getTime() : Date.now(); // Ensure client-side Date
+                const elapsedSinceStart = timeNow - new Date(log.timestamp).getTime();
+                let progressValue = (elapsedSinceStart / totalDuration) * 100;
+                const remainingPercent = Math.max(0, 100 - progressValue);
+
+                return (
+                  <Progress
+                    value={remainingPercent}
+                    className="h-1 w-[60px] mt-0.5"
+                    aria-label={`Time remaining ${Math.round(remainingPercent)}%`}
+                  />
+                );
+              })()}
+            </div>
+          ) : log.expiresAt && log.status === "SUCCESS" && title === "Expired Predictions" ? (
+             <span className="text-muted-foreground/70">Expired</span>
           ) : (
             <span className="text-muted-foreground">-- --:--:--</span>
           )}
@@ -290,17 +322,17 @@ export function PredictionsTable({
       <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby={`${title.toLowerCase().replace(/\s+/g, '-')}-title`}>
         <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-row items-center justify-between">
           <CardTitle id={`${title.toLowerCase().replace(/\s+/g, '-')}-title`} className="text-base font-semibold text-primary flex items-center">
-            {titleIcon || (title === "Active Predictions" ? <Info className="h-4 w-4 mr-1.5" aria-hidden="true" /> : <Info className="h-4 w-4 mr-1.5" aria-hidden="true" />)} {/* Fallback icon */}
+            {titleIcon || (title === "Active Predictions" ? <Info className="h-4 w-4 mr-1.5" aria-hidden="true" /> : <Info className="h-4 w-4 mr-1.5" aria-hidden="true" />)}
             {title}
           </CardTitle>
           <Tooltip>
               <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 p-1" aria-label={`Filter ${title}`} onClick={handleGearClick}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 p-1" aria-label={`Settings for ${title}`} onClick={handleGearClick}>
                       <Filter className="h-4 w-4 text-primary/80" aria-hidden="true" />
                   </Button>
               </TooltipTrigger>
               <TooltipContent>
-                  <p>Filter {title}</p>
+                  <p>Settings for {title}</p>
               </TooltipContent>
           </Tooltip>
         </CardHeader>
@@ -315,7 +347,7 @@ export function PredictionsTable({
             </ScrollArea>
           ) : (
             <div className="p-3 space-y-3">
-              <h4 className="text-sm font-medium text-primary">Filter {title}</h4>
+              <h4 className="text-sm font-medium text-primary">Settings for {title}</h4>
               <div className="space-y-1">
                 <Label htmlFor={`${title}-filter-status`} className="text-xs">Status</Label>
                 <Select
@@ -360,9 +392,12 @@ export function PredictionsTable({
                   id={`${title}-display-limit`}
                   type="number"
                   value={String(tempDisplayLimit)}
-                  onChange={(e) => setTempDisplayLimit(parseInt(e.target.value, 10))}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setTempDisplayLimit(isNaN(val) ? 0 : val); // Allow 0 for input, validation on apply
+                  }}
                   min="1"
-                  max={maxLogs} 
+                  max={maxLogs}
                   className="w-full text-xs py-1 h-8"
                   placeholder={`e.g., ${title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT} (max ${maxLogs})`}
                   aria-label={`Maximum logs to display for ${title}`}
@@ -371,7 +406,7 @@ export function PredictionsTable({
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={handleCancelFilters} className="text-xs">Cancel</Button>
                 <Button size="sm" onClick={handleApplyFilters} className="text-xs">
-                  <Save className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> Apply Filters
+                  <Save className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> Apply Settings
                 </Button>
               </div>
             </div>
@@ -380,8 +415,8 @@ export function PredictionsTable({
 
         <CardFooter className="p-1.5 text-[10px] text-muted-foreground border-t">
           Displayed: {predictions.length}
-          {totalAvailableForDisplay !== undefined ? ` of ${totalAvailableForDisplay}` : ''}.
-          {displayLimit !== undefined ? ` (Limit: ${displayLimit}).` : ''}
+          {totalAvailableForDisplay !== undefined ? ` of ${totalAvailableForDisplay} matching filters.` : '.'}
+          {displayLimit !== undefined ? ` (Limit: ${displayLimit})` : ''}
           {predictions.length === 0 && viewMode === 'table' && (
             <span className="ml-2 flex items-center">
                  <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
@@ -390,7 +425,7 @@ export function PredictionsTable({
            )}
            {viewMode === 'filter' && (
             <span className="ml-2 flex items-center italic">
-                Adjust filters and click Apply.
+                Adjust settings and click Apply.
             </span>
            )}
         </CardFooter>
@@ -399,8 +434,4 @@ export function PredictionsTable({
   );
 }
 
-// Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
-
-
-
