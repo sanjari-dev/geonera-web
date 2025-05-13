@@ -29,10 +29,12 @@ import {
   REFRESH_INTERVAL_OPTIONS,
   DEFAULT_REFRESH_INTERVAL_VALUE,
   MIN_EXPIRATION_SECONDS,
-  MAX_EXPIRATION_SECONDS, // Used as initial default for configurable max lifetime
+  MAX_EXPIRATION_SECONDS, // Default max lifetime for random generation
+  MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC,
+  MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC,
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, CalendarDays, Settings as SettingsIcon, List, Smartphone, ClockIcon } from 'lucide-react';
+import { Loader2, CalendarDays, Settings as SettingsIcon, List, Smartphone, ClockIcon, AlertTriangle } from 'lucide-react';
 import { 
   startOfDay, endOfDay, isValid,
 } from 'date-fns';
@@ -41,7 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatDateToDateTimeLocal } from '@/lib/datetime-utils';
+import { formatDateToDateTimeLocal, parseDurationStringToSeconds, formatSecondsToDurationString } from '@/lib/datetime-utils';
 import { getSortableValue } from '@/lib/table-utils';
 import { usePredictionEngine } from '@/hooks/use-prediction-engine';
 import { useLogDisplay } from '@/hooks/use-log-display';
@@ -62,7 +64,14 @@ export default function GeoneraPage() {
     profitPips: { min: 10, max: 20 },
     lossPips: { min: 5, max: 10 },
   });
-  const [maxPredictionLifetime, setMaxPredictionLifetime] = useState<number>(MAX_EXPIRATION_SECONDS);
+
+  // maxPredictionLifetime stores seconds (number)
+  const [maxPredictionLifetime, setMaxPredictionLifetime] = useState<number>(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC);
+  // maxPredictionLifetimeInputString stores the "DD HH:mm:ss" string for the input field
+  const [maxPredictionLifetimeInputString, setMaxPredictionLifetimeInputString] = useState<string>(
+    formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC)
+  );
+  const [maxPredictionLifetimeError, setMaxPredictionLifetimeError] = useState<string | null>(null);
 
 
   const [uuidAvailable, setUuidAvailable] = useState(false);
@@ -121,6 +130,8 @@ export default function GeoneraPage() {
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
     setDateRangeFilter({ start: todayStart, end: todayEnd });
+    setMaxPredictionLifetimeInputString(formatSecondsToDurationString(maxPredictionLifetime));
+
 
     const storedUser = localStorage.getItem('geoneraUser');
     if (storedUser) {
@@ -142,7 +153,7 @@ export default function GeoneraPage() {
     window.addEventListener('resize', checkResolution);
     return () => window.removeEventListener('resize', checkResolution);
 
-  }, []); 
+  }, []); // maxPredictionLifetime removed to avoid loop with setMaxPredictionLifetimeInputString
 
   useEffect(() => {
     if (isAuthCheckComplete && !currentUser) {
@@ -236,6 +247,30 @@ export default function GeoneraPage() {
   const handlePipsSettingsChange = useCallback((value: PipsSettings) => {
     setPipsSettings(value);
   }, []);
+
+  const handleMaxLifetimeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setMaxPredictionLifetimeInputString(inputValue); // Update string state immediately for responsive input
+  
+    const parsedSeconds = parseDurationStringToSeconds(inputValue);
+  
+    if (parsedSeconds === null && inputValue.trim() !== "") { // Allow empty to clear, but show error if not empty and unparsable
+      setMaxPredictionLifetimeError("Invalid format. Use DD HH:mm:ss or HH:mm:ss or mm:ss or ss.");
+    } else if (inputValue.trim() === "") {
+        setMaxPredictionLifetimeError(null); // Or set an error "Value cannot be empty" if preferred
+        // Optionally set maxPredictionLifetime to a default or MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC
+        setMaxPredictionLifetime(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC);
+    } else if (parsedSeconds !== null && parsedSeconds < MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC) {
+      setMaxPredictionLifetimeError(`Minimum is ${formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC)} (10 minutes).`);
+    } else if (parsedSeconds !== null && parsedSeconds > MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC) {
+      setMaxPredictionLifetimeError(`Maximum is ${formatSecondsToDurationString(MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC)} (5 days).`);
+    } else if (parsedSeconds !== null) {
+      setMaxPredictionLifetimeError(null);
+      setMaxPredictionLifetime(parsedSeconds); // Update the actual seconds state
+    } else {
+       setMaxPredictionLifetimeError(null); // Catch all for empty or other valid states that don't trigger error
+    }
+  };
 
   const handlePredictionSelect = useCallback((log: PredictionLogItem) => {
     const logFromState = predictionLogs.find(l => l.id === log.id);
@@ -334,6 +369,7 @@ export default function GeoneraPage() {
   }
 
   if (!currentUser && isAuthCheckComplete) {
+    // router.replace('/login') handled by useEffect above
     return null; 
   }
 
@@ -488,30 +524,31 @@ export default function GeoneraPage() {
                      <div className="ml-2 mt-2 shadow-lg shadow-none border-0 bg-transparent">
                         <Label htmlFor="max-prediction-lifetime" className="text-sm font-medium text-primary mb-1 block">
                           <ClockIcon className="h-3.5 w-3.5 mr-1 inline-block" aria-hidden="true" />
-                          Max Prediction Lifetime (seconds)
+                          Max Prediction Lifetime
                         </Label>
                         <div className="flex items-center gap-2">
                           <Input
-                            type="number"
+                            type="text" // Changed from number to text
                             id="max-prediction-lifetime"
-                            aria-label="Maximum prediction lifetime in seconds"
-                            value={maxPredictionLifetime}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value, 10);
-                              if (!isNaN(val) && val >= MIN_EXPIRATION_SECONDS) {
-                                setMaxPredictionLifetime(val);
-                              } else if (e.target.value === '') {
-                                setMaxPredictionLifetime(MIN_EXPIRATION_SECONDS); 
-                              } else if (!isNaN(val) && val < MIN_EXPIRATION_SECONDS) {
-                                setMaxPredictionLifetime(MIN_EXPIRATION_SECONDS);
-                              }
-                            }}
-                            min={MIN_EXPIRATION_SECONDS}
-                            className="h-8 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                            aria-label="Maximum prediction lifetime in DD HH:mm:ss format"
+                            value={maxPredictionLifetimeInputString}
+                            onChange={handleMaxLifetimeInputChange}
+                            className={cn(
+                              "h-8 text-xs py-1 w-auto border-primary/30 focus:border-primary",
+                              maxPredictionLifetimeError && "border-destructive"
+                            )}
+                            placeholder="DD HH:mm:ss"
                           />
                         </div>
+                        {maxPredictionLifetimeError && (
+                          <p className="text-xs text-destructive mt-1 flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {maxPredictionLifetimeError}
+                          </p>
+                        )}
                         <p className="text-xs text-muted-foreground mt-1">
-                          Min: {MIN_EXPIRATION_SECONDS}s. Predictions expire randomly between {MIN_EXPIRATION_SECONDS}s and this value.
+                          Format: DD HH:mm:ss. Valid range: 10 minutes to 5 days.
+                          Actual expiration is random between {MIN_EXPIRATION_SECONDS}s and this set maximum.
                         </p>
                       </div>
                   </div>

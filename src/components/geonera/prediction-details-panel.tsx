@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { MIN_EXPIRATION_SECONDS, REFRESH_INTERVAL_OPTIONS } from '@/types';
+import { MIN_EXPIRATION_SECONDS, REFRESH_INTERVAL_OPTIONS, MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC, MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC } from '@/types';
+import { formatSecondsToDurationString } from '@/lib/datetime-utils';
 
 
 export type ActiveDetailsView = 'about' | 'details' | 'notifications';
@@ -23,7 +24,7 @@ export type ActiveDetailsView = 'about' | 'details' | 'notifications';
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
   maxPredictionLogs: number;
-  currentMaxPredictionLifetime: number; // Added prop
+  currentMaxPredictionLifetime: number; // This is in seconds
   notifications: NotificationMessage[];
   activeView: ActiveDetailsView;
   onActiveViewChange: (view: ActiveDetailsView) => void;
@@ -213,16 +214,16 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                 </p>
                 <ul className="list-disc list-inside space-y-1 pl-3 leading-relaxed">
                   <li>
-                    <strong>Parameter Setup:</strong> Use the <strong>Currency Pair(s)</strong> selector in the header and the <strong>PIPS & Lifetime Settings</strong> (accessible via the <SettingsIcon className="inline h-3 w-3" aria-label="Settings" /> icon on the "Prediction Logs" card) to define your prediction parameters. This includes setting ranges for your target profit, acceptable loss in PIPS, and max prediction lifetime.
+                    <strong>Parameter Setup:</strong> Use the <strong>Currency Pair(s)</strong> selector in the header and the <strong>PIPS & Lifetime Settings</strong> (accessible via the <SettingsIcon className="inline h-3 w-3" aria-label="Settings" /> icon on the "Prediction Logs" card) to define your prediction parameters. This includes setting ranges for your target profit, acceptable loss in PIPS, and the max prediction lifetime (configurable from 10 minutes to 5 days in "DD HH:mm:ss" format).
                   </li>
                   <li>
-                    <strong>Automatic Predictions:</strong> Once parameters are set (valid currency pairs selected, PIPS settings, and lifetime defined), predictions will automatically generate. The frequency of these updates can be set using the interval selector (e.g., {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '1m')?.label || '1 Min'}, {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '5m')?.label || '5 Min'}) in the header. Invalid PIPS or lifetime settings (e.g., min &gt; max, or zero/negative values for PIPS; lifetime too short) will pause updates.
+                    <strong>Automatic Predictions:</strong> Once parameters are set (valid currency pairs selected, PIPS settings, and lifetime defined), predictions will automatically generate. The frequency of these updates can be set using the interval selector (e.g., {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '1m')?.label || '1 Min'}, {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '5m')?.label || '5 Min'}) in the header. Invalid PIPS or lifetime settings (e.g., min &gt; max for PIPS; lifetime outside valid range) will pause updates.
                   </li>
                   <li>
                     <strong>Prediction Logs:</strong> Generated predictions appear in the "Prediction Logs" area, split into <strong>Active Predictions</strong> and <strong>Expired Predictions</strong> tables.
                   </li>
                   <li>
-                    <strong>Expiration:</strong> Each prediction has a unique expiration time, randomly set between {MIN_EXPIRATION_SECONDS} and {currentMaxPredictionLifetime} seconds (approximately {Math.round(MIN_EXPIRATION_SECONDS/60)} to {Math.round(currentMaxPredictionLifetime/60)} minutes, based on your settings). Once expired, it moves to the "Expired Predictions" table.
+                    <strong>Expiration:</strong> Each prediction has a unique expiration time, randomly set between {MIN_EXPIRATION_SECONDS} seconds and your configured 'Max Prediction Lifetime' (which can range from {formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC)} to {formatSecondsToDurationString(MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC)}). Once expired, it moves to the "Expired Predictions" table.
                   </li>
                   <li>
                     <strong>Log Management:</strong> You can configure the maximum number of logs to display in each table using their respective <Filter className="inline h-3 w-3" aria-label="Filter Settings" /> icon. The system has an overall cap of {maxPredictionLogs} total logs.

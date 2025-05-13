@@ -100,3 +100,95 @@ export const calculateDelayUntilNextScheduledRun = (intervalValue: RefreshInterv
   }
   return delay;
 };
+
+
+/**
+ * Parses a duration string in "DD HH:mm:ss" format to total seconds.
+ * @param durationString The string to parse.
+ * @returns Total seconds, or null if parsing fails.
+ */
+export function parseDurationStringToSeconds(durationString: string): number | null {
+  const regex = /^(\d{1,2})\s(\d{2}):(\d{2}):(\d{2})$/; // DD HH:mm:ss
+  const match = durationString.match(regex);
+
+  if (!match) {
+    // Try parsing "HH:mm:ss" if DD is missing
+    const shortRegex = /^(\d{2}):(\d{2}):(\d{2})$/; // HH:mm:ss
+    const shortMatch = durationString.match(shortRegex);
+    if (shortMatch) {
+        const [, hoursStr, minutesStr, secondsStr] = shortMatch;
+        const hours = parseInt(hoursStr, 10);
+        const minutes = parseInt(minutesStr, 10);
+        const seconds = parseInt(secondsStr, 10);
+
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
+            return null;
+        }
+        return (hours * 3600) + (minutes * 60) + seconds;
+    }
+    // Try parsing "mm:ss"
+    const veryShortRegex = /^(\d{2}):(\d{2})$/; // mm:ss
+    const veryShortMatch = durationString.match(veryShortRegex);
+    if (veryShortMatch) {
+        const [, minutesStr, secondsStr] = veryShortMatch;
+        const minutes = parseInt(minutesStr, 10);
+        const seconds = parseInt(secondsStr, 10);
+         if (minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
+            return null;
+        }
+        return (minutes * 60) + seconds;
+    }
+    // Try parsing just "ss"
+    const secondsOnlyRegex = /^(\d{1,5})$/; // up to 5 digits for seconds
+    const secondsOnlyMatch = durationString.match(secondsOnlyRegex);
+    if (secondsOnlyMatch) {
+        const [, secondsStr] = secondsOnlyMatch;
+        const seconds = parseInt(secondsStr, 10);
+        if (seconds < 0) return null;
+        return seconds;
+    }
+    return null;
+  }
+
+  const [, daysStr, hoursStr, minutesStr, secondsStr] = match;
+  const days = parseInt(daysStr, 10);
+  const hours = parseInt(hoursStr, 10);
+  const minutes = parseInt(minutesStr, 10);
+  const seconds = parseInt(secondsStr, 10);
+
+  if (
+    days < 0 || days > 99 || // Assuming max 99 days
+    hours < 0 || hours > 23 ||
+    minutes < 0 || minutes > 59 ||
+    seconds < 0 || seconds > 59
+  ) {
+    return null; // Invalid range for H, M, or S
+  }
+
+  return (days * 24 * 60 * 60) + (hours * 3600) + (minutes * 60) + seconds;
+}
+
+
+/**
+ * Formats total seconds into a "DD HH:mm:ss" string.
+ * @param totalSeconds The total seconds to format.
+ * @returns A string in "DD HH:mm:ss" format.
+ */
+export function formatSecondsToDurationString(totalSeconds: number): string {
+  if (isNaN(totalSeconds) || totalSeconds < 0) {
+    return "00 00:00:00";
+  }
+
+  const days = Math.floor(totalSeconds / (24 * 3600));
+  let remainingSeconds = totalSeconds % (24 * 3600);
+
+  const hours = Math.floor(remainingSeconds / 3600);
+  remainingSeconds %= 3600;
+
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+
+  const pad = (num: number) => String(num).padStart(2, '0');
+
+  return `${pad(days)} ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}
