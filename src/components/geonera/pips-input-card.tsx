@@ -11,14 +11,14 @@ import { cn } from '@/lib/utils';
 
 interface PipsInputCardProps {
   pipsSettings: PipsSettings;
-  onPipsSettingsChange: (value: PipsSettings) => void;
+  onPipsSettingsChangeAction: (value: PipsSettings) => void;
   isLoading: boolean;
   className?: string;
 }
 
 export function PipsInputCard({
   pipsSettings,
-  onPipsSettingsChange,
+  onPipsSettingsChangeAction, 
   isLoading,
   className,
 }: PipsInputCardProps) {
@@ -35,7 +35,7 @@ export function PipsInputCard({
     // For this component, let's default to 0 if input is cleared or invalid.
     const valueToSet = rawValue === '' ? 0 : (!isNaN(parsedValue) ? parsedValue : 0);
 
-    onPipsSettingsChange({
+    onPipsSettingsChangeAction({
       ...pipsSettings,
       [type]: {
         ...pipsSettings[type],

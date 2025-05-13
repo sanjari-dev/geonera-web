@@ -21,10 +21,9 @@ import { formatSecondsToDurationString } from '@/lib/datetime-utils';
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
   maxPredictionLogs: number;
-  currentMaxPredictionLifetime: number; // This is in seconds
   notifications: NotificationMessage[];
   activeView: ActiveDetailsView;
-  onActiveViewChange: (view: ActiveDetailsView) => void;
+  onActiveViewChangeAction: (view: ActiveDetailsView) => void;
   className?: string; 
 }
 
@@ -141,7 +140,7 @@ const formatVolume = (volume?: number) => {
 };
 
 
-export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, currentMaxPredictionLifetime, notifications, activeView, onActiveViewChange, className }: PredictionDetailsPanelProps) {
+export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, notifications, activeView, onActiveViewChangeAction, className }: PredictionDetailsPanelProps) {
 
   const marketOhlcData = selectedPrediction?.predictionOutcome;
   const marketDataAvailable = selectedPrediction && marketOhlcData && (
@@ -179,17 +178,16 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => onActiveViewChange('about')} className="text-xs">
-                        <Info className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> About Geonera
+                    <Info className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> About Geonera
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                        onSelect={() => onActiveViewChange('details')}
+                    <DropdownMenuItem onSelect={() => onActiveViewChangeAction('details')}
                         disabled={!selectedPrediction && activeView !== 'details'}
                         className="text-xs"
                     >
                         <List className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> Prediction Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onActiveViewChange('notifications')} className="text-xs">
-                        <BellRing className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> Notification History
+ <DropdownMenuItem onSelect={() => onActiveViewChangeAction('notifications')} className="text-xs">
+                    <BellRing className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> Notification History
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>

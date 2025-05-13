@@ -132,7 +132,7 @@ export function AppHeader({
               <PairSelectorCard
                 variant="button"
                 selectedCurrencyPairs={selectedCurrencyPairs}
-                onSelectedCurrencyPairsChange={onSelectedCurrencyPairsChange}
+                onSelectedCurrencyPairsChangeAction={onSelectedCurrencyPairsChange}
                 isLoading={isLoading}
               />
               <TooltipProvider>

@@ -535,7 +535,7 @@ export default function GeoneraPage() {
                     </div>
                     <PipsInputCard
                       pipsSettings={pipsSettings}
-                      onPipsSettingsChange={handlePipsSettingsChange}
+                      onPipsSettingsChangeAction={handlePipsSettingsChange}
                       isLoading={isLoading}
                       className="shadow-none border-0 bg-transparent" 
                     />
@@ -578,10 +578,9 @@ export default function GeoneraPage() {
           <div className="md:col-span-1 flex flex-col min-h-0 gap-1">
             <PredictionDetailsPanel 
               activeView={activeDetailsView}
-              onActiveViewChange={handleActiveDetailsViewChange}
+              onActiveViewChangeAction={handleActiveDetailsViewChange}
               selectedPrediction={finalSelectedPredictionForChildren} 
               maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG}
-              currentMaxPredictionLifetime={maxPredictionLifetime}
               notifications={notificationsList}
               className="flex-grow min-h-0"
             />

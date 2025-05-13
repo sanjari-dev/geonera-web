@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 
 interface PairSelectorCardProps {
   selectedCurrencyPairs: CurrencyPair[];
-  onSelectedCurrencyPairsChange: (value: CurrencyPair[]) => void;
+  onSelectedCurrencyPairsChangeAction: (value: CurrencyPair[]) => void;
   isLoading: boolean;
   className?: string;
   variant?: "card" | "button";
@@ -37,7 +37,7 @@ const MAX_SELECTED_CURRENCIES = 5;
 
 export function PairSelectorCard({
   selectedCurrencyPairs,
-  onSelectedCurrencyPairsChange,
+  onSelectedCurrencyPairsChangeAction,
   isLoading,
   className,
   variant = "card", // Default to "card"
@@ -49,7 +49,7 @@ export function PairSelectorCard({
       : [...selectedCurrencyPairs, currencyValue];
 
     if (newSelectedCurrencies.length <= MAX_SELECTED_CURRENCIES) {
-      onSelectedCurrencyPairsChange(newSelectedCurrencies);
+      onSelectedCurrencyPairsChangeAction(newSelectedCurrencies);
     }
   };
 
