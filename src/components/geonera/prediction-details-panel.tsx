@@ -4,7 +4,7 @@
 import type { PredictionLogItem, PipsPredictionOutcome, NotificationMessage } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List, Filter, AlertCircle as AlertTriangleIcon } from "lucide-react"; // Added AlertTriangleIcon alias
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List, Filter, AlertCircle as AlertTriangleIcon, Settings as SettingsIcon } from "lucide-react"; // Added SettingsIcon
 import { format as formatDateFns } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 // import { useState, useEffect } from 'react'; // Removed useState, useEffect
@@ -215,7 +215,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                     <strong>Parameter Setup:</strong> Use the <strong>Currency Pair(s)</strong> selector in the header and the <strong>PIPS Settings</strong> (accessible via the <SettingsIcon className="inline h-3 w-3" /> icon on the "Prediction Logs" card) to define your prediction parameters. This includes setting ranges for your target profit and acceptable loss in PIPS.
                   </li>
                   <li>
-                    <strong>Automatic Predictions:</strong> Once parameters are set (valid currency pairs selected and PIPS settings defined), predictions will automatically generate. The frequency of these updates can be set using the interval selector (e.g., 1 Min, 5 Min) in the header. Invalid PIPS settings (e.g., min &gt; max, or zero/negative values) will pause updates.
+                    <strong>Automatic Predictions:</strong> Once parameters are set (valid currency pairs selected and PIPS settings defined), predictions will automatically generate. The frequency of these updates can be set using the interval selector (e.g., {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '1m')?.label || '1 Min'}, {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '5m')?.label || '5 Min'}) in the header. Invalid PIPS settings (e.g., min &gt; max, or zero/negative values) will pause updates.
                   </li>
                   <li>
                     <strong>Prediction Logs:</strong> Generated predictions appear in the "Prediction Logs" area, split into <strong>Active Predictions</strong> and <strong>Expired Predictions</strong> tables.
@@ -421,6 +421,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
 }
 
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
 
 
 
