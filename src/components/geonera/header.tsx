@@ -1,4 +1,4 @@
-import { Brain, LogOut, LogIn as LogInIcon, Maximize, Minimize, Clock, RefreshCw } from 'lucide-react';
+import { Brain, LogOut, LogIn as LogInIcon, Maximize, Minimize, Clock, RefreshCw, Sun, Moon, Monitor } from 'lucide-react';
 import type { User, CurrencyPair, RefreshIntervalValue, RefreshIntervalOption } from '@/types';
 import { REFRESH_INTERVAL_OPTIONS } from '@/types';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -10,6 +10,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Select,
@@ -23,6 +25,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format as formatDateFns } from 'date-fns';
 import { PairSelectorCard } from '@/components/geonera/pair-selector-card';
+import { useTheme } from '@/components/theme-provider';
+
 
 interface AppHeaderProps {
   user: User | null;
@@ -46,6 +50,7 @@ export function AppHeader({
   const router = useRouter();
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
+  const { theme, setTheme } = useTheme();
 
   const formatCurrentTime = useCallback(() => {
     return formatDateFns(new Date(), "yyyy-MM-dd HH:mm:ss XXX");
@@ -184,6 +189,33 @@ export function AppHeader({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+           <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Toggle theme">
+                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <span className="sr-only">Toggle theme</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}>
+                <DropdownMenuRadioItem value="light" className="text-xs">
+                  <Sun className="mr-2 h-3.5 w-3.5" />
+                  Light
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark" className="text-xs">
+                  <Moon className="mr-2 h-3.5 w-3.5" />
+                  Dark
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system" className="text-xs">
+                  <Monitor className="mr-2 h-3.5 w-3.5" />
+                  System
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
 
           {user ? (
             <DropdownMenu>
