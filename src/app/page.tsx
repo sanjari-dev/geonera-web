@@ -545,7 +545,7 @@ export default function GeoneraPage() {
 
 
   return (
-    <div className="h-screen grid grid-rows-[auto_auto_1fr_auto] bg-background text-foreground">
+    <div className="h-screen grid grid-rows-[auto_1fr_auto] bg-background text-foreground">
       <AppHeader 
         user={currentUser} 
         onLogout={handleLogout}
@@ -554,11 +554,6 @@ export default function GeoneraPage() {
         isLoading={isLoading} 
       />
 
-      {currentUser && ( 
-        <div className="w-full px-2 py-1">
-          <NotificationDisplay notification={latestNotificationForDisplay} className="w-full" />
-        </div>
-      )}
       {!currentUser && isAuthCheckComplete && (
         <div className="p-4 text-center text-muted-foreground">
           Please log in to view and manage Forex predictions.
@@ -693,7 +688,7 @@ export default function GeoneraPage() {
             </Card>
           </div>
           
-          <div className="md:col-span-1 flex flex-col min-h-0"> 
+          <div className="md:col-span-1 flex flex-col min-h-0 gap-1"> 
             <PredictionDetailsPanel 
               activeView={activeDetailsView}
               onActiveViewChange={handleActiveDetailsViewChange}
@@ -701,6 +696,9 @@ export default function GeoneraPage() {
               maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG}
               notifications={notificationsList}
             />
+            {currentUser && (
+              <NotificationDisplay notification={latestNotificationForDisplay} className="w-full flex-shrink-0" />
+            )}
           </div>
         </main>
       )}
@@ -711,4 +709,5 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
 
