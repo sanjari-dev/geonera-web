@@ -220,12 +220,12 @@ export function PredictionsTable({
   const tableHeaders = (
     <TableRow className="h-auto">
       {renderSortableHeader(<ListChecks className="h-3.5 w-3.5 mx-auto" aria-label="Status" />, "status", "Prediction Status", undefined, "w-10")}
-      {renderSortableHeader("Time", "timestamp", "Prediction Timestamp", <CalendarDays className="h-3.5 w-3.5 mx-auto" />)}
-      {renderSortableHeader("Pair", "currencyPair", "Currency Pair", <Coins className="h-3.5 w-3.5 mx-auto" />)}
-      {renderSortableHeader("P.Max", "profitPipsMax", "Max Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-2))]" />)}
-      {renderSortableHeader("L.Max", "lossPipsMax", "Max Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-1))]" />)}
+      {renderSortableHeader("Time", "timestamp", "Prediction Timestamp", <CalendarDays className="h-3.5 w-3.5 mx-auto" aria-hidden="true" />)}
+      {renderSortableHeader("Pair", "currencyPair", "Currency Pair", <Coins className="h-3.5 w-3.5 mx-auto" aria-hidden="true" />)}
+      {renderSortableHeader("P.Max", "profitPipsMax", "Max Profit PIPS", <TrendingUpIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-2))]" aria-hidden="true" />)}
+      {renderSortableHeader("L.Max", "lossPipsMax", "Max Loss PIPS", <TrendingDownIcon className="h-3.5 w-3.5 mx-auto text-[hsl(var(--chart-1))]" aria-hidden="true" />)}
       {renderSortableHeader(<Sigma className="h-3.5 w-3.5 mx-auto" aria-label="Signal" />, "tradingSignal", "Trading Signal")}
-      {renderSortableHeader("Expires", "expiresAt", "Expires In (DD HH:MM:SS)", <Zap className="h-3.5 w-3.5 mx-auto" />)}
+      {renderSortableHeader("Expires", "expiresAt", "Expires In (DD HH:MM:SS)", <Zap className="h-3.5 w-3.5 mx-auto" aria-hidden="true" />)}
     </TableRow>
   );
   
@@ -290,13 +290,13 @@ export function PredictionsTable({
       <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby={`${title.toLowerCase().replace(/\s+/g, '-')}-title`}>
         <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-row items-center justify-between">
           <CardTitle id={`${title.toLowerCase().replace(/\s+/g, '-')}-title`} className="text-base font-semibold text-primary flex items-center">
-            {titleIcon || (title === "Active Predictions" ? <Info className="h-4 w-4 mr-1.5" /> : <Info className="h-4 w-4 mr-1.5" />)} {/* Fallback icon */}
+            {titleIcon || (title === "Active Predictions" ? <Info className="h-4 w-4 mr-1.5" aria-hidden="true" /> : <Info className="h-4 w-4 mr-1.5" aria-hidden="true" />)} {/* Fallback icon */}
             {title}
           </CardTitle>
           <Tooltip>
               <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-6 w-6 p-1" aria-label={`Filter ${title}`} onClick={handleGearClick}>
-                      <Filter className="h-4 w-4 text-primary/80" />
+                      <Filter className="h-4 w-4 text-primary/80" aria-hidden="true" />
                   </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -322,7 +322,7 @@ export function PredictionsTable({
                   value={tempFilterStatus}
                   onValueChange={(value) => setTempFilterStatus(value as StatusFilterType)}
                 >
-                  <SelectTrigger id={`${title}-filter-status`} className="w-full text-xs py-1 h-8">
+                  <SelectTrigger id={`${title}-filter-status`} className="w-full text-xs py-1 h-8" aria-label={`Filter by status for ${title}`}>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -340,7 +340,7 @@ export function PredictionsTable({
                   value={tempFilterSignal}
                   onValueChange={(value) => setTempFilterSignal(value as SignalFilterType)}
                 >
-                  <SelectTrigger id={`${title}-filter-signal`} className="w-full text-xs py-1 h-8">
+                  <SelectTrigger id={`${title}-filter-signal`} className="w-full text-xs py-1 h-8" aria-label={`Filter by signal for ${title}`}>
                     <SelectValue placeholder="Select signal" />
                   </SelectTrigger>
                   <SelectContent>
@@ -354,7 +354,7 @@ export function PredictionsTable({
               </div>
               <div className="space-y-1">
                 <Label htmlFor={`${title}-display-limit`} className="text-xs flex items-center">
-                  <Sigma className="h-3 w-3 mr-1" /> Max Logs to Display
+                  <Sigma className="h-3 w-3 mr-1" aria-hidden="true" /> Max Logs to Display
                 </Label>
                 <Input
                   id={`${title}-display-limit`}
@@ -371,7 +371,7 @@ export function PredictionsTable({
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={handleCancelFilters} className="text-xs">Cancel</Button>
                 <Button size="sm" onClick={handleApplyFilters} className="text-xs">
-                  <Save className="h-3.5 w-3.5 mr-1" /> Apply Filters
+                  <Save className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> Apply Filters
                 </Button>
               </div>
             </div>
@@ -401,5 +401,6 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
 
 

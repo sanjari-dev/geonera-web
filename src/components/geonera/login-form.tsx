@@ -52,7 +52,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       <Card className="w-full max-w-sm shadow-xl border border-border">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-3">
-            <LogIn className="h-10 w-10 text-primary" />
+            <LogIn className="h-10 w-10 text-primary" aria-hidden="true" />
           </div>
           <CardTitle className="text-2xl">
             Login to Geonera
@@ -71,6 +71,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 onChange={(e) => setUsername(e.target.value)}
                 className="text-base py-2.5 h-auto"
                 required
+                aria-required="true"
               />
             </div>
           </CardContent>

@@ -722,7 +722,7 @@ export default function GeoneraPage() {
   if (!isAuthCheckComplete) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" aria-label="Loading application"/>
         <p className="text-lg text-muted-foreground">Loading Geonera...</p>
       </div>
     );
@@ -775,7 +775,7 @@ export default function GeoneraPage() {
                 {predictionLogsViewMode === 'logs' && (
                   <div className="flex items-center justify-center gap-1 w-full">
                     <Label htmlFor="date-filter-start" className="text-xs font-medium flex items-center text-primary">
-                        <CalendarDays className="h-3 w-3 mr-1" /> From:
+                        <CalendarDays className="h-3 w-3 mr-1" aria-hidden="true" /> From:
                     </Label>
                     <Input
                         type="datetime-local"
@@ -793,7 +793,7 @@ export default function GeoneraPage() {
                         aria-label="Filter start date and time"
                       />
                     <Label htmlFor="date-filter-end" className="text-xs font-medium flex items-center text-primary">
-                        <CalendarDays className="h-3 w-3 mr-1" /> To:
+                        <CalendarDays className="h-3 w-3 mr-1" aria-hidden="true" /> To:
                     </Label>
                     <Input
                         type="datetime-local"
@@ -825,7 +825,7 @@ export default function GeoneraPage() {
                           onClick={handlePredictionLogsViewToggle}
                           aria-label={predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}
                         >
-                          {predictionLogsViewMode === 'logs' ? <SettingsIcon className="h-4 w-4 text-primary/80" /> : <List className="h-4 w-4 text-primary/80" />}
+                          {predictionLogsViewMode === 'logs' ? <SettingsIcon className="h-4 w-4 text-primary/80" aria-hidden="true" /> : <List className="h-4 w-4 text-primary/80" aria-hidden="true" />}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -842,7 +842,7 @@ export default function GeoneraPage() {
                     <div className="flex flex-col min-h-0 overflow-y-auto h-full">
                       <PredictionsTable
                         title="Active Predictions"
-                        titleIcon={<PackageCheck className="h-4 w-4 mr-1.5" />} // Icon for Active table
+                        titleIcon={<PackageCheck className="h-4 w-4 mr-1.5" aria-hidden="true" />} // Icon for Active table
                         predictions={displayedSortedActiveLogs}
                         onRowClick={handlePredictionSelect}
                         selectedPredictionId={finalSelectedPredictionForChildren?.id}
@@ -862,7 +862,7 @@ export default function GeoneraPage() {
                     <div className="flex flex-col min-h-0 overflow-y-auto h-full">
                       <PredictionsTable
                         title="Expired Predictions"
-                        titleIcon={<PackageOpen className="h-4 w-4 mr-1.5" />} // Icon for Expired table
+                        titleIcon={<PackageOpen className="h-4 w-4 mr-1.5" aria-hidden="true" />} // Icon for Expired table
                         predictions={sortedAndLimitedExpiredLogs} // Already sorted and limited
                         onRowClick={handlePredictionSelect}
                         selectedPredictionId={finalSelectedPredictionForChildren?.id}
