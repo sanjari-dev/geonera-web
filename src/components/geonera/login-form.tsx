@@ -10,11 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogIn } from 'lucide-react';
 
-interface LoginFormProps {
-  onLogin: (user: User) => void;
+interface LoginFormActions {
+  loginAction: (user: User) => void;
 }
 
-export function LoginForm({ onLogin }: LoginFormProps) {
+export function LoginForm({ loginAction }: LoginFormActions) {
   const [username, setUsername] = useState('');
 
   const handleSubmit = (e: FormEvent) => {
@@ -44,7 +44,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       username: trimmedUsername,
       initials: initials,
     };
-    onLogin(dummyUser);
+    loginAction(dummyUser);
   };
 
   return (

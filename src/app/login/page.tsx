@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoginForm } from '@/components/geonera/login-form';
-import type { User } from '@/types';
+import type { CurrencyPair, RefreshIntervalValue, User } from '@/types';
 import { AppHeader } from '@/components/geonera/header';
 // import { useToast } from "@/hooks/use-toast"; // Removed useToast
 
@@ -34,9 +34,22 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <AppHeader user={null} onLogout={() => {}} />
+      <AppHeader 
+        user={null} 
+        onLogout={function (): void {
+          throw new Error('Function not implemented.');
+        }}
+        selectedCurrencyPairs={[]}
+        onSelectedCurrencyPairsChange={function (value: CurrencyPair[]): void {
+          throw new Error('Function not implemented.');
+        }}
+        isLoading={false} selectedRefreshInterval={''} 
+        onRefreshIntervalChange={function (value: RefreshIntervalValue): void {
+          throw new Error('Function not implemented.');
+        }}
+      />
       <main className="flex-grow container mx-auto px-4 py-4 flex items-center justify-center">
-        <LoginForm onLogin={handleLoginSuccess} />
+        <LoginForm loginAction={handleLoginSuccess} />
       </main>
       <footer className="py-3 text-center text-sm text-muted-foreground border-t border-border">
         © {currentYear} Geonera. All rights reserved.

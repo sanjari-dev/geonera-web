@@ -146,4 +146,4 @@ export const MAX_PREDICTION_LOGS_CONFIG = 500; // Overall system cap for logs if
 export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; 
 export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
 
-
+export type ActiveDetailsView = "logs" | "details" | "about" | "notifications";
