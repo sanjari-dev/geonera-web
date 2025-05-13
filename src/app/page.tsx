@@ -7,7 +7,7 @@ import { produce } from 'immer';
 import { AppHeader } from '@/components/geonera/header';
 import { PipsInputCard } from '@/components/geonera/pips-input-card';
 import { PredictionsTable } from '@/components/geonera/predictions-table';
-import { PredictionDetailsPanel, type ActiveDetailsView } from '@/components/geonera/prediction-details-panel';
+import { PredictionDetailsPanel } from '@/components/geonera/prediction-details-panel';
 import { NotificationDisplay } from '@/components/geonera/notification-display';
 import type {
   PredictionLogItem,
@@ -21,6 +21,7 @@ import type {
   NotificationMessage,
   DateRangeFilter,
   RefreshIntervalValue,
+  ActiveDetailsView,
 } from '@/types';
 import { 
   DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, 

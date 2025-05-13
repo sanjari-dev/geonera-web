@@ -1,6 +1,6 @@
 // src/components/geonera/prediction-details-panel.tsx
 "use client";
-
+import type { ActiveDetailsView } from '@/types';
 import type { PredictionLogItem, PipsPredictionOutcome, NotificationMessage } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +17,6 @@ import {
 import { cn } from '@/lib/utils';
 import { REFRESH_INTERVAL_OPTIONS, MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC, MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC } from '@/types';
 import { formatSecondsToDurationString } from '@/lib/datetime-utils';
-
-
-export type ActiveDetailsView = 'about' | 'details' | 'notifications';
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
