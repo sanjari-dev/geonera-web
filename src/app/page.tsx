@@ -67,10 +67,10 @@ export default function GeoneraPage() {
   });
 
   // maxPredictionLifetime stores seconds (number)
-  const [maxPredictionLifetime, setMaxPredictionLifetime] = useState<number>(60); // Default to 1 minute (60 seconds)
+  const [maxPredictionLifetime, setMaxPredictionLifetime] = useState<number>(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC); // Default to 10 minutes (600 seconds)
   // maxPredictionLifetimeInputString stores the "DD HH:mm:ss" string for the input field
   const [maxPredictionLifetimeInputString, setMaxPredictionLifetimeInputString] = useState<string>(
-    formatSecondsToDurationString(60) // Initialize with 1 minute string representation
+    formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC) // Initialize with 10 minutes string representation
   );
   const [maxPredictionLifetimeError, setMaxPredictionLifetimeError] = useState<string | null>(null);
 
@@ -597,5 +597,6 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
 
 
