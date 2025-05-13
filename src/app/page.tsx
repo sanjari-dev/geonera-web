@@ -224,7 +224,7 @@ export default function GeoneraPage() {
 
     const performPrediction = async () => {
       const currentIntervalOption = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === latestSelectedRefreshIntervalValueRef.current);
-      const currentPredictionIntervalMs = currentIntervalOption ? currentIntervalOption.milliseconds : 30000;
+      const currentPredictionIntervalMs = currentIntervalOption ? currentIntervalOption.milliseconds : 60000; // Default to 1 minute
 
 
       if (isLoading) { 
@@ -378,7 +378,7 @@ export default function GeoneraPage() {
     };
     
     const initialIntervalOption = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === latestSelectedRefreshIntervalValueRef.current);
-    const initialPredictionIntervalMs = initialIntervalOption ? initialIntervalOption.milliseconds : 30000;
+    const initialPredictionIntervalMs = initialIntervalOption ? initialIntervalOption.milliseconds : 60000; // Default to 1 minute
 
 
     if (timeoutId) clearTimeout(timeoutId); 
@@ -727,8 +727,9 @@ export default function GeoneraPage() {
       )}
       <footer className="py-2 text-center text-sm text-muted-foreground border-t border-border bg-muted">
         {currentYear ? `© ${currentYear} Geonera.` : '© Geonera.'} All rights reserved.
-        {currentUser && ` Predictions update automatically every ${REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === selectedRefreshIntervalValue)?.label || selectedRefreshIntervalValue} if parameters are valid.`}
+        {currentUser && ` Predictions update automatically every ${REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === selectedRefreshIntervalValue)?.label || selectedRefreshIntervalValue} (min. 1 min) if parameters are valid.`}
       </footer>
     </div>
   );
 }
+

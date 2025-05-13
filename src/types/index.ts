@@ -99,7 +99,7 @@ export const SIGNAL_FILTER_OPTIONS: { value: SignalFilterType; label: string }[]
   { value: "N/A", label: "N/A" },
 ];
 
-export type RefreshIntervalValue = string; // e.g., "30s", "1m", "5m", "1h", "1D"
+export type RefreshIntervalValue = string; // e.g., "1m", "5m", "1h", "1D"
 export interface RefreshIntervalOption {
   value: RefreshIntervalValue;
   label: string;
@@ -107,7 +107,6 @@ export interface RefreshIntervalOption {
 }
 
 export const REFRESH_INTERVAL_OPTIONS: RefreshIntervalOption[] = [
-  { value: '30s', label: '30 Sec', milliseconds: 30 * 1000 },
   { value: '1m', label: '1 Min', milliseconds: 1 * 60 * 1000 },
   { value: '2m', label: '2 Min', milliseconds: 2 * 60 * 1000 },
   { value: '3m', label: '3 Min', milliseconds: 3 * 60 * 1000 },
@@ -133,8 +132,8 @@ export const REFRESH_INTERVAL_OPTIONS: RefreshIntervalOption[] = [
   { value: '5D', label: '5 Days', milliseconds: 5 * 24 * 60 * 60 * 1000 },
 ];
 
-export const DEFAULT_REFRESH_INTERVAL_VALUE: RefreshIntervalValue = '30s';
-export const DEFAULT_REFRESH_INTERVAL_MS = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === DEFAULT_REFRESH_INTERVAL_VALUE)?.milliseconds || 30000;
+export const DEFAULT_REFRESH_INTERVAL_VALUE: RefreshIntervalValue = '1m';
+export const DEFAULT_REFRESH_INTERVAL_MS = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === DEFAULT_REFRESH_INTERVAL_VALUE)?.milliseconds || 60000;
 
 
 export const MIN_EXPIRATION_SECONDS = 10;
@@ -142,3 +141,4 @@ export const MAX_EXPIRATION_SECONDS = 75;
 export const MAX_PREDICTION_LOGS_CONFIG = 500;
 export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; // By default, show all possible active logs up to the system max.
 export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
+
