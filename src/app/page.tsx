@@ -28,9 +28,11 @@ import {
   MAX_PREDICTION_LOGS_CONFIG,
   REFRESH_INTERVAL_OPTIONS,
   DEFAULT_REFRESH_INTERVAL_VALUE,
+  MIN_EXPIRATION_SECONDS,
+  MAX_EXPIRATION_SECONDS, // Used as initial default for configurable max lifetime
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, CalendarDays, Settings as SettingsIcon, List, Smartphone } from 'lucide-react';
+import { Loader2, CalendarDays, Settings as SettingsIcon, List, Smartphone, ClockIcon } from 'lucide-react';
 import { 
   startOfDay, endOfDay, isValid,
 } from 'date-fns';
@@ -47,7 +49,7 @@ import { UnsupportedResolutionMessage } from '@/components/geonera/unsupported-r
 
 
 const MAX_NOTIFICATIONS = 100;
-const MIN_WIDTH = 1400; // Changed from 1500
+const MIN_WIDTH = 1400; 
 const MIN_HEIGHT = 800;
 
 export default function GeoneraPage() {
@@ -60,6 +62,8 @@ export default function GeoneraPage() {
     profitPips: { min: 10, max: 20 },
     lossPips: { min: 5, max: 10 },
   });
+  const [maxPredictionLifetime, setMaxPredictionLifetime] = useState<number>(MAX_EXPIRATION_SECONDS);
+
 
   const [uuidAvailable, setUuidAvailable] = useState(false);
   const [selectedPredictionLog, setSelectedPredictionLog] = useState<PredictionLogItem | null>(null);
@@ -102,6 +106,11 @@ export default function GeoneraPage() {
   useEffect(() => {
     latestSelectedRefreshIntervalValueRef.current = selectedRefreshIntervalValue;
   }, [selectedRefreshIntervalValue]);
+
+  const latestMaxPredictionLifetimeRef = useRef(maxPredictionLifetime);
+    useEffect(() => {
+    latestMaxPredictionLifetimeRef.current = maxPredictionLifetime;
+  }, [maxPredictionLifetime]);
 
   useEffect(() => {
     setCurrentTimeForFiltering(new Date());
@@ -177,6 +186,7 @@ export default function GeoneraPage() {
     latestSelectedCurrencyPairsRef,
     latestPipsSettingsRef,
     latestSelectedRefreshIntervalValueRef,
+    latestMaxPredictionLifetimeRef,
     addNotificationCallback: addNotification,
     generateIdCallback: generateId,
     selectedPredictionLog,
@@ -295,7 +305,8 @@ export default function GeoneraPage() {
       sortedAndLimitedExpiredLogs, 
       activeDetailsView, 
       currentTimeForFiltering,
-      selectedPredictionLog // ensure this effect re-runs if selectedPredictionLog is externally changed
+      selectedPredictionLog, 
+      setSelectedPredictionLog 
     ]);
 
   const handleSort = (key: SortableColumnKey, tableType: 'active' | 'expired') => {
@@ -323,9 +334,6 @@ export default function GeoneraPage() {
   }
 
   if (!currentUser && isAuthCheckComplete) {
-    // router.replace('/login') is handled in useEffect, this just prevents rendering the page content
-    // It's important that this returns null or a minimal loading/redirect indicator if needed,
-    // and does not attempt to render the main page structure which might rely on currentUser.
     return null; 
   }
 
@@ -348,7 +356,7 @@ export default function GeoneraPage() {
         onRefreshIntervalChange={handleRefreshIntervalChange}
       />
 
-      {!currentUser && isAuthCheckComplete && ( // This condition is likely redundant due to earlier return, but kept for safety
+      {!currentUser && isAuthCheckComplete && ( 
         <div className="p-4 text-center text-muted-foreground">
           Please log in to view and manage Forex predictions.
         </div>
@@ -372,13 +380,13 @@ export default function GeoneraPage() {
                           size="icon"
                           className="h-6 w-6 p-1"
                           onClick={handlePredictionLogsViewToggle}
-                          aria-label={predictionLogsViewMode === 'logs' ? "Open PIPS & Date Settings" : "View Prediction Logs"}
+                          aria-label={predictionLogsViewMode === 'logs' ? "Open Settings" : "View Prediction Logs"}
                         >
                           {predictionLogsViewMode === 'logs' ? <SettingsIcon className="h-4 w-4 text-primary/80" aria-hidden="true" /> : <List className="h-4 w-4 text-primary/80" aria-hidden="true" />}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{predictionLogsViewMode === 'logs' ? "Open PIPS & Date Settings" : "View Prediction Logs"}</p>
+                        <p>{predictionLogsViewMode === 'logs' ? "Open Settings" : "View Prediction Logs"}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -477,6 +485,35 @@ export default function GeoneraPage() {
                       isLoading={isLoading}
                       className="shadow-none border-0 bg-transparent" 
                     />
+                     <div className="ml-2 mt-2 shadow-lg shadow-none border-0 bg-transparent">
+                        <Label htmlFor="max-prediction-lifetime" className="text-sm font-medium text-primary mb-1 block">
+                          <ClockIcon className="h-3.5 w-3.5 mr-1 inline-block" aria-hidden="true" />
+                          Max Prediction Lifetime (seconds)
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            id="max-prediction-lifetime"
+                            aria-label="Maximum prediction lifetime in seconds"
+                            value={maxPredictionLifetime}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (!isNaN(val) && val >= MIN_EXPIRATION_SECONDS) {
+                                setMaxPredictionLifetime(val);
+                              } else if (e.target.value === '') {
+                                setMaxPredictionLifetime(MIN_EXPIRATION_SECONDS); 
+                              } else if (!isNaN(val) && val < MIN_EXPIRATION_SECONDS) {
+                                setMaxPredictionLifetime(MIN_EXPIRATION_SECONDS);
+                              }
+                            }}
+                            min={MIN_EXPIRATION_SECONDS}
+                            className="h-8 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Min: {MIN_EXPIRATION_SECONDS}s. Predictions expire randomly between {MIN_EXPIRATION_SECONDS}s and this value.
+                        </p>
+                      </div>
                   </div>
                 )}
               </CardContent>
@@ -489,6 +526,7 @@ export default function GeoneraPage() {
               onActiveViewChange={handleActiveDetailsViewChange}
               selectedPrediction={finalSelectedPredictionForChildren} 
               maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG}
+              currentMaxPredictionLifetime={maxPredictionLifetime}
               notifications={notificationsList}
               className="flex-grow min-h-0"
             />

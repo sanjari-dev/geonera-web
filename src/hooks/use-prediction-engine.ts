@@ -13,7 +13,7 @@ import type {
 import {
   MAX_PREDICTION_LOGS_CONFIG,
   MIN_EXPIRATION_SECONDS,
-  MAX_EXPIRATION_SECONDS,
+  // MAX_EXPIRATION_SECONDS will be replaced by a dynamic ref value
 } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { calculateDelayUntilNextScheduledRun } from '@/lib/datetime-utils';
@@ -25,6 +25,7 @@ interface UsePredictionEngineProps {
   latestSelectedCurrencyPairsRef: React.MutableRefObject<CurrencyPair[]>;
   latestPipsSettingsRef: React.MutableRefObject<PipsSettings>;
   latestSelectedRefreshIntervalValueRef: React.MutableRefObject<RefreshIntervalValue>;
+  latestMaxPredictionLifetimeRef: React.MutableRefObject<number>; // Added
   addNotificationCallback: (notification: Omit<NotificationMessage, 'timestamp' | 'id'>) => void;
   generateIdCallback: () => string;
   selectedPredictionLog: PredictionLogItem | null;
@@ -40,6 +41,7 @@ export function usePredictionEngine({
   latestSelectedCurrencyPairsRef,
   latestPipsSettingsRef,
   latestSelectedRefreshIntervalValueRef,
+  latestMaxPredictionLifetimeRef, // Added
   addNotificationCallback,
   generateIdCallback,
   selectedPredictionLog,
@@ -157,7 +159,10 @@ export function usePredictionEngine({
             logToUpdate.error = result.error;
           } else if (result.data) {
             successCount++;
-            const randomExpirationSeconds = Math.floor(Math.random() * (MAX_EXPIRATION_SECONDS - MIN_EXPIRATION_SECONDS + 1)) + MIN_EXPIRATION_SECONDS;
+            const currentMinLifetime = MIN_EXPIRATION_SECONDS;
+            const currentMaxLifetime = latestMaxPredictionLifetimeRef.current;
+            const effectiveMaxLifetime = Math.max(currentMinLifetime, currentMaxLifetime);
+            const randomExpirationSeconds = Math.floor(Math.random() * (effectiveMaxLifetime - currentMinLifetime + 1)) + currentMinLifetime;
             const randomExpirationMs = randomExpirationSeconds * 1000;
             Object.assign(logToUpdate, { status: "SUCCESS", predictionOutcome: result.data, expiresAt: new Date(Date.now() + randomExpirationMs) });
           }
@@ -216,12 +221,13 @@ export function usePredictionEngine({
     latestSelectedCurrencyPairsRef,
     latestPipsSettingsRef,
     latestSelectedRefreshIntervalValueRef,
+    latestMaxPredictionLifetimeRef, // Added
     addNotificationCallback,
     generateIdCallback,
-    selectedPredictionLog, // Added to dep array
-    setSelectedPredictionLog, // Added to dep array
-    activeDetailsView, // Added to dep array
-    setActiveDetailsView, // Added to dep array
+    selectedPredictionLog, 
+    setSelectedPredictionLog, 
+    activeDetailsView, 
+    setActiveDetailsView,
 ]);
 
   // Per-second cleanup effect for deselected pairs (moved from page.tsx)

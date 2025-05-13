@@ -136,9 +136,10 @@ export const DEFAULT_REFRESH_INTERVAL_VALUE: RefreshIntervalValue = '1m';
 export const DEFAULT_REFRESH_INTERVAL_MS = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === DEFAULT_REFRESH_INTERVAL_VALUE)?.milliseconds || 60000;
 
 
-export const MIN_EXPIRATION_SECONDS = 10;
-export const MAX_EXPIRATION_SECONDS = 75;
-export const MAX_PREDICTION_LOGS_CONFIG = 500;
-export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; // By default, show all possible active logs up to the system max.
+export const MIN_EXPIRATION_SECONDS = 10; // Minimum expiration time in seconds
+export const MAX_EXPIRATION_SECONDS = 75; // Default maximum expiration time in seconds, will be user-configurable
+export const MAX_PREDICTION_LOGS_CONFIG = 500; // Overall system cap for logs if needed, individual tables have their own limits.
+export const DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT = MAX_PREDICTION_LOGS_CONFIG; 
 export const DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT = 50;
+
 

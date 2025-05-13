@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { MIN_EXPIRATION_SECONDS, MAX_EXPIRATION_SECONDS, REFRESH_INTERVAL_OPTIONS } from '@/types';
+import { MIN_EXPIRATION_SECONDS, REFRESH_INTERVAL_OPTIONS } from '@/types';
 
 
 export type ActiveDetailsView = 'about' | 'details' | 'notifications';
@@ -23,10 +23,11 @@ export type ActiveDetailsView = 'about' | 'details' | 'notifications';
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
   maxPredictionLogs: number;
+  currentMaxPredictionLifetime: number; // Added prop
   notifications: NotificationMessage[];
   activeView: ActiveDetailsView;
   onActiveViewChange: (view: ActiveDetailsView) => void;
-  className?: string; // Added className prop
+  className?: string; 
 }
 
 
@@ -38,7 +39,7 @@ const NotificationListItem: React.FC<{ notification: NotificationMessage }> = ({
 
   switch (notification.variant) {
     case "destructive":
-      IconComponent = AlertTriangleIcon; // Use alias
+      IconComponent = AlertTriangleIcon; 
       iconColorClass = "text-destructive";
       titleColorClass = "text-destructive";
       break;
@@ -50,7 +51,7 @@ const NotificationListItem: React.FC<{ notification: NotificationMessage }> = ({
     default: // 'default' or undefined
       IconComponent = Info;
       iconColorClass = "text-blue-500";
-      titleColorClass = "text-foreground"; // or a specific color for default info
+      titleColorClass = "text-foreground"; 
       break;
   }
 
@@ -95,7 +96,7 @@ const NotificationHistoryView: React.FC<{ notifications: NotificationMessage[] }
 const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
   if (!signal) return "secondary";
   switch (signal) {
-    case "BUY": return "default";
+    case "BUY": return "default"; // Consider a "success" or greenish variant
     case "SELL": return "destructive";
     case "HOLD": return "secondary";
     case "WAIT": return "outline";
@@ -120,7 +121,7 @@ const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status 
   switch (status) {
     case "PENDING": return <Loader2 className="h-4 w-4 animate-spin text-blue-500" aria-label="Pending" />;
     case "SUCCESS": return <CheckCircle2 className="h-4 w-4 text-green-500" aria-label="Success" />;
-    case "ERROR": return <AlertCircle className="h-4 w-4 text-red-500" aria-label="Error" />; // Changed from AlertTriangle
+    case "ERROR": return <AlertCircle className="h-4 w-4 text-red-500" aria-label="Error" />; 
     default: return <Info className="h-4 w-4 text-gray-400" aria-label="Idle" />;
   }
 };
@@ -142,7 +143,7 @@ const formatVolume = (volume?: number) => {
 };
 
 
-export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, notifications, activeView, onActiveViewChange, className }: PredictionDetailsPanelProps) {
+export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, currentMaxPredictionLifetime, notifications, activeView, onActiveViewChange, className }: PredictionDetailsPanelProps) {
 
   const marketOhlcData = selectedPrediction?.predictionOutcome;
   const marketDataAvailable = selectedPrediction && marketOhlcData && (
@@ -212,16 +213,16 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                 </p>
                 <ul className="list-disc list-inside space-y-1 pl-3 leading-relaxed">
                   <li>
-                    <strong>Parameter Setup:</strong> Use the <strong>Currency Pair(s)</strong> selector in the header and the <strong>PIPS Settings</strong> (accessible via the <SettingsIcon className="inline h-3 w-3" aria-label="PIPS Settings" /> icon on the "Prediction Logs" card) to define your prediction parameters. This includes setting ranges for your target profit and acceptable loss in PIPS.
+                    <strong>Parameter Setup:</strong> Use the <strong>Currency Pair(s)</strong> selector in the header and the <strong>PIPS & Lifetime Settings</strong> (accessible via the <SettingsIcon className="inline h-3 w-3" aria-label="Settings" /> icon on the "Prediction Logs" card) to define your prediction parameters. This includes setting ranges for your target profit, acceptable loss in PIPS, and max prediction lifetime.
                   </li>
                   <li>
-                    <strong>Automatic Predictions:</strong> Once parameters are set (valid currency pairs selected and PIPS settings defined), predictions will automatically generate. The frequency of these updates can be set using the interval selector (e.g., {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '1m')?.label || '1 Min'}, {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '5m')?.label || '5 Min'}) in the header. Invalid PIPS settings (e.g., min &gt; max, or zero/negative values) will pause updates.
+                    <strong>Automatic Predictions:</strong> Once parameters are set (valid currency pairs selected, PIPS settings, and lifetime defined), predictions will automatically generate. The frequency of these updates can be set using the interval selector (e.g., {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '1m')?.label || '1 Min'}, {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '5m')?.label || '5 Min'}) in the header. Invalid PIPS or lifetime settings (e.g., min &gt; max, or zero/negative values for PIPS; lifetime too short) will pause updates.
                   </li>
                   <li>
                     <strong>Prediction Logs:</strong> Generated predictions appear in the "Prediction Logs" area, split into <strong>Active Predictions</strong> and <strong>Expired Predictions</strong> tables.
                   </li>
                   <li>
-                    <strong>Expiration:</strong> Each prediction has a unique expiration time, randomly set between {MIN_EXPIRATION_SECONDS} and {MAX_EXPIRATION_SECONDS} seconds ({Math.round(MIN_EXPIRATION_SECONDS/60)} to {Math.round(MAX_EXPIRATION_SECONDS/60)} minutes). Once expired, it moves to the "Expired Predictions" table.
+                    <strong>Expiration:</strong> Each prediction has a unique expiration time, randomly set between {MIN_EXPIRATION_SECONDS} and {currentMaxPredictionLifetime} seconds (approximately {Math.round(MIN_EXPIRATION_SECONDS/60)} to {Math.round(currentMaxPredictionLifetime/60)} minutes, based on your settings). Once expired, it moves to the "Expired Predictions" table.
                   </li>
                   <li>
                     <strong>Log Management:</strong> You can configure the maximum number of logs to display in each table using their respective <Filter className="inline h-3 w-3" aria-label="Filter Settings" /> icon. The system has an overall cap of {maxPredictionLogs} total logs.
@@ -424,4 +425,3 @@ type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends un
 
 // Constant for Notification History display
 const MAX_NOTIFICATIONS_HISTORY = 100;
-
