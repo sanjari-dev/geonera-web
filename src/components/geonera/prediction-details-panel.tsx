@@ -208,7 +208,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                   <span>Welcome to Geonera!</span>
                 </div>
                 <p className="leading-relaxed">
-                  Geonera provides mock real-time Forex insights and trading signals. Here’s how to use it:
+                  Geonera is your platform for simulated Forex insights and mock trading signals. Here’s a guide to its features:
                 </p>
                 <ul className="list-disc list-inside space-y-1 pl-3 leading-relaxed">
                   <li>
@@ -230,7 +230,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                     <strong>Viewing Details:</strong> Click on any row in the Prediction Logs to view its detailed analysis (including market data like Open, High, Low, Close, Volume) in this panel. The first log in the "Active Predictions" table is selected by default if available.
                   </li>
                   <li>
-                    <strong>Filtering & Sorting:</strong> Use the <Filter className="inline h-3 w-3" aria-label="Filter Settings" /> icon in each table's header to filter by status or signal, and set display limits. Click on column headers to sort the data. The <strong>Date Range</strong> filter in the "Prediction Logs" header allows you to view logs from a specific period.
+                    <strong>Filtering & Sorting:</strong> Use the <Filter className="inline h-3 w-3" aria-label="Filter Settings" /> icon in each table's header to filter by status or signal, and set display limits. Click on column headers to sort the data. The <strong>Date Range</strong> filter (accessible via the <SettingsIcon className="inline h-3 w-3" aria-label="Date Range Settings"/> icon on the "Prediction Logs" card) allows you to view logs from a specific period.
                   </li>
                    <li>
                     <strong>Navigation:</strong> Use the <MenuIcon className="inline h-3 w-3" aria-label="Panel Menu" /> icon at the top-right of this panel to switch between this "About" guide, the "Prediction Details" for a selected log, or the "Notification History".
@@ -424,3 +424,4 @@ type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends un
 
 // Constant for Notification History display
 const MAX_NOTIFICATIONS_HISTORY = 100;
+
