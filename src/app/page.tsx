@@ -24,11 +24,13 @@ import type {
 import { DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG, MIN_EXPIRATION_SECONDS, MAX_EXPIRATION_SECONDS } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, CalendarDays, Filter } from 'lucide-react';
+import { Loader2, CalendarDays, Filter, Settings as SettingsIcon, List } from 'lucide-react';
 import { startOfDay, endOfDay, isValid, format as formatDateFns } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const PREDICTION_INTERVAL_MS = 30000; // 30 seconds
@@ -74,6 +76,9 @@ export default function GeoneraPage() {
   const [displayedActiveLogsCount, setDisplayedActiveLogsCount] = useState<number>(DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT);
   const [displayedExpiredLogsCount, setDisplayedExpiredLogsCount] = useState<number>(DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT);
   const [activeDetailsView, setActiveDetailsView] = useState<ActiveDetailsView>('about');
+
+  // New state for the view mode of the prediction logs card
+  const [predictionLogsViewMode, setPredictionLogsViewMode] = useState<'logs' | 'pipsSettings'>('logs');
 
 
   const router = useRouter();
@@ -187,6 +192,10 @@ export default function GeoneraPage() {
   const handleDateRangeChange = useCallback((newRange: DateRangeFilter) => {
     setDateRangeFilter(newRange);
   }, []);
+
+  const handlePredictionLogsViewToggle = () => {
+    setPredictionLogsViewMode(prev => prev === 'logs' ? 'pipsSettings' : 'logs');
+  };
 
   useEffect(() => {
     if (!currentUser || !isAuthCheckComplete) return; 
@@ -539,14 +548,8 @@ export default function GeoneraPage() {
       />
 
       {currentUser && ( 
-        <div className="w-full px-2 py-1 grid grid-cols-1 sm:grid-cols-2 gap-1"> 
-          <PipsInputCard
-            pipsSettings={pipsSettings}
-            onPipsSettingsChange={handlePipsSettingsChange}
-            isLoading={isLoading}
-            className="col-span-1" 
-          />
-          <NotificationDisplay notification={latestNotificationForDisplay} className="col-span-1" />
+        <div className="w-full px-2 py-1">
+          <NotificationDisplay notification={latestNotificationForDisplay} className="w-full" />
         </div>
       )}
       {!currentUser && isAuthCheckComplete && (
@@ -560,92 +563,127 @@ export default function GeoneraPage() {
           <div className="md:col-span-2 flex flex-col min-h-0"> 
             <Card className="shadow-xl h-full flex flex-col">
               <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold text-primary">
-                  Prediction Logs
-                </CardTitle>
-                <div className="flex items-center gap-1">
-                  <Label htmlFor="date-filter-start" className="text-xs font-medium flex items-center text-primary">
-                      <CalendarDays className="h-3 w-3 mr-1" /> From:
-                  </Label>
-                  <Input
-                      type="datetime-local"
-                      id="date-filter-start"
-                      value={formatDateToDateTimeLocal(dateRangeFilter.start)}
-                      onChange={(e) => {
-                        const newStart = e.target.value ? new Date(e.target.value) : null;
-                        if (newStart && isValid(newStart)) {
-                          handleDateRangeChange({ ...dateRangeFilter, start: newStart });
-                        } else if (!e.target.value) {
-                           handleDateRangeChange({ ...dateRangeFilter, start: null });
-                        }
-                      }}
-                      className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
-                      aria-label="Filter start date and time"
-                    />
-                  <Label htmlFor="date-filter-end" className="text-xs font-medium flex items-center text-primary">
-                      <CalendarDays className="h-3 w-3 mr-1" /> To:
-                  </Label>
-                  <Input
-                      type="datetime-local"
-                      id="date-filter-end"
-                      value={formatDateToDateTimeLocal(dateRangeFilter.end)}
-                      onChange={(e) => {
-                        const newEnd = e.target.value ? new Date(e.target.value) : null;
-                        if (newEnd && isValid(newEnd)) {
-                          handleDateRangeChange({ ...dateRangeFilter, end: newEnd });
-                        } else if (!e.target.value) {
-                          handleDateRangeChange({ ...dateRangeFilter, end: null });
-                        }
-                      }}
-                      className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
-                      aria-label="Filter end date and time"
-                    />
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-primary">
+                    {predictionLogsViewMode === 'logs' ? 'Prediction Logs' : 'PIPS Settings'}
+                  </CardTitle>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-1"
+                          onClick={handlePredictionLogsViewToggle}
+                          aria-label={predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}
+                        >
+                          {predictionLogsViewMode === 'logs' ? <SettingsIcon className="h-4 w-4 text-primary/80" /> : <List className="h-4 w-4 text-primary/80" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
+                {predictionLogsViewMode === 'logs' && (
+                  <div className="flex items-center gap-1">
+                    <Label htmlFor="date-filter-start" className="text-xs font-medium flex items-center text-primary">
+                        <CalendarDays className="h-3 w-3 mr-1" /> From:
+                    </Label>
+                    <Input
+                        type="datetime-local"
+                        id="date-filter-start"
+                        value={formatDateToDateTimeLocal(dateRangeFilter.start)}
+                        onChange={(e) => {
+                          const newStart = e.target.value ? new Date(e.target.value) : null;
+                          if (newStart && isValid(newStart)) {
+                            handleDateRangeChange({ ...dateRangeFilter, start: newStart });
+                          } else if (!e.target.value) {
+                             handleDateRangeChange({ ...dateRangeFilter, start: null });
+                          }
+                        }}
+                        className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                        aria-label="Filter start date and time"
+                      />
+                    <Label htmlFor="date-filter-end" className="text-xs font-medium flex items-center text-primary">
+                        <CalendarDays className="h-3 w-3 mr-1" /> To:
+                    </Label>
+                    <Input
+                        type="datetime-local"
+                        id="date-filter-end"
+                        value={formatDateToDateTimeLocal(dateRangeFilter.end)}
+                        onChange={(e) => {
+                          const newEnd = e.target.value ? new Date(e.target.value) : null;
+                          if (newEnd && isValid(newEnd)) {
+                            handleDateRangeChange({ ...dateRangeFilter, end: newEnd });
+                          } else if (!e.target.value) {
+                            handleDateRangeChange({ ...dateRangeFilter, end: null });
+                          }
+                        }}
+                        className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                        aria-label="Filter end date and time"
+                      />
+                  </div>
+                )}
               </CardHeader>
-              <CardContent className="p-1 flex-grow grid grid-cols-1 md:grid-cols-2 gap-1 overflow-hidden">
-                <div className="flex flex-col min-h-0 overflow-y-auto h-full">
-                  <PredictionsTable
-                    title="Active Predictions"
-                    predictions={displayedSortedActiveLogs}
-                    onRowClick={handlePredictionSelect}
-                    selectedPredictionId={finalSelectedPredictionForChildren?.id}
-                    sortConfig={sortConfigActive}
-                    onSort={(key) => handleSort(key, 'active')}
-                    filterStatus={activeTableFilterStatus}
-                    onFilterStatusChange={setActiveTableFilterStatus}
-                    filterSignal={activeTableFilterSignal}
-                    onFilterSignalChange={setActiveTableFilterSignal}
-                    displayLimit={displayedActiveLogsCount}
-                    onDisplayLimitChange={setDisplayedActiveLogsCount}
-                    totalAvailableForDisplay={activeLogs.length}
-                    maxLogs={MAX_PREDICTION_LOGS_CONFIG}
-                  />
-                </div>
-                <div className="flex flex-col min-h-0 overflow-y-auto h-full">
-                  <PredictionsTable
-                    title="Expired Predictions"
-                    predictions={sortedAndLimitedExpiredLogs}
-                    onRowClick={handlePredictionSelect}
-                    selectedPredictionId={finalSelectedPredictionForChildren?.id}
-                    sortConfig={sortConfigExpired}
-                    onSort={(key) => handleSort(key, 'expired')}
-                    filterStatus={expiredTableFilterStatus}
-                    onFilterStatusChange={setExpiredTableFilterStatus}
-                    filterSignal={expiredTableFilterSignal}
-                    onFilterSignalChange={setExpiredTableFilterSignal}
-                    displayLimit={displayedExpiredLogsCount}
-                    onDisplayLimitChange={setDisplayedExpiredLogsCount}
-                    totalAvailableForDisplay={fullyFilteredExpiredExpiredLogs.length}
-                    maxLogs={MAX_PREDICTION_LOGS_CONFIG}
-                  />
-                </div>
+              <CardContent className="p-1 flex-grow overflow-auto">
+                {predictionLogsViewMode === 'logs' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-1 h-full">
+                    <div className="flex flex-col min-h-0 overflow-y-auto h-full">
+                      <PredictionsTable
+                        title="Active Predictions"
+                        predictions={displayedSortedActiveLogs}
+                        onRowClick={handlePredictionSelect}
+                        selectedPredictionId={finalSelectedPredictionForChildren?.id}
+                        sortConfig={sortConfigActive}
+                        onSort={(key) => handleSort(key, 'active')}
+                        filterStatus={activeTableFilterStatus}
+                        onFilterStatusChange={setActiveTableFilterStatus}
+                        filterSignal={activeTableFilterSignal}
+                        onFilterSignalChange={setActiveTableFilterSignal}
+                        displayLimit={displayedActiveLogsCount}
+                        onDisplayLimitChange={setDisplayedActiveLogsCount}
+                        totalAvailableForDisplay={activeLogs.length}
+                        maxLogs={MAX_PREDICTION_LOGS_CONFIG}
+                      />
+                    </div>
+                    <div className="flex flex-col min-h-0 overflow-y-auto h-full">
+                      <PredictionsTable
+                        title="Expired Predictions"
+                        predictions={sortedAndLimitedExpiredLogs}
+                        onRowClick={handlePredictionSelect}
+                        selectedPredictionId={finalSelectedPredictionForChildren?.id}
+                        sortConfig={sortConfigExpired}
+                        onSort={(key) => handleSort(key, 'expired')}
+                        filterStatus={expiredTableFilterStatus}
+                        onFilterStatusChange={setExpiredTableFilterStatus}
+                        filterSignal={expiredTableFilterSignal}
+                        onFilterSignalChange={setExpiredTableFilterSignal}
+                        displayLimit={displayedExpiredLogsCount}
+                        onDisplayLimitChange={setDisplayedExpiredLogsCount}
+                        totalAvailableForDisplay={fullyFilteredExpiredExpiredLogs.length}
+                        maxLogs={MAX_PREDICTION_LOGS_CONFIG}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4"> {/* Add padding for PipsInputCard view */}
+                    <PipsInputCard
+                      pipsSettings={pipsSettings}
+                      onPipsSettingsChange={handlePipsSettingsChange}
+                      isLoading={isLoading}
+                      className="shadow-none border-0 bg-transparent" 
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
           
           <div className="md:col-span-1 flex flex-col min-h-0"> 
             <PredictionDetailsPanel 
-              activeView={activeDetailsView}
+              activeView={activeView}
               onActiveViewChange={handleActiveDetailsViewChange}
               selectedPrediction={finalSelectedPredictionForChildren} 
               maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG}
@@ -661,8 +699,3 @@ export default function GeoneraPage() {
     </div>
   );
 }
-
-
-
-
-
