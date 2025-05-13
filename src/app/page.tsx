@@ -566,69 +566,73 @@ export default function GeoneraPage() {
           <div className="md:col-span-2 flex flex-col min-h-0"> 
             <Card className="shadow-xl h-full flex flex-col">
               <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex items-center justify-between">
+                {/* Group for Title and Date Filter (left/middle part) */}
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-lg font-semibold text-primary">
                     {predictionLogsViewMode === 'logs' ? 'Prediction Logs' : 'PIPS Settings'}
                   </CardTitle>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 p-1"
-                          onClick={handlePredictionLogsViewToggle}
-                          aria-label={predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}
-                        >
-                          {predictionLogsViewMode === 'logs' ? <SettingsIcon className="h-4 w-4 text-primary/80" /> : <List className="h-4 w-4 text-primary/80" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {/* Date Filter (only shows in 'logs' mode, appears next to title) */}
+                  {predictionLogsViewMode === 'logs' && (
+                    <div className="flex items-center gap-1">
+                      <Label htmlFor="date-filter-start" className="text-xs font-medium flex items-center text-primary">
+                          <CalendarDays className="h-3 w-3 mr-1" /> From:
+                      </Label>
+                      <Input
+                          type="datetime-local"
+                          id="date-filter-start"
+                          value={formatDateToDateTimeLocal(dateRangeFilter.start)}
+                          onChange={(e) => {
+                            const newStart = e.target.value ? new Date(e.target.value) : null;
+                            if (newStart && isValid(newStart)) {
+                              handleDateRangeChange({ ...dateRangeFilter, start: newStart });
+                            } else if (!e.target.value) {
+                               handleDateRangeChange({ ...dateRangeFilter, start: null });
+                            }
+                          }}
+                          className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                          aria-label="Filter start date and time"
+                        />
+                      <Label htmlFor="date-filter-end" className="text-xs font-medium flex items-center text-primary">
+                          <CalendarDays className="h-3 w-3 mr-1" /> To:
+                      </Label>
+                      <Input
+                          type="datetime-local"
+                          id="date-filter-end"
+                          value={formatDateToDateTimeLocal(dateRangeFilter.end)}
+                          onChange={(e) => {
+                            const newEnd = e.target.value ? new Date(e.target.value) : null;
+                            if (newEnd && isValid(newEnd)) {
+                              handleDateRangeChange({ ...dateRangeFilter, end: newEnd });
+                            } else if (!e.target.value) {
+                              handleDateRangeChange({ ...dateRangeFilter, end: null });
+                            }
+                          }}
+                          className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                          aria-label="Filter end date and time"
+                        />
+                    </div>
+                  )}
                 </div>
-                {predictionLogsViewMode === 'logs' && (
-                  <div className="flex items-center gap-1">
-                    <Label htmlFor="date-filter-start" className="text-xs font-medium flex items-center text-primary">
-                        <CalendarDays className="h-3 w-3 mr-1" /> From:
-                    </Label>
-                    <Input
-                        type="datetime-local"
-                        id="date-filter-start"
-                        value={formatDateToDateTimeLocal(dateRangeFilter.start)}
-                        onChange={(e) => {
-                          const newStart = e.target.value ? new Date(e.target.value) : null;
-                          if (newStart && isValid(newStart)) {
-                            handleDateRangeChange({ ...dateRangeFilter, start: newStart });
-                          } else if (!e.target.value) {
-                             handleDateRangeChange({ ...dateRangeFilter, start: null });
-                          }
-                        }}
-                        className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
-                        aria-label="Filter start date and time"
-                      />
-                    <Label htmlFor="date-filter-end" className="text-xs font-medium flex items-center text-primary">
-                        <CalendarDays className="h-3 w-3 mr-1" /> To:
-                    </Label>
-                    <Input
-                        type="datetime-local"
-                        id="date-filter-end"
-                        value={formatDateToDateTimeLocal(dateRangeFilter.end)}
-                        onChange={(e) => {
-                          const newEnd = e.target.value ? new Date(e.target.value) : null;
-                          if (newEnd && isValid(newEnd)) {
-                            handleDateRangeChange({ ...dateRangeFilter, end: newEnd });
-                          } else if (!e.target.value) {
-                            handleDateRangeChange({ ...dateRangeFilter, end: null });
-                          }
-                        }}
-                        className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
-                        aria-label="Filter end date and time"
-                      />
-                  </div>
-                )}
+
+                {/* PIPS Settings Toggle Button (right part) */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 p-1"
+                        onClick={handlePredictionLogsViewToggle}
+                        aria-label={predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}
+                      >
+                        {predictionLogsViewMode === 'logs' ? <SettingsIcon className="h-4 w-4 text-primary/80" /> : <List className="h-4 w-4 text-primary/80" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </CardHeader>
               <CardContent className="p-1 flex-grow overflow-auto">
                 {predictionLogsViewMode === 'logs' ? (
