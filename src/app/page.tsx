@@ -60,8 +60,8 @@ export default function GeoneraPage() {
   const [notificationsList, setNotificationsList] = useState<NotificationMessage[]>([]);
   
   const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>({ 
-    start: typeof window !== 'undefined' ? startOfDay(new Date()) : null, 
-    end: typeof window !== 'undefined' ? endOfDay(new Date()) : null 
+    start: null, 
+    end: null 
   });
   
   const [activeTableFilterStatus, setActiveTableFilterStatus] = useState<StatusFilterType>("ALL");
@@ -100,7 +100,10 @@ export default function GeoneraPage() {
         setUuidAvailable(true);
     }
      if (typeof window !== 'undefined') {
-        setDateRangeFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) });
+        const todayStart = startOfDay(new Date());
+        const todayEnd = endOfDay(new Date());
+        setDateRangeFilter({ start: todayStart, end: todayEnd });
+
         const storedUser = localStorage.getItem('geoneraUser');
         if (storedUser) {
             try {
@@ -683,7 +686,7 @@ export default function GeoneraPage() {
           
           <div className="md:col-span-1 flex flex-col min-h-0"> 
             <PredictionDetailsPanel 
-              activeView={activeView}
+              activeView={activeDetailsView}
               onActiveViewChange={handleActiveDetailsViewChange}
               selectedPrediction={finalSelectedPredictionForChildren} 
               maxPredictionLogs={MAX_PREDICTION_LOGS_CONFIG}
