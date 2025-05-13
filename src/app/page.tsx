@@ -39,7 +39,11 @@ const MAX_NOTIFICATIONS = 100;
 
 const formatDateToDateTimeLocal = (date: Date | null): string => {
   if (!date || !isValid(date)) return '';
-  return formatDateFns(date, "yyyy-MM-dd'T'HH:mm:ss");
+  // Ensure the date is treated as local by offsetting timezone for input[type=datetime-local]
+  // This is a common workaround because datetime-local input expects non-timezone-offset string
+  // but Date objects inherently carry timezone info from the system.
+  const tempDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+  return tempDate.toISOString().slice(0, 16);
 };
 
 export default function GeoneraPage() {
@@ -565,8 +569,8 @@ export default function GeoneraPage() {
         <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-3 gap-1 overflow-hidden">
           <div className="md:col-span-2 flex flex-col min-h-0"> 
             <Card className="shadow-xl h-full flex flex-col">
-              <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex items-center justify-between">
-                {/* Group for Title and Date Filter (left/middle part) */}
+              <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex items-center justify-center relative">
+                {/* Centered Content: Title and optional Date Filter */}
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-lg font-semibold text-primary">
                     {predictionLogsViewMode === 'logs' ? 'Prediction Logs' : 'PIPS Settings'}
@@ -613,26 +617,27 @@ export default function GeoneraPage() {
                     </div>
                   )}
                 </div>
-
-                {/* PIPS Settings Toggle Button (right part) */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 p-1"
-                        onClick={handlePredictionLogsViewToggle}
-                        aria-label={predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}
-                      >
-                        {predictionLogsViewMode === 'logs' ? <SettingsIcon className="h-4 w-4 text-primary/80" /> : <List className="h-4 w-4 text-primary/80" />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {/* PIPS Settings Toggle Button (Absolutely Positioned on the Right) */}
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-1"
+                          onClick={handlePredictionLogsViewToggle}
+                          aria-label={predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}
+                        >
+                          {predictionLogsViewMode === 'logs' ? <SettingsIcon className="h-4 w-4 text-primary/80" /> : <List className="h-4 w-4 text-primary/80" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{predictionLogsViewMode === 'logs' ? "Open PIPS Settings" : "View Prediction Logs"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </CardHeader>
               <CardContent className="p-1 flex-grow overflow-auto">
                 {predictionLogsViewMode === 'logs' ? (
