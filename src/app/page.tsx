@@ -47,8 +47,8 @@ import { UnsupportedResolutionMessage } from '@/components/geonera/unsupported-r
 
 
 const MAX_NOTIFICATIONS = 100;
-const MIN_WIDTH = 1280;
-const MIN_HEIGHT = 720;
+const MIN_WIDTH = 1500;
+const MIN_HEIGHT = 800;
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
