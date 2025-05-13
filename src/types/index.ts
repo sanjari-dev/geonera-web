@@ -45,12 +45,6 @@ export interface PredictionLogItem {
   expiresAt?: Date;
 }
 
-// This will be the input for the AI flow (or mock generator)
-export interface AnalyzePipsInfluenceInput {
-  currencyPair: CurrencyPair; 
-  pipsSettings: PipsSettings; 
-}
-
 export interface User {
   id: string;
   username: string;
@@ -107,7 +101,7 @@ export interface RefreshIntervalOption {
 }
 
 export const REFRESH_INTERVAL_OPTIONS: RefreshIntervalOption[] = [
-  { value: '1m', label: '1 Min', milliseconds: 1 * 60 * 1000 },
+  { value: '1m', label: '1 Min', milliseconds: 60 * 1000 },
   { value: '2m', label: '2 Min', milliseconds: 2 * 60 * 1000 },
   { value: '3m', label: '3 Min', milliseconds: 3 * 60 * 1000 },
   { value: '4m', label: '4 Min', milliseconds: 4 * 60 * 1000 },
@@ -118,14 +112,14 @@ export const REFRESH_INTERVAL_OPTIONS: RefreshIntervalOption[] = [
   { value: '15m', label: '15 Min', milliseconds: 15 * 60 * 1000 },
   { value: '20m', label: '20 Min', milliseconds: 20 * 60 * 1000 },
   { value: '30m', label: '30 Min', milliseconds: 30 * 60 * 1000 },
-  { value: '1h', label: '1 Hour', milliseconds: 1 * 60 * 60 * 1000 },
+  { value: '1h', label: '1 Hour', milliseconds: 60 * 60 * 1000 },
   { value: '2h', label: '2 Hours', milliseconds: 2 * 60 * 60 * 1000 },
   { value: '3h', label: '3 Hours', milliseconds: 3 * 60 * 60 * 1000 },
   { value: '4h', label: '4 Hours', milliseconds: 4 * 60 * 60 * 1000 },
   { value: '6h', label: '6 Hours', milliseconds: 6 * 60 * 60 * 1000 },
   { value: '8h', label: '8 Hours', milliseconds: 8 * 60 * 60 * 1000 },
   { value: '12h', label: '12 Hours', milliseconds: 12 * 60 * 60 * 1000 },
-  { value: '1D', label: '1 Day', milliseconds: 1 * 24 * 60 * 60 * 1000 },
+  { value: '1D', label: '1 Day', milliseconds: 24 * 60 * 60 * 1000 },
   { value: '2D', label: '2 Days', milliseconds: 2 * 24 * 60 * 60 * 1000 },
   { value: '3D', label: '3 Days', milliseconds: 3 * 24 * 60 * 60 * 1000 },
   { value: '4D', label: '4 Days', milliseconds: 4 * 24 * 60 * 60 * 1000 },
@@ -133,12 +127,9 @@ export const REFRESH_INTERVAL_OPTIONS: RefreshIntervalOption[] = [
 ];
 
 export const DEFAULT_REFRESH_INTERVAL_VALUE: RefreshIntervalValue = '1m'; // Default to 1 minute
-export const DEFAULT_REFRESH_INTERVAL_MS = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === DEFAULT_REFRESH_INTERVAL_VALUE)?.milliseconds || (1 * 60 * 1000);
+export const DEFAULT_REFRESH_INTERVAL_MS = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === DEFAULT_REFRESH_INTERVAL_VALUE)?.milliseconds || (60 * 1000);
 
-
-export const MIN_EXPIRATION_SECONDS = 120; // Absolute minimum expiration time in seconds for a prediction (2 minutes)
-export const MAX_EXPIRATION_SECONDS = 75; // Default maximum expiration time in seconds, user-configurable (e.g. 75 seconds)
-
+export const MIN_EXPIRATION_SECONDS = 120;
 export const MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC = 10 * 60; // 10 minutes
 export const MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC = 5 * 24 * 60 * 60; // 5 days
 

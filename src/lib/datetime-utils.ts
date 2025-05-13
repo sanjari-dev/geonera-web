@@ -1,6 +1,6 @@
 // src/lib/datetime-utils.ts
 import { 
-  startOfDay, endOfDay, isValid,
+  startOfDay, isValid,
   addMinutes, addHours, addDays, 
   startOfMinute, startOfHour, 
   differenceInMilliseconds 

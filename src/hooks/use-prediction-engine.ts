@@ -1,5 +1,5 @@
 // src/hooks/use-prediction-engine.ts
-import { useState, useEffect, useCallback } from 'react';
+import {useState, useEffect, MutableRefObject, Dispatch, SetStateAction} from 'react';
 import { produce } from 'immer';
 import type {
   PredictionLogItem,
@@ -13,7 +13,7 @@ import type {
 import {
   MAX_PREDICTION_LOGS_CONFIG,
   MIN_EXPIRATION_SECONDS,
-  // MAX_EXPIRATION_SECONDS will be replaced by a dynamic ref value
+  // A dynamic ref value will replace MAX_EXPIRATION_SECONDS
 } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { calculateDelayUntilNextScheduledRun } from '@/lib/datetime-utils';
@@ -22,16 +22,16 @@ interface UsePredictionEngineProps {
   currentUser: User | null;
   isAuthCheckComplete: boolean;
   currentTimeForFiltering: Date | null;
-  latestSelectedCurrencyPairsRef: React.MutableRefObject<CurrencyPair[]>;
-  latestPipsSettingsRef: React.MutableRefObject<PipsSettings>;
-  latestSelectedRefreshIntervalValueRef: React.MutableRefObject<RefreshIntervalValue>;
-  latestMaxPredictionLifetimeRef: React.MutableRefObject<number>; // Added
+  latestSelectedCurrencyPairsRef: MutableRefObject<CurrencyPair[]>;
+  latestPipsSettingsRef: MutableRefObject<PipsSettings>;
+  latestSelectedRefreshIntervalValueRef: MutableRefObject<RefreshIntervalValue>;
+  latestMaxPredictionLifetimeRef: MutableRefObject<number>; // Added
   addNotificationCallback: (notification: Omit<NotificationMessage, 'timestamp' | 'id'>) => void;
   generateIdCallback: () => string;
   selectedPredictionLog: PredictionLogItem | null;
-  setSelectedPredictionLog: React.Dispatch<React.SetStateAction<PredictionLogItem | null>>;
+  setSelectedPredictionLog: Dispatch<SetStateAction<PredictionLogItem | null>>;
   activeDetailsView: ActiveDetailsView;
-  setActiveDetailsView: React.Dispatch<React.SetStateAction<ActiveDetailsView>>;
+  setActiveDetailsView: Dispatch<SetStateAction<ActiveDetailsView>>;
 }
 
 export function usePredictionEngine({

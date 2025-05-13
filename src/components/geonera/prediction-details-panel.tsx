@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import { REFRESH_INTERVAL_OPTIONS, MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC, MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC } from '@/types';
 import { formatSecondsToDurationString } from '@/lib/datetime-utils';
+import { FC } from 'react';
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
@@ -29,10 +30,10 @@ interface PredictionDetailsPanelProps {
 
 
 // New component for rendering the list of notifications
-const NotificationListItem: React.FC<{ notification: NotificationMessage }> = ({ notification }) => {
+const NotificationListItem: FC<{ notification: NotificationMessage }> = ({ notification }) => {
   let IconComponent;
-  let iconColorClass = "";
-  let titleColorClass = "text-foreground";
+  let iconColorClass: string;
+  let titleColorClass: string;
 
   switch (notification.variant) {
     case "destructive":
@@ -71,7 +72,7 @@ const NotificationListItem: React.FC<{ notification: NotificationMessage }> = ({
   );
 };
 
-const NotificationHistoryView: React.FC<{ notifications: NotificationMessage[] }> = ({ notifications }) => {
+const NotificationHistoryView: FC<{ notifications: NotificationMessage[] }> = ({ notifications }) => {
   if (notifications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-xs">
@@ -102,7 +103,7 @@ const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]):
   }
 };
 
-const SignalIcon: React.FC<{ signal?: PipsPredictionOutcome["tradingSignal"] }> = ({ signal }) => {
+const SignalIcon: FC<{ signal?: PipsPredictionOutcome["tradingSignal"] }> = ({ signal }) => {
   if (!signal) return <HelpCircle className="h-4 w-4" aria-label="Signal Not Available"/>;
   switch (signal) {
     case "BUY": return <TrendingUp className="h-4 w-4 text-green-500" aria-label="Buy Signal" />;
@@ -114,7 +115,7 @@ const SignalIcon: React.FC<{ signal?: PipsPredictionOutcome["tradingSignal"] }> 
   }
 };
 
-const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status }) => {
+const StatusIcon: FC<{ status: PredictionLogItem["status"] }> = ({ status }) => {
   switch (status) {
     case "PENDING": return <Loader2 className="h-4 w-4 animate-spin text-blue-500" aria-label="Pending" />;
     case "SUCCESS": return <CheckCircle2 className="h-4 w-4 text-green-500" aria-label="Success" />;
@@ -125,7 +126,7 @@ const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status 
 
 const formatPrice = (price?: number, currencyPair?: PredictionLogItem["currencyPair"]) => {
   if (price === undefined || price === null) return "N/A";
-  let fractionDigits = 2;
+  let fractionDigits: number;
   if (currencyPair === "BTC/USD") fractionDigits = 2;
   else if (currencyPair && currencyPair.includes("JPY")) fractionDigits = 3;
   else if (currencyPair === "XAU/USD") fractionDigits = 2;
@@ -177,7 +178,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => onActiveViewChange('about')} className="text-xs">
+                    <DropdownMenuItem onSelect={() => onActiveViewChangeAction('about')} className="text-xs">
                     <Info className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> About Geonera
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => onActiveViewChangeAction('details')}

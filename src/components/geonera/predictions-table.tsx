@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock, ListFilter } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock, ListFilter } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, StatusFilterType, SignalFilterType } from '@/types';
 import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG } from '@/types';
 import { format as formatDateFns } from 'date-fns';
@@ -29,23 +29,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { getSortableValue } from '@/lib/table-utils';
 
 
 interface PredictionsTableProps {
   title: string;
   titleIcon?: React.ReactNode;
   predictions: PredictionLogItem[];
-  onRowClick: (log: PredictionLogItem) => void;
+  onRowClickAction: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
   sortConfig: SortConfig | null;
-  onSort: (key: SortableColumnKey) => void;
+  onSortAction: (key: SortableColumnKey) => void;
   filterStatus: StatusFilterType;
-  onFilterStatusChange: (value: StatusFilterType) => void;
+  onFilterStatusChangeAction: (value: StatusFilterType) => void;
   filterSignal: SignalFilterType;
-  onFilterSignalChange: (value: SignalFilterType) => void;
+  onFilterSignalChangeAction: (value: SignalFilterType) => void;
   displayLimit: number;
-  onDisplayLimitChange: (value: number) => void;
+  onDisplayLimitChangeAction: (value: number) => void;
   totalAvailableForDisplay: number; 
   maxLogs: number; 
 }
@@ -88,7 +87,7 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
 const SignalIconDisplay: React.FC<{ signal?: PipsPredictionOutcome["tradingSignal"], className?: string }> = ({ signal, className }) => {
   const iconCommonClass = "h-3.5 w-3.5 mx-auto";
   let iconElement: React.ReactNode;
-  let tooltipText: string = "N/A";
+  let tooltipText: string;
 
   if (!signal) {
      iconElement = <HelpCircle className={cn(iconCommonClass, "text-gray-400", className)} aria-label="Not Available" />;
@@ -139,16 +138,16 @@ export function PredictionsTable({
   title,
   titleIcon,
   predictions,
-  onRowClick,
+  onRowClickAction,
   selectedPredictionId,
   sortConfig,
-  onSort,
+  onSortAction,
   filterStatus,
-  onFilterStatusChange,
+  onFilterStatusChangeAction,
   filterSignal,
-  onFilterSignalChange,
+  onFilterSignalChangeAction,
   displayLimit,
-  onDisplayLimitChange,
+  onDisplayLimitChangeAction,
   totalAvailableForDisplay,
   maxLogs,
 }: PredictionsTableProps) {
@@ -171,8 +170,8 @@ export function PredictionsTable({
 
 
   const handleApplyFilters = () => {
-    onFilterStatusChange(tempFilterStatus);
-    onFilterSignalChange(tempFilterSignal);
+    onFilterStatusChangeAction(tempFilterStatus);
+    onFilterSignalChangeAction(tempFilterSignal);
 
     let newLimit = parseInt(String(tempDisplayLimit), 10);
     const defaultLimit = title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT;
@@ -181,7 +180,7 @@ export function PredictionsTable({
     } else if (newLimit > MAX_PREDICTION_LOGS_CONFIG) {
       newLimit = MAX_PREDICTION_LOGS_CONFIG;
     }
-    onDisplayLimitChange(newLimit);
+    onDisplayLimitChangeAction(newLimit);
     setViewMode('table');
   };
 
@@ -203,7 +202,7 @@ export function PredictionsTable({
   const renderSortableHeader = (label: string | React.ReactNode, columnKey: SortableColumnKey, tooltipContent: string, icon?: React.ReactNode, headerClassName?: string) => (
     <TableHead
       className={cn("px-1 py-1 text-center whitespace-nowrap cursor-pointer hover:bg-accent/50 transition-colors sticky top-0 bg-card z-10 text-xs h-auto", headerClassName)}
-      onClick={() => onSort(columnKey)}
+      onClick={() => onSortAction(columnKey)}
       aria-sort={sortConfig?.key === columnKey ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
       <Tooltip>
@@ -239,7 +238,7 @@ export function PredictionsTable({
         </TableRow>
       );
     }
-     if (data.length === 0 && totalAvailableForDisplay > 0) { // If no data to display but some are available (e.g. due to displayLimit)
+     if (data.length === 0 && totalAvailableForDisplay > 0) { // If no data to display but some are available (e.g., due to displayLimit)
       return (
         <TableRow>
           <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-xs">
@@ -251,14 +250,14 @@ export function PredictionsTable({
     return data.map((log) => (
       <TableRow
         key={log.id}
-        onClick={() => onRowClick(log)}
+        onClick={() => onRowClickAction(log)}
         className={cn(
           "cursor-pointer hover:bg-muted/50 transition-colors",
           selectedPredictionId === log.id && "bg-secondary text-secondary-foreground hover:bg-muted"
         )}
         aria-selected={selectedPredictionId === log.id}
         tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onRowClick(log); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onRowClickAction(log); }}
       >
         <TableCell className="px-1 py-0.5 text-center whitespace-nowrap w-10">
           <StatusIndicator status={log.status} />
@@ -434,5 +433,3 @@ export function PredictionsTable({
     </TooltipProvider>
   );
 }
-
-type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];

@@ -16,7 +16,7 @@ function generateMockPrediction(currencyPair: CurrencyPair, pipsSettings: PipsSe
   const midPointProfitPips = (profitPips.min + profitPips.max) / 2;
   const basePipsForCalc = midPointProfitPips > 0 ? midPointProfitPips : profitPips.min;
 
-  const potentialPipsMove = Math.round(basePipsForCalc * (0.5 + randomFactor * 1.5)); // Moves between 50% and 200% of target
+  const potentialPipsMove = Math.round(basePipsForCalc * (0.5 + randomFactor * 1.5)); // Moves between 50% and 200% of the target
 
   const profitRangeString = `${profitPips.min}-${profitPips.max} PIPS`;
   const lossRangeString = `${lossPips.min}-${lossPips.max} PIPS`;

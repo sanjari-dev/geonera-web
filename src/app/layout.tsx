@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from "@/components/theme-provider";
+import { ReactNode } from 'react';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -43,7 +44,7 @@ export const metadata: Metadata = {
     url: new URL(BASE_URL), // Main site URL for Open Graph
     images: [
       {
-        url: "/og-image.png", // Replace with your actual OG image path
+        url: "/og-image.png", // Replace it with your actual OG image path
         width: 1200,
         height: 630,
         alt: "Geonera - AI Powered Forex Predictions Platform",
@@ -86,9 +87,7 @@ export const metadata: Metadata = {
     // },
   },
   icons: { // Define icons more explicitly
-    icon: [
-      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-    ],
+    icon: [],
     apple: '/apple-touch-icon.png', // Example Apple touch icon
     shortcut: '/favicon.ico', // Favicon
   },
@@ -101,7 +100,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning={true}>

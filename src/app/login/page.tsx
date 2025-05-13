@@ -19,7 +19,7 @@ export default function LoginPage() {
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('geoneraUser');
       if (storedUser) {
-        router.replace('/'); // Use replace to avoid login page in history
+        router.replace('/'); // Use replacement to avoid login page in history
       }
     }
   }, [router]);
@@ -40,11 +40,11 @@ export default function LoginPage() {
           throw new Error('Function not implemented.');
         }}
         selectedCurrencyPairs={[]}
-        onSelectedCurrencyPairsChange={function (value: CurrencyPair[]): void {
+        onSelectedCurrencyPairsChange={function (_value: CurrencyPair[]): void {
           throw new Error('Function not implemented.');
         }}
         isLoading={false} selectedRefreshInterval={''} 
-        onRefreshIntervalChange={function (value: RefreshIntervalValue): void {
+        onRefreshIntervalChange={function (_value: RefreshIntervalValue): void {
           throw new Error('Function not implemented.');
         }}
       />

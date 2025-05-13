@@ -1,7 +1,7 @@
 // src/app/page.tsx
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import {useState, useCallback, useEffect, useRef, ChangeEvent} from 'react';
 import { useRouter } from 'next/navigation';
 import { produce } from 'immer';
 import { AppHeader } from '@/components/geonera/header';
@@ -35,7 +35,7 @@ import {
   MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC,
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, CalendarDays, Settings as SettingsIcon, List, Smartphone, ClockIcon, AlertTriangle } from 'lucide-react';
+import { Loader2, CalendarDays, Settings as SettingsIcon, List, ClockIcon, AlertTriangle } from 'lucide-react';
 import { 
   startOfDay, endOfDay, isValid,
 } from 'date-fns';
@@ -71,7 +71,7 @@ export default function GeoneraPage() {
   const [maxPredictionLifetime, setMaxPredictionLifetime] = useState<number>(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC); // Default to 10 minutes (600 seconds)
   // maxPredictionLifetimeInputString stores the "DD HH:mm:ss" string for the input field
   const [maxPredictionLifetimeInputString, setMaxPredictionLifetimeInputString] = useState<string>(
-    formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC) // Initialize with 10 minutes string representation
+    formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC) // Initialize with 10-minute string representation
   );
   const [maxPredictionLifetimeError, setMaxPredictionLifetimeError] = useState<string | null>(null);
 
@@ -266,7 +266,7 @@ export default function GeoneraPage() {
     setPipsSettings(value);
   }, []);
 
-  const handleMaxLifetimeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMaxLifetimeInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     setMaxPredictionLifetimeInputString(inputValue); // Update string state immediately for responsive input
   
@@ -453,16 +453,16 @@ export default function GeoneraPage() {
                       <PredictionsTable
                         title="Active Predictions"
                         predictions={displayedSortedActiveLogs}
-                        onRowClick={handlePredictionSelect}
+                        onRowClickAction={handlePredictionSelect}
                         selectedPredictionId={finalSelectedPredictionForChildren?.id}
                         sortConfig={sortConfigActive}
-                        onSort={(key) => handleSort(key, 'active')}
+                        onSortAction={(key) => handleSort(key, 'active')}
                         filterStatus={activeTableFilterStatus}
-                        onFilterStatusChange={setActiveTableFilterStatus}
+                        onFilterStatusChangeAction={setActiveTableFilterStatus}
                         filterSignal={activeTableFilterSignal}
-                        onFilterSignalChange={setActiveTableFilterSignal}
+                        onFilterSignalChangeAction={setActiveTableFilterSignal}
                         displayLimit={displayedActiveLogsCount}
-                        onDisplayLimitChange={setDisplayedActiveLogsCount}
+                        onDisplayLimitChangeAction={setDisplayedActiveLogsCount}
                         totalAvailableForDisplay={totalActiveLogsCount} 
                         maxLogs={MAX_PREDICTION_LOGS_CONFIG} 
                       />
@@ -471,16 +471,16 @@ export default function GeoneraPage() {
                       <PredictionsTable
                         title="Expired Predictions"
                         predictions={sortedAndLimitedExpiredLogs} 
-                        onRowClick={handlePredictionSelect}
+                        onRowClickAction={handlePredictionSelect}
                         selectedPredictionId={finalSelectedPredictionForChildren?.id}
                         sortConfig={sortConfigExpired}
-                        onSort={(key) => handleSort(key, 'expired')}
+                        onSortAction={(key) => handleSort(key, 'expired')}
                         filterStatus={expiredTableFilterStatus}
-                        onFilterStatusChange={setExpiredTableFilterStatus}
+                        onFilterStatusChangeAction={setExpiredTableFilterStatus}
                         filterSignal={expiredTableFilterSignal}
-                        onFilterSignalChange={setExpiredTableFilterSignal}
+                        onFilterSignalChangeAction={setExpiredTableFilterSignal}
                         displayLimit={displayedExpiredLogsCount}
-                        onDisplayLimitChange={setDisplayedExpiredLogsCount}
+                        onDisplayLimitChangeAction={setDisplayedExpiredLogsCount}
                         totalAvailableForDisplay={totalExpiredLogsCount} 
                         maxLogs={MAX_PREDICTION_LOGS_CONFIG} 
                       />
@@ -488,7 +488,7 @@ export default function GeoneraPage() {
                   </div>
                 ) : (
                   <div className="p-2 space-y-2"> 
-                    <div className="ml-2 shadow-lg shadow-none border-0 bg-transparent">
+                    <div className="ml-2 shadow-lg border-0 bg-transparent">
                       <Label className="text-sm font-medium text-primary mb-1 block">Date Range Filter</Label>
                       <div className="flex items-center justify-start gap-2 flex-wrap">
                         <div className='flex items-center gap-1'>
@@ -539,7 +539,7 @@ export default function GeoneraPage() {
                       isLoading={isLoading}
                       className="shadow-none border-0 bg-transparent" 
                     />
-                     <div className="ml-2 mt-2 shadow-lg shadow-none border-0 bg-transparent">
+                     <div className="ml-2 mt-2 shadow-lg border-0 bg-transparent">
                         <Label htmlFor="max-prediction-lifetime" className="text-sm font-medium text-primary mb-1 block">
                           <ClockIcon className="h-3.5 w-3.5 mr-1 inline-block" aria-hidden="true" />
                           Max Prediction Lifetime

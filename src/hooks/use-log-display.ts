@@ -1,5 +1,5 @@
 // src/hooks/use-log-display.ts
-import { useMemo, useCallback } from 'react';
+import {useMemo, useCallback, MutableRefObject} from 'react';
 import type {
   PredictionLogItem,
   DateRangeFilter,
@@ -16,7 +16,7 @@ interface UseLogDisplayProps {
   predictionLogs: PredictionLogItem[];
   dateRangeFilter: DateRangeFilter;
   currentTimeForFiltering: Date | null;
-  latestSelectedCurrencyPairsRef: React.MutableRefObject<CurrencyPair[]>;
+  latestSelectedCurrencyPairsRef: MutableRefObject<CurrencyPair[]>;
   activeTableFilterStatus: StatusFilterType;
   activeTableFilterSignal: SignalFilterType;
   expiredTableFilterStatus: StatusFilterType;
@@ -50,9 +50,7 @@ export function useLogDisplay({
       
       const logTimestamp = new Date(log.timestamp);
       if (dateRangeFilter.start && isValid(dateRangeFilter.start) && logTimestamp < dateRangeFilter.start) return false;
-      if (dateRangeFilter.end && isValid(dateRangeFilter.end) && logTimestamp > dateRangeFilter.end) return false;
-      
-      return true;
+      return !(dateRangeFilter.end && isValid(dateRangeFilter.end) && logTimestamp > dateRangeFilter.end);
     });
   }, [predictionLogs, dateRangeFilter, latestSelectedCurrencyPairsRef]);
 
@@ -69,16 +67,14 @@ export function useLogDisplay({
   const activeLogs = useMemo(() => {
     return potentialActiveLogs.filter(log => {
       if (activeTableFilterStatus !== "ALL" && log.status !== activeTableFilterStatus) return false;
-      if (activeTableFilterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== activeTableFilterSignal)) return false;
-      return true;
+      return !(activeTableFilterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== activeTableFilterSignal));
     });
   }, [potentialActiveLogs, activeTableFilterStatus, activeTableFilterSignal]);
   
   const fullyFilteredExpiredLogs = useMemo(() => {
     return potentialExpiredLogs.filter(log => {
       if (expiredTableFilterStatus !== "ALL" && log.status !== expiredTableFilterStatus) return false;
-      if (expiredTableFilterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== expiredTableFilterSignal)) return false;
-      return true;
+      return !(expiredTableFilterSignal !== "ALL" && (!log.predictionOutcome || log.predictionOutcome.tradingSignal !== expiredTableFilterSignal));
     });
   }, [potentialExpiredLogs, expiredTableFilterStatus, expiredTableFilterSignal]);
 
@@ -91,7 +87,7 @@ export function useLogDisplay({
       if (valA === undefined) return config.direction === 'asc' ? 1 : -1;
       if (valB === undefined) return config.direction === 'asc' ? -1 : 1;
 
-      let comparison = 0;
+      let comparison: number;
       if (typeof valA === 'number' && typeof valB === 'number') {
         comparison = valA - valB;
       } else if (valA instanceof Date && valB instanceof Date) {
