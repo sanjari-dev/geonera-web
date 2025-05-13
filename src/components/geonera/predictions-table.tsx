@@ -1,7 +1,7 @@
 // src/components/geonera/predictions-table.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock, ListFilter } from "lucide-react";
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, StatusFilterType, SignalFilterType } from '@/types';
 import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG } from '@/types';
 import { format as formatDateFns } from 'date-fns';
@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { getSortableValue } from '@/lib/table-utils';
 
 
 interface PredictionsTableProps {
@@ -45,22 +46,9 @@ interface PredictionsTableProps {
   onFilterSignalChange: (value: SignalFilterType) => void;
   displayLimit: number;
   onDisplayLimitChange: (value: number) => void;
-  totalAvailableForDisplay: number;
-  maxLogs: number;
+  totalAvailableForDisplay: number; 
+  maxLogs: number; 
 }
-
-const getSortableValue = (log: PredictionLogItem, key: SortableColumnKey): string | number | Date | undefined => {
-  switch (key) {
-    case 'status': return log.status;
-    case 'timestamp': return log.timestamp;
-    case 'currencyPair': return log.currencyPair;
-    case 'profitPipsMax': return log.pipsSettings.profitPips.max;
-    case 'lossPipsMax': return log.pipsSettings.lossPips.max;
-    case 'tradingSignal': return log.predictionOutcome?.tradingSignal;
-    case 'expiresAt': return log.expiresAt;
-    default: return undefined;
-  }
-};
 
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -86,7 +74,7 @@ const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => 
        tooltipContent = "Idle";
        break;
     default:
-      return <div className="flex justify-center items-center h-full w-full" aria-label="Unknown status">?</div>;
+      return <div className="flex justify-center items-center h-full w-full" aria-label="Unknown status"><HelpCircle className={cn(commonClass, "text-gray-400")} /></div>;
   }
   return (
     <Tooltip>
@@ -242,11 +230,20 @@ export function PredictionsTable({
   );
 
   const renderTableRows = (data: PredictionLogItem[]) => {
-    if (data.length === 0) {
+    if (data.length === 0 && totalAvailableForDisplay === 0) { // Adjusted condition
       return (
         <TableRow>
           <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-xs">
-            {title === "Active Predictions" ? "No active predictions found." : "No expired predictions found."}
+            {/* This part will be handled by the footer logic now */}
+          </TableCell>
+        </TableRow>
+      );
+    }
+     if (data.length === 0 && totalAvailableForDisplay > 0) { // If no data to display but some are available (e.g. due to displayLimit)
+      return (
+        <TableRow>
+          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-xs">
+            No predictions match current display settings. Adjust limit or filters.
           </TableCell>
         </TableRow>
       );
@@ -292,7 +289,7 @@ export function PredictionsTable({
               {(() => {
                 const totalDuration = new Date(log.expiresAt).getTime() - new Date(log.timestamp).getTime();
                 if (totalDuration <= 0) return null;
-                const timeNow = typeof window !== 'undefined' ? new Date().getTime() : Date.now(); // Ensure client-side Date
+                const timeNow = typeof window !== 'undefined' ? new Date().getTime() : Date.now(); 
                 const elapsedSinceStart = timeNow - new Date(log.timestamp).getTime();
                 let progressValue = (elapsedSinceStart / totalDuration) * 100;
                 const remainingPercent = Math.max(0, 100 - progressValue);
@@ -322,7 +319,7 @@ export function PredictionsTable({
       <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby={`${title.toLowerCase().replace(/\s+/g, '-')}-title`}>
         <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-row items-center justify-between">
           <CardTitle id={`${title.toLowerCase().replace(/\s+/g, '-')}-title`} className="text-base font-semibold text-primary flex items-center">
-            {titleIcon || (title === "Active Predictions" ? <Info className="h-4 w-4 mr-1.5" aria-hidden="true" /> : <Info className="h-4 w-4 mr-1.5" aria-hidden="true" />)}
+            {titleIcon || (title === "Active Predictions" ? <ListFilter className="h-4 w-4 mr-1.5" aria-hidden="true" /> : <ListFilter className="h-4 w-4 mr-1.5" aria-hidden="true" />)}
             {title}
           </CardTitle>
           <Tooltip>
@@ -394,7 +391,7 @@ export function PredictionsTable({
                   value={String(tempDisplayLimit)}
                   onChange={(e) => {
                     const val = parseInt(e.target.value, 10);
-                    setTempDisplayLimit(isNaN(val) ? 0 : val); // Allow 0 for input, validation on apply
+                    setTempDisplayLimit(isNaN(val) ? 0 : val); 
                   }}
                   min="1"
                   max={maxLogs}
@@ -414,20 +411,24 @@ export function PredictionsTable({
         </CardContent>
 
         <CardFooter className="p-1.5 text-[10px] text-muted-foreground border-t">
-          Displayed: {predictions.length}
-          {totalAvailableForDisplay !== undefined ? ` of ${totalAvailableForDisplay} matching filters.` : '.'}
-          {displayLimit !== undefined ? ` (Limit: ${displayLimit})` : ''}
-          {predictions.length === 0 && viewMode === 'table' && (
-            <span className="ml-2 flex items-center">
-                 <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
+          {viewMode === 'table' ? (
+            (predictions.length === 0 && totalAvailableForDisplay === 0) ? (
+              <span className="flex items-center">
+                <Info className="h-3 w-3 mr-1 text-muted-foreground" aria-hidden="true" />
                 {title === "Active Predictions" ? "No active logs. Set parameters or adjust filters." : "No expired logs found for current filters."}
+              </span>
+            ) : (
+              <>
+                Displayed: {predictions.length}
+                {` of ${totalAvailableForDisplay} matching filters.`}
+                {` (Limit: ${displayLimit})`}
+              </>
+            )
+          ) : ( 
+            <span className="flex items-center italic">
+              Adjust settings and click Apply.
             </span>
-           )}
-           {viewMode === 'filter' && (
-            <span className="ml-2 flex items-center italic">
-                Adjust settings and click Apply.
-            </span>
-           )}
+          )}
         </CardFooter>
       </Card>
     </TooltipProvider>
