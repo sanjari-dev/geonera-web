@@ -30,11 +30,17 @@ import {
   MAX_EXPIRATION_SECONDS,
   REFRESH_INTERVAL_OPTIONS,
   DEFAULT_REFRESH_INTERVAL_VALUE,
+  DEFAULT_REFRESH_INTERVAL_MS,
 } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, CalendarDays, Settings as SettingsIcon, List, PackageCheck, PackageOpen } from 'lucide-react'; // Filter icon removed as it's used internally in PredictionsTable
-import { startOfDay, endOfDay, isValid, format as formatDateFns } from 'date-fns';
+import { Loader2, CalendarDays, Settings as SettingsIcon, List, PackageCheck, PackageOpen } from 'lucide-react';
+import { 
+  startOfDay, endOfDay, isValid, format as formatDateFns,
+  addMinutes, addHours, addDays, 
+  startOfMinute, startOfHour, 
+  differenceInMilliseconds 
+} from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +56,65 @@ const formatDateToDateTimeLocal = (date: Date | null): string => {
   const tempDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
   return tempDate.toISOString().slice(0, 16);
 };
+
+const calculateDelayUntilNextScheduledRun = (intervalValue: RefreshIntervalValue): number => {
+  const now = new Date();
+  let nextRunTime: Date;
+
+  const intervalOption = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === intervalValue);
+  if (!intervalOption) {
+    return DEFAULT_REFRESH_INTERVAL_MS; 
+  }
+
+  const unitChar = intervalValue.slice(-1); // 'm', 'h', 'D'
+  const amountStr = intervalValue.slice(0, -1);
+  
+  if (amountStr === '' || isNaN(parseInt(amountStr, 10))) { // Handle cases like 'D' for '1D' or invalid amounts
+     return DEFAULT_REFRESH_INTERVAL_MS;
+  }
+  const amount = parseInt(amountStr, 10);
+
+
+  switch (unitChar) {
+    case 'm':
+      nextRunTime = startOfMinute(now);
+      do {
+        nextRunTime = addMinutes(nextRunTime, amount);
+      } while (nextRunTime <= now);
+      break;
+    case 'h':
+      nextRunTime = startOfHour(now);
+      do {
+        nextRunTime = addHours(nextRunTime, amount);
+      } while (nextRunTime <= now);
+      break;
+    case 'D':
+      nextRunTime = startOfDay(now);
+      do {
+        nextRunTime = addDays(nextRunTime, amount);
+      } while (nextRunTime <= now);
+      break;
+    default:
+      return intervalOption.milliseconds; // Fallback to defined milliseconds
+  }
+
+  let delay = differenceInMilliseconds(nextRunTime, now);
+  if (delay <= 0) {
+    // If calculated nextRunTime is in the past or now, it means we might have missed it
+    // or the calculation logic led to it. Schedule for the *next* valid interval.
+    // This can happen if 'amount' is large and the 'do-while' pushes it too far initially.
+    // A simple robust way is to calculate again based on the *next* interval start.
+    // For simplicity here, if delay is <=0, use a small positive delay to re-evaluate soon.
+    // Or, if it's significantly past, schedule based on the next logical interval from `now`.
+    // e.g. if interval is 1m, and now is 10:00:05, next run 10:01:00. If now 10:00:59, next 10:01:00.
+    // If now 10:01:01, next 10:02:00. The do-while should handle this correctly.
+    // The only case delay <= 0 should happen is if now IS the nextRunTime, or very slightly past.
+    // In such case, a small delay (e.g. 100ms) is fine before re-running performPrediction.
+     delay = 100; 
+  }
+  return delay;
+};
+
 
 export default function GeoneraPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -223,13 +288,10 @@ export default function GeoneraPage() {
     let timeoutId: NodeJS.Timeout | undefined = undefined;
 
     const performPrediction = async () => {
-      const currentIntervalOption = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === latestSelectedRefreshIntervalValueRef.current);
-      const currentPredictionIntervalMs = currentIntervalOption ? currentIntervalOption.milliseconds : 60000; // Default to 1 minute
-
-
       if (isLoading) { 
+        const delay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
         if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
+        timeoutId = setTimeout(performPrediction, delay);
         return;
       }
 
@@ -244,8 +306,9 @@ export default function GeoneraPage() {
       const noCurrenciesSelected = currentSelectedPairs.length === 0;
 
       if (noCurrenciesSelected) {
+        const delay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
         if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
+        timeoutId = setTimeout(performPrediction, delay);
         return;
       }
 
@@ -257,8 +320,9 @@ export default function GeoneraPage() {
                 variant: "default", 
              });
         }
+        const delay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
         if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
+        timeoutId = setTimeout(performPrediction, delay);
         return;
       }
 
@@ -282,8 +346,9 @@ export default function GeoneraPage() {
 
       if (newPendingLogs.length === 0) { 
         setIsLoading(false);
+        const delay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
         if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
+        timeoutId = setTimeout(performPrediction, delay);
         return;
       }
 
@@ -373,16 +438,14 @@ export default function GeoneraPage() {
       }
 
       setIsLoading(false);
+      const nextDelay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
       if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(performPrediction, currentPredictionIntervalMs);
+      timeoutId = setTimeout(performPrediction, nextDelay);
     };
     
-    const initialIntervalOption = REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === latestSelectedRefreshIntervalValueRef.current);
-    const initialPredictionIntervalMs = initialIntervalOption ? initialIntervalOption.milliseconds : 60000; // Default to 1 minute
-
-
+    const initialDelay = calculateDelayUntilNextScheduledRun(latestSelectedRefreshIntervalValueRef.current);
     if (timeoutId) clearTimeout(timeoutId); 
-    timeoutId = setTimeout(performPrediction, initialPredictionIntervalMs);
+    timeoutId = setTimeout(performPrediction, initialDelay);
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
@@ -734,5 +797,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
-
 
