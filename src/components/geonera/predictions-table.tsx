@@ -13,9 +13,9 @@ import {
 import { Button } from "@/components/ui/button";
 // Badge is no longer used for signal, but might be used elsewhere or can be removed if truly unused.
 // import { Badge } from "@/components/ui/badge"; 
-import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, PackageCheck, PackageOpen, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info, ArrowUp, ArrowDown, ChevronsUpDown, ListChecks, Zap, TrendingUpIcon, TrendingDownIcon, CalendarDays, Coins, Settings, Filter, Save, Sigma, HelpCircle, TrendingUp, TrendingDown, PauseCircle, Clock } from "lucide-react"; // Removed PackageCheck, PackageOpen as they will be passed as props
 import type { PredictionLogItem, PredictionStatus, PipsPredictionOutcome, SortConfig, SortableColumnKey, StatusFilterType, SignalFilterType } from '@/types';
-import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT } from '@/types'; // Import filter options
+import { STATUS_FILTER_OPTIONS, SIGNAL_FILTER_OPTIONS, DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT, DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT, MAX_PREDICTION_LOGS_CONFIG } from '@/types'; // Import filter options
 import { format as formatDateFns } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -34,10 +34,11 @@ import { Input } from "@/components/ui/input";
 
 interface PredictionsTableProps {
   title: string; 
+  titleIcon?: React.ReactNode; // New prop for dynamic icon
   predictions: PredictionLogItem[];
   onRowClick: (log: PredictionLogItem) => void;
   selectedPredictionId?: string | null;
-  maxLogs: number; 
+  // maxLogs prop no longer needed here as it's derived from types or passed differently for display purposes
   sortConfig: SortConfig | null;
   onSort: (key: SortableColumnKey) => void;
   filterStatus: StatusFilterType;
@@ -47,6 +48,7 @@ interface PredictionsTableProps {
   displayLimit: number; 
   onDisplayLimitChange: (value: number) => void; 
   totalAvailableForDisplay: number; 
+  maxLogs: number; // Keep this for the input field constraint
 }
 
 const StatusIndicator: React.FC<{ status: PredictionStatus }> = ({ status }) => {
@@ -135,10 +137,10 @@ const SortIndicator: React.FC<{ sortConfig: SortConfig | null, columnKey: Sortab
 
 export function PredictionsTable({
   title,
+  titleIcon, // Use the new prop
   predictions,
   onRowClick,
   selectedPredictionId,
-  maxLogs, 
   sortConfig,
   onSort,
   filterStatus,
@@ -148,6 +150,7 @@ export function PredictionsTable({
   displayLimit,
   onDisplayLimitChange,
   totalAvailableForDisplay,
+  maxLogs,
 }: PredictionsTableProps) {
   const [viewMode, setViewMode] = useState<'table' | 'filter'>('table');
   const [tempFilterStatus, setTempFilterStatus] = useState<StatusFilterType>(filterStatus);
@@ -175,7 +178,7 @@ export function PredictionsTable({
     const defaultLimit = title === "Active Predictions" ? DEFAULT_ACTIVE_LOGS_DISPLAY_COUNT : DEFAULT_EXPIRED_LOGS_DISPLAY_COUNT;
     if (Number.isNaN(newLimit) || newLimit <= 0) {
       newLimit = defaultLimit; 
-    } else if (newLimit > MAX_PREDICTION_LOGS_CONFIG) { 
+    } else if (newLimit > MAX_PREDICTION_LOGS_CONFIG) { // Use MAX_PREDICTION_LOGS_CONFIG from types
       newLimit = MAX_PREDICTION_LOGS_CONFIG;
     }
     onDisplayLimitChange(newLimit);
@@ -287,7 +290,7 @@ export function PredictionsTable({
       <Card className="shadow-xl h-full grid grid-rows-[auto_1fr_auto]" aria-labelledby={`${title.toLowerCase().replace(/\s+/g, '-')}-title`}>
         <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-row items-center justify-between">
           <CardTitle id={`${title.toLowerCase().replace(/\s+/g, '-')}-title`} className="text-base font-semibold text-primary flex items-center">
-            {title === "Active Predictions" ? <PackageCheck className="h-4 w-4 mr-1.5" /> : <PackageOpen className="h-4 w-4 mr-1.5" />}
+            {titleIcon || (title === "Active Predictions" ? <Info className="h-4 w-4 mr-1.5" /> : <Info className="h-4 w-4 mr-1.5" />)} {/* Fallback icon */}
             {title}
           </CardTitle>
           <Tooltip>
@@ -398,4 +401,5 @@ export function PredictionsTable({
 
 // Define VariantProps type locally if not globally available or for clarity
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
 

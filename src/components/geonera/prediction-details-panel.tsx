@@ -4,7 +4,7 @@
 import type { PredictionLogItem, PipsPredictionOutcome, NotificationMessage } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List, Filter, AlertCircle as AlertTriangleIcon } from "lucide-react"; // Added AlertTriangleIcon alias
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List, Filter, AlertCircle as AlertTriangleIcon } from "lucide-react"; // Added AlertTriangleIcon alias
 import { format as formatDateFns } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 // import { useState, useEffect } from 'react'; // Removed useState, useEffect
@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { MIN_EXPIRATION_SECONDS, MAX_EXPIRATION_SECONDS } from '@/types';
+import { MIN_EXPIRATION_SECONDS, MAX_EXPIRATION_SECONDS, REFRESH_INTERVAL_OPTIONS } from '@/types';
 
 
 export type ActiveDetailsView = 'about' | 'details' | 'notifications';
@@ -120,7 +120,7 @@ const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status 
   switch (status) {
     case "PENDING": return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
     case "SUCCESS": return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-    case "ERROR": return <AlertCircle className="h-4 w-4 text-red-500" />;
+    case "ERROR": return <AlertCircle className="h-4 w-4 text-red-500" />; // Changed from AlertTriangle
     default: return <Info className="h-4 w-4 text-gray-400" />; 
   }
 };
@@ -154,14 +154,14 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
   );
   
   let cardTitle = "About Geonera";
-  let cardDescription = "Mock Forex Prediction Insights";
+  let cardDescription = "Forex Prediction Insights";
 
   if (activeView === 'details') {
     cardTitle = "Prediction Details";
     cardDescription = selectedPrediction ? `Details for ${selectedPrediction.currencyPair}` : "Select a prediction to see details";
   } else if (activeView === 'notifications') {
     cardTitle = "Notification History";
-    cardDescription = "Last 100 notifications";
+    cardDescription = `Last ${notifications.length > 0 ? Math.min(notifications.length, 100) : 0} notifications`;
   }
 
 
@@ -208,34 +208,40 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                   <span>Welcome to Geonera!</span>
                 </div>
                 <p className="leading-relaxed">
-                  Geonera is a platform designed to provide mock real-time insights and trading signals for forex currency pairs. Here’s how to get started:
+                  Geonera provides mock real-time Forex insights and trading signals. Here’s how to use it:
                 </p>
                 <ul className="list-disc list-inside space-y-1 pl-3 leading-relaxed">
                   <li>
-                    Use the <strong>PIPS Targets</strong> and <strong>Currency Pair(s)</strong> selection in the header to define your parameters.
+                    <strong>Parameter Setup:</strong> Use the <strong>Currency Pair(s)</strong> selector in the header and the <strong>PIPS Settings</strong> (accessible via the <SettingsIcon className="inline h-3 w-3" /> icon on the "Prediction Logs" card) to define your prediction parameters. This includes setting ranges for your target profit and acceptable loss in PIPS.
                   </li>
                   <li>
-                    Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Logs</strong> to your left, updating every 30 seconds.
+                    <strong>Automatic Predictions:</strong> Once parameters are set (valid currency pairs selected and PIPS settings defined), predictions will automatically generate. The frequency of these updates can be set using the interval selector (e.g., 1 Min, 5 Min) in the header. Invalid PIPS settings (e.g., min &gt; max, or zero/negative values) will pause updates.
                   </li>
                   <li>
-                    Each prediction has a unique expiration time (randomly between {MIN_EXPIRATION_SECONDS} and {MAX_EXPIRATION_SECONDS} seconds) and will be categorized into Active or Expired tables. Max log size for each table can be configured via its filter settings, with a system cap of {maxPredictionLogs} total.
+                    <strong>Prediction Logs:</strong> Generated predictions appear in the "Prediction Logs" area, split into <strong>Active Predictions</strong> and <strong>Expired Predictions</strong> tables.
                   </li>
                   <li>
-                    Click on any row in the Prediction Logs to view its detailed analysis in this panel.
+                    <strong>Expiration:</strong> Each prediction has a unique expiration time, randomly set between {MIN_EXPIRATION_SECONDS} and {MAX_EXPIRATION_SECONDS} seconds. Once expired, it moves to the "Expired Predictions" table.
                   </li>
                   <li>
-                    Utilize the <strong>Filter <Filter className="inline h-3 w-3" /></strong> controls within each log table and the <strong>Date Range</strong> filter in the Prediction Logs header to narrow down results. You can also sort columns by clicking their headers.
+                    <strong>Log Management:</strong> You can configure the maximum number of logs to display in each table using their respective <Filter className="inline h-3 w-3" /> (Filter/Settings) icon. The system has an overall cap of {maxPredictionLogs} total logs.
                   </li>
                   <li>
-                    Use the <MenuIcon className="inline h-3 w-3" /> icon at the top-right of this panel to switch between this guide, selected prediction's details, or notification history.
+                    <strong>Viewing Details:</strong> Click on any row in the Prediction Logs to view its detailed analysis (including market data like Open, High, Low, Close, Volume) in this panel. The first log in the "Active Predictions" table is selected by default if available.
+                  </li>
+                  <li>
+                    <strong>Filtering & Sorting:</strong> Use the <Filter className="inline h-3 w-3" /> icon in each table's header to filter by status or signal, and set display limits. Click on column headers to sort the data. The <strong>Date Range</strong> filter in the "Prediction Logs" header allows you to view logs from a specific period.
+                  </li>
+                   <li>
+                    <strong>Navigation:</strong> Use the <MenuIcon className="inline h-3 w-3" /> icon at the top-right of this panel to switch between this "About" guide, the "Prediction Details" for a selected log, or the "Notification History".
                   </li>
                 </ul>
                 <p className="text-[0.7rem] italic pt-1 text-muted-foreground">
-                  Please note: All data and predictions provided by Geonera are for informational and demonstration purposes only. They should not be considered as financial advice.
+                  Disclaimer: All data and predictions provided by Geonera are for informational and demonstration purposes only using mock data. They should not be considered as financial advice.
                 </p>
                 {activeView === 'about' && !selectedPrediction && (
                   <p className="text-xs text-center pt-1 text-accent">
-                    When predictions are available, select one from the logs to see its details or switch view using the menu.
+                    When predictions are available, select one from the logs to see its details, or switch views using the menu.
                   </p>
                 )}
               </div>
@@ -415,6 +421,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
 }
 
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
+
 
 
 

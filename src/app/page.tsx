@@ -33,7 +33,7 @@ import {
 } from '@/types';
 import { getPipsPredictionAction } from '@/lib/actions';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, CalendarDays, Settings as SettingsIcon, List } from 'lucide-react'; // Filter icon removed as it's used internally in PredictionsTable
+import { Loader2, CalendarDays, Settings as SettingsIcon, List, PackageCheck, PackageOpen } from 'lucide-react'; // Filter icon removed as it's used internally in PredictionsTable
 import { startOfDay, endOfDay, isValid, format as formatDateFns } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -663,6 +663,7 @@ export default function GeoneraPage() {
                     <div className="flex flex-col min-h-0 overflow-y-auto h-full">
                       <PredictionsTable
                         title="Active Predictions"
+                        titleIcon={<PackageCheck className="h-4 w-4 mr-1.5" />}
                         predictions={displayedSortedActiveLogs}
                         onRowClick={handlePredictionSelect}
                         selectedPredictionId={finalSelectedPredictionForChildren?.id}
@@ -681,6 +682,7 @@ export default function GeoneraPage() {
                     <div className="flex flex-col min-h-0 overflow-y-auto h-full">
                       <PredictionsTable
                         title="Expired Predictions"
+                        titleIcon={<PackageOpen className="h-4 w-4 mr-1.5" />}
                         predictions={sortedAndLimitedExpiredLogs}
                         onRowClick={handlePredictionSelect}
                         selectedPredictionId={finalSelectedPredictionForChildren?.id}
@@ -732,4 +734,5 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
 
