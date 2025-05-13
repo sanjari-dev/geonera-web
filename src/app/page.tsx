@@ -29,7 +29,7 @@ import {
   REFRESH_INTERVAL_OPTIONS,
   DEFAULT_REFRESH_INTERVAL_VALUE,
   MIN_EXPIRATION_SECONDS,
-  MAX_EXPIRATION_SECONDS, // Default max lifetime for random generation
+  // MAX_EXPIRATION_SECONDS, // Default max lifetime for random generation
   MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC,
   MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC,
 } from '@/types';
@@ -48,6 +48,7 @@ import { getSortableValue } from '@/lib/table-utils';
 import { usePredictionEngine } from '@/hooks/use-prediction-engine';
 import { useLogDisplay } from '@/hooks/use-log-display';
 import { UnsupportedResolutionMessage } from '@/components/geonera/unsupported-resolution-message';
+import { cn } from '@/lib/utils';
 
 
 const MAX_NOTIFICATIONS = 100;
@@ -130,7 +131,7 @@ export default function GeoneraPage() {
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
     setDateRangeFilter({ start: todayStart, end: todayEnd });
-    setMaxPredictionLifetimeInputString(formatSecondsToDurationString(maxPredictionLifetime));
+    // setMaxPredictionLifetimeInputString(formatSecondsToDurationString(maxPredictionLifetime)); // Initial call was here
 
 
     const storedUser = localStorage.getItem('geoneraUser');
@@ -153,7 +154,14 @@ export default function GeoneraPage() {
     window.addEventListener('resize', checkResolution);
     return () => window.removeEventListener('resize', checkResolution);
 
-  }, []); // maxPredictionLifetime removed to avoid loop with setMaxPredictionLifetimeInputString
+  }, []); 
+  
+  // Separate useEffect for maxPredictionLifetimeInputString initialization and updates
+  // This avoids re-running the main useEffect when maxPredictionLifetime changes due to input.
+  useEffect(() => {
+    setMaxPredictionLifetimeInputString(formatSecondsToDurationString(maxPredictionLifetime));
+  }, [maxPredictionLifetime]);
+
 
   useEffect(() => {
     if (isAuthCheckComplete && !currentUser) {
