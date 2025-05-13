@@ -67,10 +67,10 @@ export default function GeoneraPage() {
   });
 
   // maxPredictionLifetime stores seconds (number)
-  const [maxPredictionLifetime, setMaxPredictionLifetime] = useState<number>(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC);
+  const [maxPredictionLifetime, setMaxPredictionLifetime] = useState<number>(60); // Default to 1 minute (60 seconds)
   // maxPredictionLifetimeInputString stores the "DD HH:mm:ss" string for the input field
   const [maxPredictionLifetimeInputString, setMaxPredictionLifetimeInputString] = useState<string>(
-    formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC)
+    formatSecondsToDurationString(60) // Initialize with 1 minute string representation
   );
   const [maxPredictionLifetimeError, setMaxPredictionLifetimeError] = useState<string | null>(null);
 
@@ -160,6 +160,15 @@ export default function GeoneraPage() {
   // This avoids re-running the main useEffect when maxPredictionLifetime changes due to input.
   useEffect(() => {
     setMaxPredictionLifetimeInputString(formatSecondsToDurationString(maxPredictionLifetime));
+    // Trigger validation check when maxPredictionLifetime (the source of truth for seconds) changes
+    const parsedSeconds = maxPredictionLifetime;
+     if (parsedSeconds < MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC) {
+      setMaxPredictionLifetimeError(`Minimum is ${formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC)} (10 minutes).`);
+    } else if (parsedSeconds > MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC) {
+      setMaxPredictionLifetimeError(`Maximum is ${formatSecondsToDurationString(MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC)} (5 days).`);
+    } else {
+      setMaxPredictionLifetimeError(null);
+    }
   }, [maxPredictionLifetime]);
 
 
@@ -588,3 +597,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
