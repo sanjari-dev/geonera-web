@@ -28,27 +28,32 @@ export function PipsInputCard({
     type: 'profitPips' | 'lossPips',
     field: 'min' | 'max'
   ) => {
-    const value = parseInt(e.target.value, 10);
-    const newValue = !isNaN(value) ? value : 0; // Ensure valid number, default to 0 if NaN
+    const rawValue = e.target.value;
+    const parsedValue = parseInt(rawValue, 10);
+    
+    // If rawValue is empty or becomes NaN after parsing, set to 0 or a defined minimum.
+    // For this component, let's default to 0 if input is cleared or invalid.
+    const valueToSet = rawValue === '' ? 0 : (!isNaN(parsedValue) ? parsedValue : 0);
+
     onPipsSettingsChange({
       ...pipsSettings,
       [type]: {
         ...pipsSettings[type],
-        [field]: newValue,
+        [field]: valueToSet,
       },
     });
   };
   
   return (
-    <Card className={cn("shadow-lg h-full flex flex-col", className)}>
-      <CardHeader className="px-2 pt-2 pb-1"> {/* Reduced bottom padding */}
+    <Card className={cn("shadow-lg", className)}>
+      <CardHeader className="px-2 pt-2 pb-1">
         <CardTitle className="text-sm font-semibold text-primary flex items-center">
           <Target className="h-4 w-4 mr-1.5" aria-hidden="true" />
           <span>Set PIPS Targets</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-2 pt-0 flex-grow flex flex-col justify-center"> {/* pt-0 was already there, ensuring content is close to header */}
-        <div className="grid grid-cols-4 gap-1 mt-auto">
+      <CardContent className="p-2 pt-0">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
             <div>
               <Label htmlFor="min-profit-pips" className="text-xs font-medium mb-0.5 block">Min Profit</Label>
               <Input
@@ -58,7 +63,7 @@ export function PipsInputCard({
                 onChange={(e) => handleInputChange(e, 'profitPips', 'min')}
                 placeholder="e.g., 10"
                 className="text-xs py-1 h-8"
-                min="1"
+                min="0" // Allow 0, validation for >0 is handled in page.tsx
                 disabled={isLoading}
                 aria-label="Minimum Profit PIPS target"
               />
@@ -72,7 +77,7 @@ export function PipsInputCard({
                 onChange={(e) => handleInputChange(e, 'profitPips', 'max')}
                 placeholder="e.g., 20"
                 className="text-xs py-1 h-8"
-                min="1"
+                min="0"
                 disabled={isLoading}
                 aria-label="Maximum Profit PIPS target"
               />
@@ -86,7 +91,7 @@ export function PipsInputCard({
                 onChange={(e) => handleInputChange(e, 'lossPips', 'min')}
                 placeholder="e.g., 5"
                 className="text-xs py-1 h-8"
-                min="1"
+                min="0"
                 disabled={isLoading}
                 aria-label="Minimum Loss PIPS target"
               />
@@ -100,7 +105,7 @@ export function PipsInputCard({
                 onChange={(e) => handleInputChange(e, 'lossPips', 'max')}
                 placeholder="e.g., 10"
                 className="text-xs py-1 h-8"
-                min="1"
+                min="0"
                 disabled={isLoading}
                 aria-label="Maximum Loss PIPS target"
               />

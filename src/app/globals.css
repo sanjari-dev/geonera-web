@@ -66,7 +66,7 @@ body {
     --popover-foreground: 0 0% 93.3%;
 
     --primary: 187 100% 42%; /* Teal becomes primary in dark mode for vibrancy */
-    --primary-foreground: 235 30% 10%; /* Dark text on teal */
+    --primary-foreground: 235 30% 5%; /* Darker text on teal for better contrast */
 
     --secondary: 235 30% 22%; /* A lighter shade of the dark blue bg */
     --secondary-foreground: 0 0% 93.3%;
@@ -105,7 +105,10 @@ body {
   * {
     @apply border-border;
   }
-  body {
+  html { /* Apply to html for ThemeProvider */
     @apply bg-background text-foreground;
+  }
+  body {
+    @apply bg-background text-foreground; /* Body also for good measure */
   }
 }

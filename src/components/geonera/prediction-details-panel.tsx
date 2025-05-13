@@ -4,10 +4,9 @@
 import type { PredictionLogItem, PipsPredictionOutcome, NotificationMessage } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List, Filter, AlertCircle as AlertTriangleIcon } from "lucide-react"; // Added AlertTriangleIcon alias
+import { AlertCircle, CheckCircle2, Clock, Info, Loader2, Target, TrendingUp, TrendingDown, PauseCircle, HelpCircle, Landmark, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, BarChart3, Briefcase, Brain, TrendingUpIcon, TrendingDownIcon, Menu as MenuIcon, BellRing, List, Filter, AlertCircle as AlertTriangleIcon, Settings as SettingsIcon } from "lucide-react";
 import { format as formatDateFns } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-// import { useState, useEffect } from 'react'; // Removed useState, useEffect
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,17 +15,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { MIN_EXPIRATION_SECONDS, MAX_EXPIRATION_SECONDS } from '@/types';
+import { REFRESH_INTERVAL_OPTIONS, MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC, MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC } from '@/types';
+import { formatSecondsToDurationString } from '@/lib/datetime-utils';
 
 
 export type ActiveDetailsView = 'about' | 'details' | 'notifications';
 
 interface PredictionDetailsPanelProps {
   selectedPrediction: PredictionLogItem | null;
-  maxPredictionLogs: number; 
+  maxPredictionLogs: number;
+  currentMaxPredictionLifetime: number; // This is in seconds
   notifications: NotificationMessage[];
   activeView: ActiveDetailsView;
   onActiveViewChange: (view: ActiveDetailsView) => void;
+  className?: string; 
 }
 
 
@@ -38,7 +40,7 @@ const NotificationListItem: React.FC<{ notification: NotificationMessage }> = ({
 
   switch (notification.variant) {
     case "destructive":
-      IconComponent = AlertTriangleIcon; // Use alias
+      IconComponent = AlertTriangleIcon; 
       iconColorClass = "text-destructive";
       titleColorClass = "text-destructive";
       break;
@@ -50,7 +52,7 @@ const NotificationListItem: React.FC<{ notification: NotificationMessage }> = ({
     default: // 'default' or undefined
       IconComponent = Info;
       iconColorClass = "text-blue-500";
-      titleColorClass = "text-foreground"; // or a specific color for default info
+      titleColorClass = "text-foreground"; 
       break;
   }
 
@@ -77,7 +79,7 @@ const NotificationHistoryView: React.FC<{ notifications: NotificationMessage[] }
   if (notifications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-xs">
-        <BellRing className="h-8 w-8 mb-2 opacity-50" />
+        <BellRing className="h-8 w-8 mb-2 opacity-50" aria-hidden="true" />
         <p>No notifications yet.</p>
       </div>
     );
@@ -95,43 +97,43 @@ const NotificationHistoryView: React.FC<{ notifications: NotificationMessage[] }
 const getSignalBadgeVariant = (signal?: PipsPredictionOutcome["tradingSignal"]): VariantProps<typeof Badge>["variant"] => {
   if (!signal) return "secondary";
   switch (signal) {
-    case "BUY": return "default"; 
+    case "BUY": return "default"; // Consider a "success" or greenish variant
     case "SELL": return "destructive";
-    case "HOLD": return "secondary"; 
-    case "WAIT": return "outline"; 
+    case "HOLD": return "secondary";
+    case "WAIT": return "outline";
     case "N/A": return "secondary";
     default: return "secondary";
   }
 };
 
 const SignalIcon: React.FC<{ signal?: PipsPredictionOutcome["tradingSignal"] }> = ({ signal }) => {
-  if (!signal) return <HelpCircle className="h-4 w-4" />;
+  if (!signal) return <HelpCircle className="h-4 w-4" aria-label="Signal Not Available"/>;
   switch (signal) {
-    case "BUY": return <TrendingUp className="h-4 w-4 text-green-500" />;
-    case "SELL": return <TrendingDown className="h-4 w-4 text-red-500" />;
-    case "HOLD": return <PauseCircle className="h-4 w-4 text-yellow-500" />;
-    case "WAIT": return <Clock className="h-4 w-4 text-blue-500" />;
-    case "N/A": return <HelpCircle className="h-4 w-4 text-gray-500" />;
-    default: return <HelpCircle className="h-4 w-4" />;
+    case "BUY": return <TrendingUp className="h-4 w-4 text-green-500" aria-label="Buy Signal" />;
+    case "SELL": return <TrendingDown className="h-4 w-4 text-red-500" aria-label="Sell Signal" />;
+    case "HOLD": return <PauseCircle className="h-4 w-4 text-yellow-500" aria-label="Hold Signal" />;
+    case "WAIT": return <Clock className="h-4 w-4 text-blue-500" aria-label="Wait Signal" />;
+    case "N/A": return <HelpCircle className="h-4 w-4 text-gray-500" aria-label="Signal Not Available" />;
+    default: return <HelpCircle className="h-4 w-4" aria-label="Signal Not Available" />;
   }
 };
 
 const StatusIcon: React.FC<{ status: PredictionLogItem["status"] }> = ({ status }) => {
   switch (status) {
-    case "PENDING": return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
-    case "SUCCESS": return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-    case "ERROR": return <AlertCircle className="h-4 w-4 text-red-500" />;
-    default: return <Info className="h-4 w-4 text-gray-400" />; 
+    case "PENDING": return <Loader2 className="h-4 w-4 animate-spin text-blue-500" aria-label="Pending" />;
+    case "SUCCESS": return <CheckCircle2 className="h-4 w-4 text-green-500" aria-label="Success" />;
+    case "ERROR": return <AlertCircle className="h-4 w-4 text-red-500" aria-label="Error" />; 
+    default: return <Info className="h-4 w-4 text-gray-400" aria-label="Idle" />;
   }
 };
 
 const formatPrice = (price?: number, currencyPair?: PredictionLogItem["currencyPair"]) => {
   if (price === undefined || price === null) return "N/A";
   let fractionDigits = 2;
-  if (currencyPair === "BTC/USD") fractionDigits = 2; 
-  else if (currencyPair && currencyPair.includes("JPY")) fractionDigits = 3; 
-  else if (currencyPair === "XAU/USD") fractionDigits = 2; 
-  else fractionDigits = 5; 
+  if (currencyPair === "BTC/USD") fractionDigits = 2;
+  else if (currencyPair && currencyPair.includes("JPY")) fractionDigits = 3;
+  else if (currencyPair === "XAU/USD") fractionDigits = 2;
+  else fractionDigits = 5;
 
   return price.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
 };
@@ -142,8 +144,8 @@ const formatVolume = (volume?: number) => {
 };
 
 
-export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, notifications, activeView, onActiveViewChange }: PredictionDetailsPanelProps) {
-  
+export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, currentMaxPredictionLifetime, notifications, activeView, onActiveViewChange, className }: PredictionDetailsPanelProps) {
+
   const marketOhlcData = selectedPrediction?.predictionOutcome;
   const marketDataAvailable = selectedPrediction && marketOhlcData && (
     marketOhlcData.openPrice !== undefined ||
@@ -152,21 +154,21 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
     marketOhlcData.lowPrice !== undefined ||
     marketOhlcData.volume !== undefined
   );
-  
+
   let cardTitle = "About Geonera";
-  let cardDescription = "Mock Forex Prediction Insights";
+  let cardDescription = "Forex Prediction Insights";
 
   if (activeView === 'details') {
     cardTitle = "Prediction Details";
     cardDescription = selectedPrediction ? `Details for ${selectedPrediction.currencyPair}` : "Select a prediction to see details";
   } else if (activeView === 'notifications') {
     cardTitle = "Notification History";
-    cardDescription = "Last 100 notifications";
+    cardDescription = `Last ${notifications.length > 0 ? Math.min(notifications.length, MAX_NOTIFICATIONS_HISTORY) : 0} notifications`;
   }
 
 
   return (
-    <Card className="shadow-xl h-full grid grid-rows-[auto_1fr]" aria-labelledby="details-panel-title">
+    <Card className={cn("shadow-xl h-full grid grid-rows-[auto_1fr]", className)} aria-labelledby="details-panel-title">
       <CardHeader className="bg-primary/10 p-2 rounded-t-lg">
         <div className="flex justify-between items-center">
             <CardTitle id="details-panel-title" className="text-lg font-semibold text-primary dark:text-foreground whitespace-nowrap">
@@ -175,22 +177,22 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7 p-1" aria-label="View options for details panel">
-                        <MenuIcon className="h-4 w-4" />
+                        <MenuIcon className="h-4 w-4" aria-hidden="true" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => onActiveViewChange('about')} className="text-xs">
-                        <Info className="mr-2 h-3.5 w-3.5" /> About Geonera
+                        <Info className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> About Geonera
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                        onSelect={() => onActiveViewChange('details')} 
-                        disabled={!selectedPrediction} 
+                    <DropdownMenuItem
+                        onSelect={() => onActiveViewChange('details')}
+                        disabled={!selectedPrediction && activeView !== 'details'}
                         className="text-xs"
                     >
-                        <List className="mr-2 h-3.5 w-3.5" /> Prediction Details
+                        <List className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> Prediction Details
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => onActiveViewChange('notifications')} className="text-xs">
-                        <BellRing className="mr-2 h-3.5 w-3.5" /> Notification History
+                        <BellRing className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> Notification History
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -199,7 +201,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
           {cardDescription}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-0 flex-grow flex flex-col min-h-0"> {/* Changed p-2 to p-0 for ScrollArea */}
+      <CardContent className="p-0 flex-grow flex flex-col min-h-0">
         <ScrollArea className="h-full w-full">
             {activeView === 'about' && (
               <div className="space-y-1.5 p-1.5 pr-2 text-foreground text-xs">
@@ -208,40 +210,46 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                   <span>Welcome to Geonera!</span>
                 </div>
                 <p className="leading-relaxed">
-                  Geonera is a platform designed to provide mock real-time insights and trading signals for forex currency pairs. Here’s how to get started:
+                  Geonera is your platform for simulated Forex insights and mock trading signals. Here’s a guide to its features:
                 </p>
                 <ul className="list-disc list-inside space-y-1 pl-3 leading-relaxed">
                   <li>
-                    Use the <strong>PIPS Targets</strong> and <strong>Currency Pair(s)</strong> selection in the header to define your parameters.
+                    <strong>Parameter Setup:</strong> Use the <strong>Currency Pair(s)</strong> selector in the header and the <strong>PIPS & Lifetime Settings</strong> (accessible via the <SettingsIcon className="inline h-3 w-3" aria-label="Settings" /> icon on the "Prediction Logs" card) to define your prediction parameters. This includes setting ranges for your target profit, acceptable loss in PIPS, and the max prediction lifetime (configurable from 10 minutes to 5 days in "DD HH:mm:ss" format).
                   </li>
                   <li>
-                    Once parameters are set, predictions will automatically generate and appear in the <strong>Prediction Logs</strong> to your left, updating every 30 seconds.
+                    <strong>Automatic Predictions:</strong> Once parameters are set (valid currency pairs selected, PIPS settings, and lifetime defined), predictions will automatically generate. The frequency of these updates can be set using the interval selector (e.g., {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '1m')?.label || '1 Min'}, {REFRESH_INTERVAL_OPTIONS.find(opt => opt.value === '5m')?.label || '5 Min'}) in the header. Invalid PIPS or lifetime settings (e.g., min &gt; max for PIPS; lifetime outside valid range) will pause updates.
                   </li>
                   <li>
-                    Each prediction has a unique expiration time (randomly between {MIN_EXPIRATION_SECONDS} and {MAX_EXPIRATION_SECONDS} seconds) and will be categorized into Active or Expired tables. Max log size for each table can be configured via its filter settings, with a system cap of {maxPredictionLogs} total.
+                    <strong>Prediction Logs:</strong> Generated predictions appear in the "Prediction Logs" area, split into <strong>Active Predictions</strong> and <strong>Expired Predictions</strong> tables.
                   </li>
                   <li>
-                    Click on any row in the Prediction Logs to view its detailed analysis in this panel.
+                    <strong>Expiration:</strong> Each prediction has a unique expiration time, randomly set between 2 minutes and your configured 'Max Prediction Lifetime' (which can range from {formatSecondsToDurationString(MIN_USER_CONFIGURABLE_MAX_LIFETIME_SEC)} to {formatSecondsToDurationString(MAX_USER_CONFIGURABLE_MAX_LIFETIME_SEC)}). Once expired, it moves to the "Expired Predictions" table.
                   </li>
                   <li>
-                    Utilize the <strong>Filter <Filter className="inline h-3 w-3" /></strong> controls within each log table and the <strong>Date Range</strong> filter in the Prediction Logs header to narrow down results. You can also sort columns by clicking their headers.
+                    <strong>Log Management:</strong> You can configure the maximum number of logs to display in each table using their respective <Filter className="inline h-3 w-3" aria-label="Filter Settings" /> icon. The system has an overall cap of {maxPredictionLogs} total logs.
                   </li>
                   <li>
-                    Use the <MenuIcon className="inline h-3 w-3" /> icon at the top-right of this panel to switch between this guide, selected prediction's details, or notification history.
+                    <strong>Viewing Details:</strong> Click on any row in the Prediction Logs to view its detailed analysis (including market data like Open, High, Low, Close, Volume) in this panel. The first log in the "Active Predictions" table is selected by default if available.
+                  </li>
+                  <li>
+                    <strong>Filtering & Sorting:</strong> Use the <Filter className="inline h-3 w-3" aria-label="Filter Settings" /> icon in each table's header to filter by status or signal, and set display limits. Click on column headers to sort the data. The <strong>Date Range</strong> filter (accessible via the <SettingsIcon className="inline h-3 w-3" aria-label="Date Range Settings"/> icon on the "Prediction Logs" card) allows you to view logs from a specific period.
+                  </li>
+                   <li>
+                    <strong>Navigation:</strong> Use the <MenuIcon className="inline h-3 w-3" aria-label="Panel Menu" /> icon at the top-right of this panel to switch between this "About" guide, the "Prediction Details" for a selected log, or the "Notification History".
                   </li>
                 </ul>
                 <p className="text-[0.7rem] italic pt-1 text-muted-foreground">
-                  Please note: All data and predictions provided by Geonera are for informational and demonstration purposes only. They should not be considered as financial advice.
+                  Disclaimer: All data and predictions provided by Geonera are for informational and demonstration purposes only using mock data. They should not be considered as financial advice.
                 </p>
                 {activeView === 'about' && !selectedPrediction && (
                   <p className="text-xs text-center pt-1 text-accent">
-                    When predictions are available, select one from the logs to see its details or switch view using the menu.
+                    When predictions are available, select one from the logs to see its details, or switch views using the menu.
                   </p>
                 )}
               </div>
             )}
             {activeView === 'details' && selectedPrediction && (
-              <div className="space-y-1 p-1.5 pr-2"> {/* Added p-1.5 for padding inside scroll area */}
+              <div className="space-y-1 p-1.5 pr-2">
                 <div className="flex items-center space-x-1.5">
                   <Landmark className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />
                   <span className="font-medium text-xs whitespace-nowrap">Currency Pair:</span>
@@ -274,12 +282,12 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                     <StatusIcon status={selectedPrediction.status} />
                   </div>
                   <span className="font-medium text-xs whitespace-nowrap">Status:</span>
-                  <Badge 
-                    className="text-[10px] px-1.5 py-0.5" 
+                  <Badge
+                    className="text-[10px] px-1.5 py-0.5"
                     variant={
                     selectedPrediction.status === "SUCCESS" ? "default" :
                     selectedPrediction.status === "ERROR" ? "destructive" :
-                    "secondary" 
+                    "secondary"
                   }>
                     {selectedPrediction.status}
                   </Badge>
@@ -295,8 +303,8 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                       {marketOhlcData.openPrice !== undefined && (
                         <div className="flex items-center space-x-1.5">
                           <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center" aria-hidden="true">
-                             <LogIn className="h-3.5 w-3.5 text-muted-foreground" />
-                          </div>
+                             <LogIn className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                            </div>
                           <span className="font-medium whitespace-nowrap text-[11px]">Open:</span>
                           <span className="text-[11px] whitespace-nowrap">
                              {formatPrice(marketOhlcData.openPrice, selectedPrediction.currencyPair)}
@@ -306,7 +314,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                       {marketOhlcData.highPrice !== undefined && (
                         <div className="flex items-center space-x-1.5">
                           <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center" aria-hidden="true">
-                            <ArrowUpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                            <ArrowUpCircle className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                           </div>
                           <span className="font-medium whitespace-nowrap text-[11px]">High:</span>
                           <span className="text-[11px] whitespace-nowrap">
@@ -317,7 +325,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                       {marketOhlcData.lowPrice !== undefined && (
                          <div className="flex items-center space-x-1.5">
                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center" aria-hidden="true">
-                             <ArrowDownCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                             <ArrowDownCircle className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                            </div>
                            <span className="font-medium whitespace-nowrap text-[11px]">Low:</span>
                            <span className="text-[11px] whitespace-nowrap">
@@ -328,7 +336,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                       {marketOhlcData.closePrice !== undefined && (
                          <div className="flex items-center space-x-1.5">
                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center" aria-hidden="true">
-                             <LogOut className="h-3.5 w-3.5 text-muted-foreground" />
+                             <LogOut className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                            </div>
                            <span className="font-medium whitespace-nowrap text-[11px]">Close:</span>
                            <span className="text-[11px] whitespace-nowrap">
@@ -339,7 +347,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                       {marketOhlcData.volume !== undefined && (
                          <div className="flex items-center space-x-1.5">
                            <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center" aria-hidden="true">
-                             <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                             <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                            </div>
                            <span className="font-medium whitespace-nowrap text-[11px]">Volume:</span>
                            <span className="text-[11px] whitespace-nowrap">
@@ -358,41 +366,41 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
                     <span className="text-xs whitespace-nowrap">{formatDateFns(new Date(selectedPrediction.expiresAt), "yyyy-MM-dd HH:mm:ss XXX")}</span>
                   </div>
                 )}
-                
+
                 {selectedPrediction.status === "SUCCESS" && selectedPrediction.predictionOutcome && (
                   <>
-                    <div className="flex items-center space-x-1.5 pt-0.5 mt-0.5 border-t border-border"> 
+                    <div className="flex items-center space-x-1.5 pt-0.5 mt-0.5 border-t border-border">
                         <div className="flex items-center justify-center h-4 w-4 flex-shrink-0" aria-hidden="true">
                         <SignalIcon signal={selectedPrediction.predictionOutcome.tradingSignal} />
                         </div>
                       <span className="font-medium text-xs whitespace-nowrap">Trading Signal:</span>
-                      <Badge 
-                        className="text-[10px] px-1.5 py-0.5" 
+                      <Badge
+                        className="text-[10px] px-1.5 py-0.5"
                         variant={getSignalBadgeVariant(selectedPrediction.predictionOutcome.tradingSignal)}
                       >
                         {selectedPrediction.predictionOutcome.tradingSignal}
                       </Badge>
                     </div>
-                    <div className="space-y-0.5"> 
+                    <div className="space-y-0.5">
                       <span className="font-medium text-primary text-xs block whitespace-nowrap">Signal Details:</span>
-                      <p className="text-[11px] bg-muted/50 p-1 rounded leading-relaxed">{selectedPrediction.predictionOutcome.signalDetails}</p> 
+                      <p className="text-[11px] bg-muted/50 p-1 rounded leading-relaxed">{selectedPrediction.predictionOutcome.signalDetails}</p>
                     </div>
-                    <div className="space-y-0.5"> 
+                    <div className="space-y-0.5">
                       <span className="font-medium text-primary text-xs block whitespace-nowrap">Reasoning:</span>
-                      <p className="text-[11px] bg-muted/50 p-1 rounded leading-relaxed">{selectedPrediction.predictionOutcome.reasoning}</p> 
+                      <p className="text-[11px] bg-muted/50 p-1 rounded leading-relaxed">{selectedPrediction.predictionOutcome.reasoning}</p>
                     </div>
                   </>
                 )}
 
                 {selectedPrediction.status === "ERROR" && selectedPrediction.error && (
-                  <div className="space-y-0.5 pt-0.5 mt-0.5 border-t border-border"> 
+                  <div className="space-y-0.5 pt-0.5 mt-0.5 border-t border-border">
                     <span className="font-medium text-destructive text-xs block whitespace-nowrap">Error:</span>
-                    <p className="text-[11px] bg-destructive/10 text-destructive p-1 rounded leading-relaxed">{selectedPrediction.error}</p> 
+                    <p className="text-[11px] bg-destructive/10 text-destructive p-1 rounded leading-relaxed">{selectedPrediction.error}</p>
                   </div>
                 )}
-                
+
                 {selectedPrediction.status === "PENDING" && (
-                    <div className="flex items-center space-x-1.5 text-muted-foreground pt-0.5 mt-0.5 border-t border-border" role="status" aria-live="polite"> 
+                    <div className="flex items-center space-x-1.5 text-muted-foreground pt-0.5 mt-0.5 border-t border-border" role="status" aria-live="polite">
                       <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" aria-hidden="true" />
                       <span className="text-xs whitespace-nowrap">Awaiting analysis...</span>
                     </div>
@@ -404,7 +412,7 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
             )}
              {activeView === 'details' && !selectedPrediction && (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-xs">
-                    <List className="h-8 w-8 mb-2 opacity-50" />
+                    <List className="h-8 w-8 mb-2 opacity-50" aria-hidden="true" />
                     <p>Select a prediction from the logs to view its details.</p>
                 </div>
             )}
@@ -416,5 +424,6 @@ export function PredictionDetailsPanel({ selectedPrediction, maxPredictionLogs, 
 
 type VariantProps<T extends (...args: any) => any> = Parameters<T>[0] extends undefined ? {} : Parameters<T>[0];
 
-
+// Constant for Notification History display
+const MAX_NOTIFICATIONS_HISTORY = 100;
 

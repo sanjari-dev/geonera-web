@@ -15,7 +15,7 @@ interface NotificationDisplayProps {
 
 export function NotificationDisplay({ notification, className }: NotificationDisplayProps) {
   return (
-    <Card className={cn("shadow-lg h-full flex flex-col", className)} aria-labelledby="notification-title">
+    <Card className={cn("shadow-lg flex flex-col", className)} aria-labelledby="notification-title">
       <CardHeader className="px-2 pt-2 pb-1"> {/* Reduced bottom padding */}
         <CardTitle id="notification-title" className="text-sm font-semibold text-primary flex items-center">
           <Bell className="h-4 w-4 mr-1.5" aria-hidden="true" />
@@ -63,3 +63,4 @@ export function NotificationDisplay({ notification, className }: NotificationDis
     </Card>
   );
 }
+
