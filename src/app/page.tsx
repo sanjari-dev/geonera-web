@@ -569,54 +569,54 @@ export default function GeoneraPage() {
         <main className="w-full px-2 py-1 grid grid-cols-1 md:grid-cols-3 gap-1 overflow-hidden">
           <div className="md:col-span-2 flex flex-col min-h-0"> 
             <Card className="shadow-xl h-full flex flex-col">
-              <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex items-center justify-center relative">
-                {/* Centered Content: Title and optional Date Filter */}
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg font-semibold text-primary">
-                    {predictionLogsViewMode === 'logs' ? 'Prediction Logs' : 'PIPS Settings'}
-                  </CardTitle>
-                  {/* Date Filter (only shows in 'logs' mode, appears next to title) */}
-                  {predictionLogsViewMode === 'logs' && (
-                    <div className="flex items-center gap-1">
-                      <Label htmlFor="date-filter-start" className="text-xs font-medium flex items-center text-primary">
-                          <CalendarDays className="h-3 w-3 mr-1" /> From:
-                      </Label>
-                      <Input
-                          type="datetime-local"
-                          id="date-filter-start"
-                          value={formatDateToDateTimeLocal(dateRangeFilter.start)}
-                          onChange={(e) => {
-                            const newStart = e.target.value ? new Date(e.target.value) : null;
-                            if (newStart && isValid(newStart)) {
-                              handleDateRangeChange({ ...dateRangeFilter, start: newStart });
-                            } else if (!e.target.value) {
-                               handleDateRangeChange({ ...dateRangeFilter, start: null });
-                            }
-                          }}
-                          className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
-                          aria-label="Filter start date and time"
-                        />
-                      <Label htmlFor="date-filter-end" className="text-xs font-medium flex items-center text-primary">
-                          <CalendarDays className="h-3 w-3 mr-1" /> To:
-                      </Label>
-                      <Input
-                          type="datetime-local"
-                          id="date-filter-end"
-                          value={formatDateToDateTimeLocal(dateRangeFilter.end)}
-                          onChange={(e) => {
-                            const newEnd = e.target.value ? new Date(e.target.value) : null;
-                            if (newEnd && isValid(newEnd)) {
-                              handleDateRangeChange({ ...dateRangeFilter, end: newEnd });
-                            } else if (!e.target.value) {
-                              handleDateRangeChange({ ...dateRangeFilter, end: null });
-                            }
-                          }}
-                          className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
-                          aria-label="Filter end date and time"
-                        />
-                    </div>
-                  )}
-                </div>
+              <CardHeader className="bg-primary/10 p-2 rounded-t-lg flex flex-col items-center relative">
+                {/* Centered Title */}
+                <CardTitle className="text-lg font-semibold text-primary text-center w-full mb-1">
+                  {predictionLogsViewMode === 'logs' ? 'Prediction Logs' : 'PIPS Settings'}
+                </CardTitle>
+                
+                {/* Date Filter (only shows in 'logs' mode, centered below title) */}
+                {predictionLogsViewMode === 'logs' && (
+                  <div className="flex items-center justify-center gap-1 w-full">
+                    <Label htmlFor="date-filter-start" className="text-xs font-medium flex items-center text-primary">
+                        <CalendarDays className="h-3 w-3 mr-1" /> From:
+                    </Label>
+                    <Input
+                        type="datetime-local"
+                        id="date-filter-start"
+                        value={formatDateToDateTimeLocal(dateRangeFilter.start)}
+                        onChange={(e) => {
+                          const newStart = e.target.value ? new Date(e.target.value) : null;
+                          if (newStart && isValid(newStart)) {
+                            handleDateRangeChange({ ...dateRangeFilter, start: newStart });
+                          } else if (!e.target.value) {
+                             handleDateRangeChange({ ...dateRangeFilter, start: null });
+                          }
+                        }}
+                        className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                        aria-label="Filter start date and time"
+                      />
+                    <Label htmlFor="date-filter-end" className="text-xs font-medium flex items-center text-primary">
+                        <CalendarDays className="h-3 w-3 mr-1" /> To:
+                    </Label>
+                    <Input
+                        type="datetime-local"
+                        id="date-filter-end"
+                        value={formatDateToDateTimeLocal(dateRangeFilter.end)}
+                        onChange={(e) => {
+                          const newEnd = e.target.value ? new Date(e.target.value) : null;
+                          if (newEnd && isValid(newEnd)) {
+                            handleDateRangeChange({ ...dateRangeFilter, end: newEnd });
+                          } else if (!e.target.value) {
+                            handleDateRangeChange({ ...dateRangeFilter, end: null });
+                          }
+                        }}
+                        className="h-7 text-xs py-1 w-auto border-primary/30 focus:border-primary"
+                        aria-label="Filter end date and time"
+                      />
+                  </div>
+                )}
+
                 {/* PIPS Settings Toggle Button (Absolutely Positioned on the Right) */}
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                   <TooltipProvider>
@@ -711,3 +711,4 @@ export default function GeoneraPage() {
     </div>
   );
 }
+
